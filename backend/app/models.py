@@ -82,6 +82,12 @@ class ProcurementSearchRequest(BaseModel):
     limit: int = Field(default=40, ge=1, le=100)
 
 
+class ActivityRequest(BaseModel):
+    sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted"])
+    days: int = Field(default=3, ge=1, le=14)
+    limit: int = Field(default=100, ge=1, le=100)
+
+
 class Opportunity(BaseModel):
     id: str
     source: SourceName
@@ -151,6 +157,22 @@ class SearchResponse(BaseModel):
     source_runs: list[SourceRun]
     stats: dict[str, Any]
     ai_enabled: bool
+
+
+class DailyActivity(BaseModel):
+    date: date
+    label: str
+    total: int
+    by_source: dict[SourceName, int] = Field(default_factory=dict)
+
+
+class ActivityResponse(BaseModel):
+    generated_at: datetime
+    date_from: date
+    date_to: date
+    daily_activity: list[DailyActivity]
+    source_runs: list[SourceRun]
+    total: int
 
 
 class HealthResponse(BaseModel):

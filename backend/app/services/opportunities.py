@@ -2,10 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app.config import Settings
-from app.models import Opportunity, ProcurementSearchRequest, SearchResponse, SourceName, SourceRun
+from app.models import (
+    ActivityRequest,
+    ActivityResponse,
+    DailyActivity,
+    Opportunity,
+    ProcurementSearchRequest,
+    SearchResponse,
+    SourceName,
+    SourceRun,
+)
 from app.scoring import score_opportunity
 from app.services.ai import AIEnricher
 from app.sources.demo import demo_opportunities
@@ -56,6 +65,44 @@ class OpportunityService:
             ai_enabled=self.ai.enabled,
         )
 
+    async def activity(self, request: ActivityRequest) -> ActivityResponse:
+        today = date.today()
+        date_to = today
+        date_from = today - timedelta(days=request.days - 1)
+        source_runs: list[SourceRun] = []
+        tasks = [
+            self._run_activity_source(source, date_from, date_to, request.limit)
+            for source in request.sources
+            if source != "demo"
+        ]
+        results = await asyncio.gather(*tasks) if tasks else []
+
+        items: list[Opportunity] = []
+        for run, source_items in results:
+            source_runs.append(run)
+            items.extend(source_items)
+
+        if "demo" in request.sources:
+            demo_items = [
+                item
+                for item in demo_opportunities()
+                if item.published_at is not None and date_from <= item.published_at <= date_to
+            ]
+            source_runs.append(
+                SourceRun(source="demo", status="ok", items=len(demo_items), shown=len(demo_items), elapsed_ms=0)
+            )
+            items.extend(demo_items)
+
+        daily_activity = _daily_activity(items, request.sources, today, request.days)
+        return ActivityResponse(
+            generated_at=datetime.utcnow(),
+            date_from=date_from,
+            date_to=date_to,
+            daily_activity=daily_activity,
+            source_runs=source_runs,
+            total=sum(day.total for day in daily_activity),
+        )
+
     async def _run_source(
         self, source: SourceName, request: ProcurementSearchRequest
     ) -> tuple[SourceRun, list[Opportunity]]:
@@ -73,6 +120,29 @@ class OpportunityService:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             return (
                 SourceRun(source=source, status="error", items=0, elapsed_ms=elapsed_ms, error=str(exc)[:240]),
+                [],
+            )
+
+    async def _run_activity_source(
+        self, source: SourceName, date_from: date, date_to: date, limit: int
+    ) -> tuple[SourceRun, list[Opportunity]]:
+        started = time.perf_counter()
+        try:
+            if source == "khmdhs":
+                items = await KhmdhsClient(self.settings).activity(date_from, date_to, limit)
+            elif source == "ted":
+                items = await TedClient(self.settings).activity(date_from, date_to, limit)
+            else:
+                items = []
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            return (
+                SourceRun(source=source, status="ok", items=len(items), shown=len(items), elapsed_ms=elapsed_ms),
+                items,
+            )
+        except Exception as exc:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            return (
+                SourceRun(source=source, status="error", items=0, shown=0, elapsed_ms=elapsed_ms, error=str(exc)[:240]),
                 [],
             )
 
@@ -94,6 +164,33 @@ def _count_by_source(items: list[Opportunity]) -> dict[SourceName, int]:
     for item in items:
         counts[item.source] = counts.get(item.source, 0) + 1
     return counts
+
+
+def _daily_activity(
+    items: list[Opportunity], sources: list[SourceName], today: date, days: int
+) -> list[DailyActivity]:
+    selected_sources = [source for source in sources if source != "demo"]
+    if "demo" in sources:
+        selected_sources.append("demo")
+
+    output: list[DailyActivity] = []
+    labels = ["today", "yesterday", "day_before_yesterday"]
+    for day_index in range(days):
+        day = today - timedelta(days=day_index)
+        by_source = {source: 0 for source in selected_sources}
+        for item in items:
+            if item.published_at != day:
+                continue
+            by_source[item.source] = by_source.get(item.source, 0) + 1
+        output.append(
+            DailyActivity(
+                date=day,
+                label=labels[day_index] if day_index < len(labels) else f"{day_index}_days_ago",
+                total=sum(by_source.values()),
+                by_source=by_source,
+            )
+        )
+    return output
 
 
 def _filter_opportunities(items: list[Opportunity], request: ProcurementSearchRequest) -> list[Opportunity]:

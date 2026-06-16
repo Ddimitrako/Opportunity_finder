@@ -107,6 +107,22 @@ type SearchResponse = {
   ai_enabled: boolean
 }
 
+type DailyActivity = {
+  date: string
+  label: string
+  total: number
+  by_source: Partial<Record<SourceName, number>>
+}
+
+type ActivityResponse = {
+  generated_at: string
+  date_from: string
+  date_to: string
+  daily_activity: DailyActivity[]
+  source_runs: SourceRun[]
+  total: number
+}
+
 type ConfigResponse = {
   default_cpv_codes: string[]
   default_keywords: string[]
@@ -291,6 +307,9 @@ function App() {
   const [useAi, setUseAi] = useState(false)
   const [loading, setLoading] = useState(true)
   const [response, setResponse] = useState<SearchResponse | null>(null)
+  const [activity, setActivity] = useState<ActivityResponse | null>(null)
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [activityError, setActivityError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [detailsOpportunity, setDetailsOpportunity] = useState<Opportunity | null>(null)
   const [details, setDetails] = useState<OpportunityDetails | null>(null)
@@ -358,6 +377,31 @@ function App() {
     }
   }, [aiEnabled, budgetMax, budgetMin, dateFrom, dateTo, keywords, onlyOpen, query, selectedCpvs, showAllFetched, sources, useAi])
 
+  const runActivity = useCallback(async () => {
+    setActivityLoading(true)
+    setActivityError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/opportunities/activity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sources: sources.filter((source) => source !== 'demo'),
+          days: 3,
+          limit: 100,
+        }),
+      })
+      if (!res.ok) {
+        throw new Error(`Activity API returned ${res.status}`)
+      }
+      setActivity((await res.json()) as ActivityResponse)
+    } catch (exc) {
+      setActivityError(exc instanceof Error ? exc.message : 'Activity fetch failed')
+      setActivity(null)
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [sources])
+
   useEffect(() => {
     async function boot() {
       try {
@@ -376,6 +420,13 @@ function App() {
     void boot()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const activityTimer = window.setTimeout(() => {
+      void runActivity()
+    }, 0)
+    return () => window.clearTimeout(activityTimer)
+  }, [runActivity])
 
   useEffect(() => {
     localStorage.setItem('opportunity-shortlist', JSON.stringify(shortlist))
@@ -658,6 +709,8 @@ function App() {
         </section>
 
         <section className="insight-layout">
+          <SmartCalendarPanel activity={activity} loading={activityLoading} error={activityError} selectedSources={sources} />
+
           <div className="source-panel">
             <div className="panel-heading">
               <Activity size={18} aria-hidden="true" />
@@ -763,6 +816,68 @@ function App() {
   )
 }
 
+function SmartCalendarPanel({
+  activity,
+  loading,
+  error,
+  selectedSources,
+}: {
+  activity: ActivityResponse | null
+  loading: boolean
+  error: string | null
+  selectedSources: SourceName[]
+}) {
+  const visibleSources = selectedSources.filter((source) => source !== 'demo')
+
+  return (
+    <div className="smart-calendar-panel">
+      <div className="panel-heading">
+        <CalendarClock size={18} aria-hidden="true" />
+        <h3>Smart calendar</h3>
+      </div>
+      <p className="panel-note">New publications from selected sources. Search filters do not affect this count.</p>
+
+      {loading ? (
+        <div className="calendar-state">
+          <Loader2 className="spin" size={17} aria-hidden="true" />
+          <span>Loading activity...</span>
+        </div>
+      ) : null}
+
+      {!loading && error ? (
+        <div className="calendar-state error">
+          <AlertTriangle size={17} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {!loading && !error ? (
+        <div className="calendar-list">
+          {(activity?.daily_activity ?? []).map((day) => (
+            <div className="calendar-row" key={day.date}>
+              <div>
+                <strong>{calendarLabel(day)}</strong>
+                <span>{formatDate(day.date)}</span>
+              </div>
+              <div className="calendar-count">
+                <strong>{day.total}</strong>
+                <span>new</span>
+              </div>
+              <div className="calendar-sources">
+                {visibleSources.map((source) => (
+                  <span key={`${day.date}-${source}`}>
+                    {SOURCE_META[source].label}: {day.by_source[source] ?? 0}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function OpportunityRow({
   opportunity,
   pinned,
@@ -776,6 +891,7 @@ function OpportunityRow({
 }) {
   const bandClass = bandToClass(opportunity.fit_score)
   const daysLeft = opportunity.deadline ? daysUntil(opportunity.deadline) : null
+  const window = actionWindow(opportunity)
   const PinIcon = pinned ? BookmarkCheck : BookmarkPlus
 
   return (
@@ -795,6 +911,7 @@ function OpportunityRow({
               <span>{opportunity.source_label}</span>
               {opportunity.procedure_type ? <span>{opportunity.procedure_type}</span> : null}
               {opportunity.package_match ? <span>{packageLabel(opportunity.package_match)}</span> : null}
+              <span className={`action-window ${window.tone}`}>{window.label}</span>
             </div>
             <h4>{opportunity.title}</h4>
           </div>
@@ -820,7 +937,9 @@ function OpportunityRow({
         <div className="meta-grid">
           <Meta icon={Building2} label="Buyer" value={opportunity.buyer} />
           <Meta icon={CircleDollarSign} label="Budget" value={formatCurrency(opportunity.budget)} />
-          <Meta icon={CalendarClock} label="Deadline" value={daysLeft === null ? 'Unknown' : `${formatDate(opportunity.deadline)} · ${daysLeft}d`} />
+          <Meta icon={CalendarClock} label="Published" value={formatPublishedDate(opportunity.published_at)} />
+          <Meta icon={CalendarClock} label="Deadline" value={daysLeft === null ? 'Unknown' : `${formatDate(opportunity.deadline)} - ${daysLeft}d`} />
+          <Meta icon={Gauge} label="Action window" value={window.detail} />
           <Meta icon={FileText} label="CPV" value={opportunity.cpv_codes.slice(0, 3).join(', ') || 'N/A'} />
         </div>
 
@@ -1213,13 +1332,71 @@ function formatDate(value?: string | null) {
   if (!value) {
     return 'Unknown'
   }
-  return new Intl.DateTimeFormat('el-GR', { day: '2-digit', month: 'short' }).format(new Date(value))
+  return new Intl.DateTimeFormat('el-GR', { day: '2-digit', month: 'short', year: 'numeric' }).format(parseDateOnly(value))
+}
+
+function formatPublishedDate(value?: string | null) {
+  if (!value) {
+    return 'Unknown'
+  }
+  return `${formatDate(value)} - ${freshnessLabel(value)}`
+}
+
+function calendarLabel(day: DailyActivity) {
+  if (day.label === 'today') return 'Today'
+  if (day.label === 'yesterday') return 'Yesterday'
+  if (day.label === 'day_before_yesterday') return 'Day before'
+  return freshnessLabel(day.date)
+}
+
+function freshnessLabel(value?: string | null) {
+  const age = daysSince(value)
+  if (age === null) return 'Unknown'
+  if (age === 0) return 'Today'
+  if (age === 1) return 'Yesterday'
+  return `${age}d ago`
+}
+
+function actionWindow(opportunity: Opportunity) {
+  const daysLeft = opportunity.deadline ? daysUntil(opportunity.deadline) : null
+  const age = daysSince(opportunity.published_at)
+
+  if (daysLeft !== null && daysLeft <= 5) {
+    return { label: 'Urgent', detail: daysLeft < 0 ? 'Deadline passed' : `${daysLeft}d left`, tone: 'urgent' }
+  }
+  if (age === null) {
+    return { label: 'Unknown', detail: 'Missing publish date', tone: 'unknown' }
+  }
+  if (age <= 14 && (daysLeft === null || daysLeft >= 10)) {
+    return { label: 'Fresh', detail: `${age}d old`, tone: 'fresh' }
+  }
+  return { label: 'Stale', detail: `${age}d old`, tone: 'stale' }
 }
 
 function daysUntil(value: string) {
-  const deadline = new Date(`${value}T12:00:00`)
-  const now = new Date()
-  return Math.ceil((deadline.getTime() - now.getTime()) / 86_400_000)
+  const deadline = parseDateOnly(value)
+  const today = startOfDay(new Date())
+  return Math.ceil((deadline.getTime() - today.getTime()) / 86_400_000)
+}
+
+function daysSince(value?: string | null) {
+  if (!value) {
+    return null
+  }
+  const published = parseDateOnly(value)
+  const today = startOfDay(new Date())
+  return Math.max(0, Math.floor((today.getTime() - published.getTime()) / 86_400_000))
+}
+
+function parseDateOnly(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T12:00:00`)
+  }
+  return new Date(value)
+}
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate())
 }
 
 function bandToClass(score: number) {

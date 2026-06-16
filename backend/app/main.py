@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
 from app.models import (
+    ActivityRequest,
+    ActivityResponse,
     ConfigResponse,
     DEFAULT_CPV_CODES,
     DEFAULT_KEYWORDS,
@@ -74,6 +76,14 @@ async def search_opportunities(
     service: OpportunityService = Depends(get_service),
 ) -> SearchResponse:
     return await service.search(request)
+
+
+@app.post("/api/opportunities/activity", response_model=ActivityResponse)
+async def opportunity_activity(
+    request: ActivityRequest,
+    service: OpportunityService = Depends(get_service),
+) -> ActivityResponse:
+    return await service.activity(request)
 
 
 @app.get("/api/opportunities/{source}/{reference}/details", response_model=OpportunityDetails)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import date
 from typing import Any
 
 import httpx
@@ -36,6 +37,25 @@ class KhmdhsClient:
             response.raise_for_status()
             records = extract_records(response.json())
         return [self._to_opportunity(record) for record in records[: request.limit]]
+
+    async def activity(self, date_from: date, date_to: date, limit: int = 100) -> list[Opportunity]:
+        body: dict[str, Any] = {
+            "dateFrom": date_from.isoformat(),
+            "dateTo": date_to.isoformat(),
+            "isInitial": True,
+            "isApproved": True,
+            "isApproval": True,
+        }
+        url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/request"
+        async with httpx.AsyncClient(
+            timeout=self.settings.khmdhs_timeout_seconds,
+            verify=self.settings.khmdhs_verify_ssl,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        ) as client:
+            response = await client.post(url, params={"page": 0}, json=body)
+            response.raise_for_status()
+            records = extract_records(response.json())
+        return [self._to_opportunity(record) for record in records[:limit]]
 
     def _to_opportunity(self, record: dict[str, Any]) -> Opportunity:
         reference = first_text(record.get("referenceNumber"))

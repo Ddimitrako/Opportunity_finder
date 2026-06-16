@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 import httpx
@@ -47,6 +48,40 @@ class TedClient:
             response.raise_for_status()
             records = extract_records(response.json())
         return [self._to_opportunity(record) for record in records[: request.limit]]
+
+    async def activity(self, date_from: date, date_to: date, limit: int = 100) -> list[Opportunity]:
+        body: dict[str, Any] = {
+            "query": "organisation-country-buyer=GRC",
+            "fields": [
+                "publication-number",
+                "notice-title",
+                "buyer-name",
+                "organisation-country-buyer",
+                "publication-date",
+                "notice-type",
+                "deadline",
+                "BT-131(d)-Lot",
+                "deadline-receipt-tender-date-lot",
+            ],
+            "page": 1,
+            "limit": min(limit, 100),
+            "scope": "ACTIVE",
+            "paginationMode": "PAGE_NUMBER",
+        }
+        url = f"{str(self.settings.ted_base_url).rstrip('/')}/v3/notices/search"
+        async with httpx.AsyncClient(
+            timeout=self.settings.ted_timeout_seconds,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        ) as client:
+            response = await client.post(url, json=body)
+            response.raise_for_status()
+            records = extract_records(response.json())
+        opportunities = [self._to_opportunity(record) for record in records[:limit]]
+        return [
+            opportunity
+            for opportunity in opportunities
+            if opportunity.published_at is not None and date_from <= opportunity.published_at <= date_to
+        ]
 
     def _to_opportunity(self, record: dict[str, Any]) -> Opportunity:
         title = first_text(
