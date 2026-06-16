@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import time
+from typing import Any
+
+import httpx
+
+from app.config import Settings
+from app.models import Opportunity, ProcurementSearchRequest
+from app.normalization import collect_cpv_codes, extract_records, first_text, parse_date, stable_id, truncate
+
+
+class KhmdhsClient:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+
+    async def search(self, request: ProcurementSearchRequest) -> list[Opportunity]:
+        body: dict[str, Any] = {
+            "title": request.query.strip()[:100],
+            "cpvItems": request.cpv_codes,
+            "dateFrom": request.date_from.isoformat(),
+            "dateTo": request.date_to.isoformat(),
+            "totalCostFrom": int(request.budget_min),
+            "totalCostTo": int(request.budget_max),
+            "isInitial": True,
+            "isApproved": True,
+            "isApproval": True,
+        }
+        url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/request"
+        async with httpx.AsyncClient(
+            timeout=self.settings.khmdhs_timeout_seconds,
+            verify=self.settings.khmdhs_verify_ssl,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        ) as client:
+            response = await client.post(url, params={"page": request.page}, json=body)
+            response.raise_for_status()
+            records = extract_records(response.json())
+        return [self._to_opportunity(record) for record in records[: request.limit]]
+
+    def _to_opportunity(self, record: dict[str, Any]) -> Opportunity:
+        reference = first_text(record.get("referenceNumber"))
+        title = first_text(record.get("title"), "ΚΗΜΔΗΣ πράξη χωρίς τίτλο")
+        buyer = first_text(record.get("organization"), "Unknown buyer")
+        buyer_type = first_text(record.get("typeOfContractingAuthority")) or first_text(
+            record.get("classificationOfPublicLawOrganization")
+        )
+        budget = record.get("totalCostWithoutVAT") or record.get("budget") or record.get("totalCostWithVAT")
+        cpv_codes = collect_cpv_codes(record)
+        summary_parts = [
+            title,
+            first_text(record.get("procedureType")),
+            " ".join(first_text(item.get("shortDescription")) for item in record.get("objectDetails") or [] if isinstance(item, dict)),
+        ]
+        summary = truncate(" ".join(part for part in summary_parts if part), 320)
+        url = _extract_platform_url(record)
+        if not url and reference:
+            url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/request/attachment/{reference}"
+        status_label = first_text(record.get("status") or record.get("state") or record.get("approvalStatus"))
+        notice_type = first_text(record.get("noticeType") or record.get("actType") or record.get("documentType"))
+        return Opportunity(
+            id=f"khmdhs-{stable_id(reference, title, buyer)}",
+            source="khmdhs",
+            source_label="ΚΗΜΔΗΣ",
+            title=title,
+            buyer=buyer,
+            buyer_type=buyer_type or None,
+            procedure_type=first_text(record.get("procedureType")) or None,
+            cpv_codes=cpv_codes,
+            budget=float(budget) if budget not in (None, "") else None,
+            deadline=parse_date(record.get("procurementDeliveryDate")),
+            published_at=parse_date(record.get("submissionDate") or record.get("signedDate")),
+            location=first_text(record.get("nutsCode")) or None,
+            url=url,
+            platform_label="ΚΗΜΔΗΣ",
+            source_reference=reference or None,
+            status_label=status_label or None,
+            notice_type=notice_type or None,
+            summary=summary,
+            raw_text=" ".join(part for part in (summary, status_label, notice_type) if part),
+            source_payload={"referenceNumber": reference, "fetchedAt": int(time.time())},
+        )
+
+
+def _extract_platform_url(record: dict[str, Any]) -> str | None:
+    for key in ("url", "link", "documentUrl", "documentURL", "decisionUrl", "attachmentUrl"):
+        value = first_text(record.get(key))
+        if value.startswith("http"):
+            return value
+
+    links = record.get("links")
+    if isinstance(links, dict):
+        for value in links.values():
+            text = first_text(value)
+            if text.startswith("http"):
+                return text
+    return None
