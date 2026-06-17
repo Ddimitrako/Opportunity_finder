@@ -11,6 +11,7 @@ from app.models import (
     ConfigResponse,
     DEFAULT_CPV_CODES,
     DEFAULT_KEYWORDS,
+    DocumentBriefResponse,
     HealthResponse,
     OpportunityDetails,
     ProcurementSearchRequest,
@@ -19,6 +20,7 @@ from app.models import (
 )
 from app.scoring import PACKAGES
 from app.services.bookmarks import BookmarkService
+from app.services.briefs import DocumentBriefService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 
@@ -50,12 +52,16 @@ def get_bookmark_service(settings: Settings = Depends(get_settings)) -> Bookmark
     return BookmarkService(settings)
 
 
+def get_brief_service(settings: Settings = Depends(get_settings)) -> DocumentBriefService:
+    return DocumentBriefService(settings)
+
+
 @app.get("/api/health", response_model=HealthResponse)
 async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     return HealthResponse(
         status="ok",
         app=settings.app_name,
-        ai_enabled=bool(settings.openai_api_key),
+        brief_ai_enabled=bool(settings.openai_api_key),
         sources={
             "khmdhs": "OpenData API for Greek public procurement acts",
             "ted": "EU TED Search API for published procurement notices",
@@ -129,3 +135,21 @@ async def opportunity_details(
     service: OpportunityDetailsService = Depends(get_details_service),
 ) -> OpportunityDetails:
     return await service.get_details(source, reference)
+
+
+@app.get("/api/opportunities/{source}/{reference}/brief", response_model=DocumentBriefResponse)
+async def cached_document_brief(
+    source: SourceName,
+    reference: str,
+    service: DocumentBriefService = Depends(get_brief_service),
+) -> DocumentBriefResponse:
+    return service.get_cached_brief(source, reference)
+
+
+@app.post("/api/opportunities/{source}/{reference}/brief", response_model=DocumentBriefResponse)
+async def generate_document_brief(
+    source: SourceName,
+    reference: str,
+    service: DocumentBriefService = Depends(get_brief_service),
+) -> DocumentBriefResponse:
+    return await service.generate_brief(source, reference)

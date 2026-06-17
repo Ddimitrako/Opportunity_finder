@@ -16,7 +16,6 @@ from app.models import (
     SourceRun,
 )
 from app.scoring import score_opportunity
-from app.services.ai import AIEnricher
 from app.sources.demo import demo_opportunities
 from app.sources.khmdhs import KhmdhsClient
 from app.sources.ted import TedClient
@@ -25,7 +24,6 @@ from app.sources.ted import TedClient
 class OpportunityService:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.ai = AIEnricher(settings)
 
     async def search(self, request: ProcurementSearchRequest) -> SearchResponse:
         source_runs: list[SourceRun] = []
@@ -53,16 +51,12 @@ class OpportunityService:
         scored.sort(key=lambda item: (item.fit_score, item.budget or 0), reverse=True)
         scored = scored[: request.limit]
 
-        if request.use_ai and self.ai.enabled:
-            scored = await asyncio.gather(*(self.ai.enrich(item) for item in scored[:8])) + scored[8:]
-
         return SearchResponse(
             generated_at=datetime.utcnow(),
             query=request,
             opportunities=scored,
             source_runs=source_runs,
             stats=_stats(scored),
-            ai_enabled=self.ai.enabled,
         )
 
     async def activity(self, request: ActivityRequest) -> ActivityResponse:

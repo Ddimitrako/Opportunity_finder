@@ -9,7 +9,6 @@ import {
   ChevronDown,
   CheckCircle2,
   CircleDollarSign,
-  Cpu,
   DatabaseZap,
   ExternalLink,
   FileText,
@@ -68,7 +67,6 @@ type Opportunity = {
   red_flags: string[]
   recommendation: string
   package_match: string
-  ai_summary?: string | null
 }
 
 type DocumentLink = {
@@ -118,6 +116,29 @@ type OpportunityDetails = {
   raw: Record<string, unknown>
 }
 
+type DocumentBrief = {
+  source: SourceName
+  reference: string
+  project_summary: string
+  actionable: 'yes' | 'no' | 'maybe' | 'unknown'
+  deadline_submission: string
+  required_documents: string[]
+  technical_requirements: string[]
+  red_flags: string[]
+  recommendation: string
+  next_steps: string[]
+  source_documents: DocumentLink[]
+  generated_at: string
+  model?: string | null
+  cached: boolean
+}
+
+type DocumentBriefResponse = {
+  brief?: DocumentBrief | null
+  cached: boolean
+  message?: string | null
+}
+
 type SearchResponse = {
   generated_at: string
   opportunities: Opportunity[]
@@ -131,7 +152,6 @@ type SearchResponse = {
     by_band: Record<string, number>
     by_package: Record<string, number>
   }
-  ai_enabled: boolean
 }
 
 type DailyActivity = {
@@ -342,7 +362,6 @@ function App() {
   )
   const [keywords, setKeywords] = useState(FALLBACK_KEYWORDS.join(', '))
   const [sources, setSources] = useState<SourceName[]>(DASHBOARD_SOURCES)
-  const [useAi, setUseAi] = useState(false)
   const [loading, setLoading] = useState(true)
   const [response, setResponse] = useState<SearchResponse | null>(null)
   const [activity, setActivity] = useState<ActivityResponse | null>(null)
@@ -353,10 +372,13 @@ function App() {
   const [details, setDetails] = useState<OpportunityDetails | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [documentBrief, setDocumentBrief] = useState<DocumentBrief | null>(null)
+  const [documentBriefLoading, setDocumentBriefLoading] = useState(false)
+  const [documentBriefGenerating, setDocumentBriefGenerating] = useState(false)
+  const [documentBriefError, setDocumentBriefError] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([])
   const [bookmarkError, setBookmarkError] = useState<string | null>(null)
 
-  const aiEnabled = response?.ai_enabled ?? false
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
   const cpvGroups = useMemo(() => buildCpvGroups(cpvOptions), [cpvOptions])
   const packageRows = useMemo(() => {
@@ -435,7 +457,6 @@ function App() {
           show_all_fetched: requestShowAllFetched,
           sources,
           include_demo_when_empty: false,
-          use_ai: useAi && aiEnabled,
           limit: 100,
         }),
       })
@@ -445,15 +466,12 @@ function App() {
       const data = (await res.json()) as SearchResponse
       setResponse(data)
       await migrateLegacyShortlist(data.opportunities)
-      if (!data.ai_enabled) {
-        setUseAi(false)
-      }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : 'Search failed')
     } finally {
       setLoading(false)
     }
-  }, [aiEnabled, budgetMax, budgetMin, dateFrom, dateTo, keywords, migrateLegacyShortlist, onlyOpen, query, selectedCpvs, showAllFetched, sources, useAi])
+  }, [budgetMax, budgetMin, dateFrom, dateTo, keywords, migrateLegacyShortlist, onlyOpen, query, selectedCpvs, showAllFetched, sources])
 
   const runActivity = useCallback(async () => {
     setActivityLoading(true)
@@ -491,6 +509,30 @@ function App() {
       setBookmarks(data.bookmarks)
     } catch (exc) {
       setBookmarkError(exc instanceof Error ? exc.message : 'Bookmarks fetch failed')
+    }
+  }, [])
+
+  const loadCachedBrief = useCallback(async (opportunity: Opportunity) => {
+    if (!opportunity.source_reference) {
+      setDocumentBrief(null)
+      return
+    }
+    setDocumentBriefLoading(true)
+    setDocumentBriefError(null)
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief`,
+      )
+      if (!res.ok) {
+        throw new Error(`AI brief API returned ${res.status}`)
+      }
+      const data = (await res.json()) as DocumentBriefResponse
+      setDocumentBrief(data.brief ?? null)
+    } catch (exc) {
+      setDocumentBrief(null)
+      setDocumentBriefError(exc instanceof Error ? exc.message : 'AI brief fetch failed')
+    } finally {
+      setDocumentBriefLoading(false)
     }
   }, [])
 
@@ -534,6 +576,11 @@ function App() {
   }
 
   const openDetails = async (opportunity: Opportunity) => {
+    setDocumentBrief(null)
+    setDocumentBriefError(null)
+    setDocumentBriefLoading(false)
+    setDocumentBriefGenerating(false)
+
     if (!opportunity.source_reference) {
       setDetailsOpportunity(opportunity)
       setDetails(null)
@@ -553,6 +600,7 @@ function App() {
         throw new Error(`Details API returned ${res.status}`)
       }
       setDetails((await res.json()) as OpportunityDetails)
+      void loadCachedBrief(opportunity)
     } catch (exc) {
       setDetailsError(exc instanceof Error ? exc.message : 'Details fetch failed')
     } finally {
@@ -565,6 +613,10 @@ function App() {
     setDetails(null)
     setDetailsError(null)
     setDetailsLoading(false)
+    setDocumentBrief(null)
+    setDocumentBriefError(null)
+    setDocumentBriefLoading(false)
+    setDocumentBriefGenerating(false)
   }
 
   const toggleSource = (source: SourceName) => {
@@ -613,6 +665,34 @@ function App() {
       setBookmarks(data.bookmarks)
     } catch (exc) {
       setBookmarkError(exc instanceof Error ? exc.message : 'Bookmark update failed')
+    }
+  }
+
+  const generateDocumentBrief = async (opportunity: Opportunity) => {
+    if (!opportunity.source_reference) {
+      setDocumentBriefError('No source reference available for this opportunity.')
+      return
+    }
+    setDocumentBriefGenerating(true)
+    setDocumentBriefError(null)
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief`,
+        { method: 'POST' },
+      )
+      if (!res.ok) {
+        throw new Error(`AI brief API returned ${res.status}`)
+      }
+      const data = (await res.json()) as DocumentBriefResponse
+      if (data.brief) {
+        setDocumentBrief(data.brief)
+      } else {
+        setDocumentBriefError(data.message ?? 'No AI brief was generated.')
+      }
+    } catch (exc) {
+      setDocumentBriefError(exc instanceof Error ? exc.message : 'AI brief generation failed')
+    } finally {
+      setDocumentBriefGenerating(false)
     }
   }
 
@@ -770,11 +850,6 @@ function App() {
             </div>
           </div>
 
-          <label className={`ai-toggle ${aiEnabled ? '' : 'disabled'}`}>
-            <input type="checkbox" checked={useAi && aiEnabled} disabled={!aiEnabled} onChange={(event) => setUseAi(event.target.checked)} />
-            <Cpu size={17} aria-hidden="true" />
-            <span>{aiEnabled ? 'AI enrichment' : 'AI off μέχρι να μπει key'}</span>
-          </label>
           </div>
 
           <div className="sidebar-actions">
@@ -794,7 +869,6 @@ function App() {
           </div>
           <div className="topbar-actions">
             <StatusPill ok={!error} label={error ? 'API issue' : 'API live'} />
-            <StatusPill ok={aiEnabled} label={aiEnabled ? 'AI ready' : 'Rules mode'} />
           </div>
         </header>
 
@@ -868,10 +942,15 @@ function App() {
               ) : null}
               {shortlistItems.length ? (
                 shortlistItems.map((item) => (
-                  <button className="shortlist-item" key={item.id} onClick={() => void toggleBookmark(item)} type="button">
-                    <span>{item.fit_score}</span>
-                    {item.title}
-                  </button>
+                  <div className="shortlist-entry" key={item.id}>
+                    <button className="shortlist-item" onClick={() => void openDetails(item)} type="button">
+                      <span>{item.fit_score}</span>
+                      {item.title}
+                    </button>
+                    <button className="shortlist-remove" onClick={() => void toggleBookmark(item)} type="button" aria-label="Remove from shortlist">
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  </div>
                 ))
               ) : (
                 <p className="muted">Pin promising tenders as you scan.</p>
@@ -917,6 +996,11 @@ function App() {
         details={details}
         loading={detailsLoading}
         error={detailsError}
+        brief={documentBrief}
+        briefLoading={documentBriefLoading}
+        briefGenerating={documentBriefGenerating}
+        briefError={documentBriefError}
+        onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
     </div>
@@ -1041,7 +1125,7 @@ function OpportunityRow({
           </div>
         </div>
 
-        <p className="summary">{opportunity.ai_summary ?? opportunity.summary}</p>
+        <p className="summary">{opportunity.summary}</p>
 
         <div className="meta-grid">
           <Meta icon={Building2} label="Buyer" value={opportunity.buyer} />
@@ -1165,12 +1249,22 @@ function DetailsDrawer({
   details,
   loading,
   error,
+  brief,
+  briefLoading,
+  briefGenerating,
+  briefError,
+  onGenerateBrief,
   onClose,
 }: {
   opportunity: Opportunity | null
   details: OpportunityDetails | null
   loading: boolean
   error: string | null
+  brief: DocumentBrief | null
+  briefLoading: boolean
+  briefGenerating: boolean
+  briefError: string | null
+  onGenerateBrief: () => void
   onClose: () => void
 }) {
   if (!opportunity) {
@@ -1235,6 +1329,15 @@ function DetailsDrawer({
               <GuidancePanel guidance={details.guidance} />
             ) : null}
 
+            <DocumentBriefPanel
+              brief={brief}
+              loading={briefLoading}
+              generating={briefGenerating}
+              error={briefError}
+              canGenerate={Boolean(opportunity.source_reference)}
+              onGenerate={onGenerateBrief}
+            />
+
             <section className="drawer-section">
               <h4>Documents</h4>
               {documents.length ? (
@@ -1269,6 +1372,99 @@ function DetailsDrawer({
           </div>
         ) : null}
       </aside>
+    </div>
+  )
+}
+
+function DocumentBriefPanel({
+  brief,
+  loading,
+  generating,
+  error,
+  canGenerate,
+  onGenerate,
+}: {
+  brief: DocumentBrief | null
+  loading: boolean
+  generating: boolean
+  error: string | null
+  canGenerate: boolean
+  onGenerate: () => void
+}) {
+  const ActionIcon = generating ? Loader2 : Sparkles
+
+  return (
+    <section className="drawer-section ai-brief-section">
+      <div className="ai-brief-header">
+        <div>
+          <h4>AI document brief</h4>
+          <p>Runs only when you press the pink button. Saved briefs load from the database.</p>
+        </div>
+        <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating || Boolean(brief)}>
+          <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
+          {brief ? 'Saved in DB' : generating ? 'Reading docs...' : 'Generate brief'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="ai-brief-state">
+          <Loader2 className="spin" size={16} aria-hidden="true" />
+          <span>Checking saved brief...</span>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="ai-brief-error">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {!loading && !brief ? (
+        <p className="muted">No saved brief yet. Press the pink button when you want AI to read the available documents.</p>
+      ) : null}
+
+      {brief ? (
+        <div className="ai-brief-content">
+          <div className="brief-verdict-row">
+            <span className={`brief-verdict ${brief.actionable}`}>{brief.actionable}</span>
+            <strong>{brief.recommendation}</strong>
+          </div>
+          <p>{brief.project_summary}</p>
+
+          <div className="brief-grid">
+            <BriefBlock title="Deadline / submission" items={[brief.deadline_submission]} />
+            <BriefBlock title="Required documents" items={brief.required_documents} empty="Not identified in the readable text." />
+            <BriefBlock title="Technical requirements" items={brief.technical_requirements} empty="Not identified in the readable text." />
+            <BriefBlock title="Red flags" items={brief.red_flags} empty="No red flags identified by the brief." />
+            <BriefBlock title="Next steps" items={brief.next_steps} empty="Open the official source documents first." />
+          </div>
+
+          <div className="brief-meta">
+            <span>{brief.cached ? 'Saved brief' : 'New brief'}</span>
+            <span>{formatDateTime(brief.generated_at)}</span>
+            {brief.model ? <span>{brief.model}</span> : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function BriefBlock({ title, items, empty }: { title: string; items: string[]; empty?: string }) {
+  const visibleItems = items.filter(Boolean)
+  return (
+    <div className="brief-block">
+      <h5>{title}</h5>
+      {visibleItems.length ? (
+        <ul>
+          {visibleItems.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>{empty ?? 'Unknown'}</p>
+      )}
     </div>
   )
 }
@@ -1519,6 +1715,23 @@ function formatDate(value?: string | null) {
     return 'Unknown'
   }
   return new Intl.DateTimeFormat('el-GR', { day: '2-digit', month: 'short', year: 'numeric' }).format(parseDateOnly(value))
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return 'Unknown'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return formatDate(value)
+  }
+  return new Intl.DateTimeFormat('el-GR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
 }
 
 function formatPublishedDate(value?: string | null) {

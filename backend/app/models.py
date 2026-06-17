@@ -77,7 +77,6 @@ class ProcurementSearchRequest(BaseModel):
     show_all_fetched: bool = False
     sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted", "demo"])
     include_demo_when_empty: bool = True
-    use_ai: bool = False
     page: int = Field(default=0, ge=0)
     limit: int = Field(default=40, ge=1, le=100)
 
@@ -117,7 +116,6 @@ class Opportunity(BaseModel):
     red_flags: list[str] = Field(default_factory=list)
     recommendation: str = "Monitor"
     package_match: str = "Custom software"
-    ai_summary: str | None = None
     source_payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -183,7 +181,6 @@ class SearchResponse(BaseModel):
     opportunities: list[Opportunity]
     source_runs: list[SourceRun]
     stats: dict[str, Any]
-    ai_enabled: bool
 
 
 class DailyActivity(BaseModel):
@@ -223,10 +220,36 @@ class BookmarkUpsertRequest(BaseModel):
     opportunity: Opportunity
 
 
+DocumentBriefVerdict = Literal["yes", "no", "maybe", "unknown"]
+
+
+class DocumentBrief(BaseModel):
+    source: SourceName
+    reference: str
+    project_summary: str
+    actionable: DocumentBriefVerdict = "unknown"
+    deadline_submission: str = "Unknown"
+    required_documents: list[str] = Field(default_factory=list)
+    technical_requirements: list[str] = Field(default_factory=list)
+    red_flags: list[str] = Field(default_factory=list)
+    recommendation: str = "Maybe"
+    next_steps: list[str] = Field(default_factory=list)
+    source_documents: list[DocumentLink] = Field(default_factory=list)
+    generated_at: datetime
+    model: str | None = None
+    cached: bool = False
+
+
+class DocumentBriefResponse(BaseModel):
+    brief: DocumentBrief | None = None
+    cached: bool = False
+    message: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     app: str
-    ai_enabled: bool
+    brief_ai_enabled: bool
     sources: dict[str, str]
 
 

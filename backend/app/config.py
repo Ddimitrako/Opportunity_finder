@@ -4,6 +4,9 @@ from pathlib import Path
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
     app_name: str = "Opportunity Finder API"
@@ -23,7 +26,12 @@ class Settings(BaseSettings):
     bookmark_db_path: Path = Path("data/opportunity_finder.sqlite3")
 
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.local", "backend/.env", "backend/.env.local"),
+        env_file=(
+            PROJECT_ROOT / ".env",
+            PROJECT_ROOT / ".env.local",
+            BACKEND_DIR / ".env",
+            BACKEND_DIR / ".env.local",
+        ),
         env_file_encoding="utf-8",
         extra="ignore",
     )
