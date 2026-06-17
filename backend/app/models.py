@@ -246,6 +246,76 @@ class DocumentBriefResponse(BaseModel):
     message: str | None = None
 
 
+class BudgetProfile(BaseModel):
+    count: int = 0
+    min: float | None = None
+    max: float | None = None
+    average: float | None = None
+    median: float | None = None
+    typical_range: str = "Unknown"
+
+
+class BuyerOpportunitySample(BaseModel):
+    id: str
+    title: str
+    source: SourceName
+    source_label: str
+    budget: float | None = None
+    published_at: date | None = None
+    deadline: date | None = None
+    cpv_codes: list[str] = Field(default_factory=list)
+    fit_score: int = 0
+    package_match: str | None = None
+    url: str | None = None
+
+
+class DiavgeiaDecisionSignal(BaseModel):
+    source_label: str = "Diavgeia"
+    ada: str | None = None
+    subject: str
+    decision_type: str | None = None
+    published_at: date | None = None
+    amount: float | None = None
+    currency: str = "EUR"
+    winner_name: str | None = None
+    cpv_codes: list[str] = Field(default_factory=list)
+    url: str | None = None
+    document_url: str | None = None
+    similar_to_software: bool = False
+
+
+class BuyerIntelligenceRequest(BaseModel):
+    buyer: str = Field(min_length=1, max_length=240)
+    opportunity: Opportunity | None = None
+    market_opportunities: list[Opportunity] = Field(default_factory=list)
+    diavgeia_limit: int = Field(default=8, ge=0, le=30)
+    history_days: int = Field(default=720, ge=0, le=1800)
+    history_limit: int = Field(default=40, ge=0, le=120)
+
+
+class BuyerIntelligenceResponse(BaseModel):
+    buyer: str
+    generated_at: datetime
+    market_window_count: int
+    visible_buyer_opportunity_count: int
+    history_opportunity_count: int = 0
+    buyer_opportunity_count: int
+    source_counts: dict[SourceName, int] = Field(default_factory=dict)
+    budget_profile: BudgetProfile
+    small_software_count: int = 0
+    similar_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
+    recent_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
+    has_similar_procurement: bool = False
+    khmdhs_history_status: Literal["ok", "error", "skipped"] = "skipped"
+    khmdhs_history_message: str | None = None
+    diavgeia_status: Literal["ok", "error", "skipped"] = "skipped"
+    diavgeia_message: str | None = None
+    diavgeia_decisions: list[DiavgeiaDecisionSignal] = Field(default_factory=list)
+    winner_signals: list[DiavgeiaDecisionSignal] = Field(default_factory=list)
+    confidence_notes: list[str] = Field(default_factory=list)
+    insight_flags: list[str] = Field(default_factory=list)
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     app: str

@@ -104,7 +104,7 @@ def extract_records(payload: Any) -> list[dict[str, Any]]:
         return [item for item in payload if isinstance(item, dict)]
     if not isinstance(payload, dict):
         return []
-    for key in ("content", "notices", "results", "items", "data", "records"):
+    for key in ("content", "notices", "decisions", "results", "items", "data", "records"):
         value = payload.get(key)
         if isinstance(value, list):
             return [item for item in value if isinstance(item, dict)]

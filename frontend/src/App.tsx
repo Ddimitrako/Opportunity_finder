@@ -59,6 +59,8 @@ type Opportunity = {
   url?: string | null
   platform_label?: string | null
   source_reference?: string | null
+  status_label?: string | null
+  notice_type?: string | null
   summary: string
   matched_keywords: string[]
   fit_score: number
@@ -67,6 +69,7 @@ type Opportunity = {
   red_flags: string[]
   recommendation: string
   package_match: string
+  source_payload?: Record<string, unknown>
 }
 
 type DocumentLink = {
@@ -137,6 +140,67 @@ type DocumentBriefResponse = {
   brief?: DocumentBrief | null
   cached: boolean
   message?: string | null
+}
+
+type BudgetProfile = {
+  count: number
+  min?: number | null
+  max?: number | null
+  average?: number | null
+  median?: number | null
+  typical_range: string
+}
+
+type BuyerOpportunitySample = {
+  id: string
+  title: string
+  source: SourceName
+  source_label: string
+  budget?: number | null
+  published_at?: string | null
+  deadline?: string | null
+  cpv_codes: string[]
+  fit_score: number
+  package_match?: string | null
+  url?: string | null
+}
+
+type DiavgeiaDecisionSignal = {
+  source_label: string
+  ada?: string | null
+  subject: string
+  decision_type?: string | null
+  published_at?: string | null
+  amount?: number | null
+  currency: string
+  winner_name?: string | null
+  cpv_codes: string[]
+  url?: string | null
+  document_url?: string | null
+  similar_to_software: boolean
+}
+
+type BuyerIntelligenceResponse = {
+  buyer: string
+  generated_at: string
+  market_window_count: number
+  visible_buyer_opportunity_count: number
+  history_opportunity_count: number
+  buyer_opportunity_count: number
+  source_counts: Partial<Record<SourceName, number>>
+  budget_profile: BudgetProfile
+  small_software_count: number
+  similar_opportunities: BuyerOpportunitySample[]
+  recent_opportunities: BuyerOpportunitySample[]
+  has_similar_procurement: boolean
+  khmdhs_history_status: 'ok' | 'error' | 'skipped'
+  khmdhs_history_message?: string | null
+  diavgeia_status: 'ok' | 'error' | 'skipped'
+  diavgeia_message?: string | null
+  diavgeia_decisions: DiavgeiaDecisionSignal[]
+  winner_signals: DiavgeiaDecisionSignal[]
+  confidence_notes: string[]
+  insight_flags: string[]
 }
 
 type SearchResponse = {
@@ -376,8 +440,12 @@ function App() {
   const [documentBriefLoading, setDocumentBriefLoading] = useState(false)
   const [documentBriefGenerating, setDocumentBriefGenerating] = useState(false)
   const [documentBriefError, setDocumentBriefError] = useState<string | null>(null)
+  const [buyerIntelligence, setBuyerIntelligence] = useState<BuyerIntelligenceResponse | null>(null)
+  const [buyerIntelligenceLoading, setBuyerIntelligenceLoading] = useState(false)
+  const [buyerIntelligenceError, setBuyerIntelligenceError] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([])
   const [bookmarkError, setBookmarkError] = useState<string | null>(null)
+  const [guidanceByOpportunityId, setGuidanceByOpportunityId] = useState<Record<string, OpportunityGuidance>>({})
 
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
   const cpvGroups = useMemo(() => buildCpvGroups(cpvOptions), [cpvOptions])
@@ -536,6 +604,34 @@ function App() {
     }
   }, [])
 
+  const loadBuyerIntelligence = useCallback(async (opportunity: Opportunity, marketOpportunities: Opportunity[]) => {
+    setBuyerIntelligenceLoading(true)
+    setBuyerIntelligenceError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/buyers/intelligence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyer: opportunity.buyer,
+          opportunity,
+          market_opportunities: marketOpportunities,
+          diavgeia_limit: 8,
+          history_days: 720,
+          history_limit: 40,
+        }),
+      })
+      if (!res.ok) {
+        throw new Error(`Buyer intelligence API returned ${res.status}`)
+      }
+      setBuyerIntelligence((await res.json()) as BuyerIntelligenceResponse)
+    } catch (exc) {
+      setBuyerIntelligence(null)
+      setBuyerIntelligenceError(exc instanceof Error ? exc.message : 'Buyer intelligence fetch failed')
+    } finally {
+      setBuyerIntelligenceLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     async function boot() {
       try {
@@ -580,6 +676,9 @@ function App() {
     setDocumentBriefError(null)
     setDocumentBriefLoading(false)
     setDocumentBriefGenerating(false)
+    setBuyerIntelligence(null)
+    setBuyerIntelligenceError(null)
+    setBuyerIntelligenceLoading(false)
 
     if (!opportunity.source_reference) {
       setDetailsOpportunity(opportunity)
@@ -599,8 +698,18 @@ function App() {
       if (!res.ok) {
         throw new Error(`Details API returned ${res.status}`)
       }
-      setDetails((await res.json()) as OpportunityDetails)
+      const nextDetails = (await res.json()) as OpportunityDetails
+      setDetails(nextDetails)
+      if (nextDetails.guidance) {
+        const nextGuidance = nextDetails.guidance
+        setGuidanceByOpportunityId((current) => ({
+          ...current,
+          [opportunity.id]: nextGuidance,
+        }))
+      }
+      const intelligenceOpportunity = enrichOpportunityFromDetails(opportunity, nextDetails)
       void loadCachedBrief(opportunity)
+      void loadBuyerIntelligence(intelligenceOpportunity, response?.opportunities ?? [])
     } catch (exc) {
       setDetailsError(exc instanceof Error ? exc.message : 'Details fetch failed')
     } finally {
@@ -617,6 +726,9 @@ function App() {
     setDocumentBriefError(null)
     setDocumentBriefLoading(false)
     setDocumentBriefGenerating(false)
+    setBuyerIntelligence(null)
+    setBuyerIntelligenceError(null)
+    setBuyerIntelligenceLoading(false)
   }
 
   const toggleSource = (source: SourceName) => {
@@ -982,6 +1094,7 @@ function App() {
               <OpportunityRow
                 key={opportunity.id}
                 opportunity={opportunity}
+                guidance={guidanceByOpportunityId[opportunity.id]}
                 pinned={bookmarkedIds.has(opportunity.id)}
                 onTogglePin={() => void toggleBookmark(opportunity)}
                 onOpenDetails={() => void openDetails(opportunity)}
@@ -1000,6 +1113,9 @@ function App() {
         briefLoading={documentBriefLoading}
         briefGenerating={documentBriefGenerating}
         briefError={documentBriefError}
+        buyerIntelligence={buyerIntelligence}
+        buyerIntelligenceLoading={buyerIntelligenceLoading}
+        buyerIntelligenceError={buyerIntelligenceError}
         onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
@@ -1071,11 +1187,13 @@ function SmartCalendarPanel({
 
 function OpportunityRow({
   opportunity,
+  guidance,
   pinned,
   onTogglePin,
   onOpenDetails,
 }: {
   opportunity: Opportunity
+  guidance?: OpportunityGuidance
   pinned: boolean
   onTogglePin: () => void
   onOpenDetails: () => void
@@ -1083,7 +1201,7 @@ function OpportunityRow({
   const bandClass = bandToClass(opportunity.fit_score)
   const daysLeft = opportunity.deadline ? daysUntil(opportunity.deadline) : null
   const window = actionWindow(opportunity)
-  const stage = rowLifecycleStage(opportunity)
+  const stage = rowLifecycleStage(opportunity, guidance)
   const PinIcon = pinned ? BookmarkCheck : BookmarkPlus
 
   return (
@@ -1253,6 +1371,9 @@ function DetailsDrawer({
   briefLoading,
   briefGenerating,
   briefError,
+  buyerIntelligence,
+  buyerIntelligenceLoading,
+  buyerIntelligenceError,
   onGenerateBrief,
   onClose,
 }: {
@@ -1264,6 +1385,9 @@ function DetailsDrawer({
   briefLoading: boolean
   briefGenerating: boolean
   briefError: string | null
+  buyerIntelligence: BuyerIntelligenceResponse | null
+  buyerIntelligenceLoading: boolean
+  buyerIntelligenceError: string | null
   onGenerateBrief: () => void
   onClose: () => void
 }) {
@@ -1329,6 +1453,8 @@ function DetailsDrawer({
               <GuidancePanel guidance={details.guidance} />
             ) : null}
 
+            <BuyerIntelligencePanel intelligence={buyerIntelligence} loading={buyerIntelligenceLoading} error={buyerIntelligenceError} />
+
             <DocumentBriefPanel
               brief={brief}
               loading={briefLoading}
@@ -1372,6 +1498,145 @@ function DetailsDrawer({
           </div>
         ) : null}
       </aside>
+    </div>
+  )
+}
+
+function BuyerIntelligencePanel({
+  intelligence,
+  loading,
+  error,
+}: {
+  intelligence: BuyerIntelligenceResponse | null
+  loading: boolean
+  error: string | null
+}) {
+  return (
+    <section className="drawer-section buyer-intel-section">
+      <div className="buyer-intel-header">
+        <div>
+          <h4>Buyer intelligence</h4>
+          <p>Buyer history from visible rows, KIMDIS historical lookup, and best-effort award signals.</p>
+        </div>
+        {intelligence ? (
+          <div className="buyer-status-pills">
+            <span className={`source-status-pill ${intelligence.khmdhs_history_status}`}>KIMDIS history {intelligence.khmdhs_history_status}</span>
+            <span className={`source-status-pill ${intelligence.diavgeia_status}`}>Diavgeia {intelligence.diavgeia_status}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {loading ? (
+        <div className="buyer-intel-state">
+          <Loader2 className="spin" size={16} aria-hidden="true" />
+          <span>Checking buyer history...</span>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="buyer-intel-error">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {!loading && !error && !intelligence ? <p className="muted">No buyer intelligence loaded yet.</p> : null}
+
+      {intelligence ? (
+        <div className="buyer-intel-content">
+          <div className="buyer-metrics">
+            <BuyerMetric label="Buyer opportunities" value={String(intelligence.buyer_opportunity_count)} />
+            <BuyerMetric label="KIMDIS history" value={String(intelligence.history_opportunity_count)} />
+            <BuyerMetric label="Typical budget" value={intelligence.budget_profile.typical_range} />
+            <BuyerMetric label="Small software" value={String(intelligence.small_software_count)} />
+            <BuyerMetric label="Similar past work" value={intelligence.has_similar_procurement ? 'Yes' : 'Not found'} />
+          </div>
+
+          {intelligence.insight_flags.length ? (
+            <div className="buyer-flags">
+              {intelligence.insight_flags.map((flag) => (
+                <span key={flag}>{flag}</span>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="buyer-intel-grid">
+            <BuyerSampleList title="Recent visible opportunities" items={intelligence.recent_opportunities} />
+            <BuyerSampleList title="Similar procurements" items={intelligence.similar_opportunities} empty="No similar procurement found in visible or KIMDIS historical records." />
+          </div>
+
+          <DiavgeiaSignals intelligence={intelligence} />
+
+          {intelligence.confidence_notes.length ? (
+            <div className="confidence-notes">
+              <h5>Confidence notes</h5>
+              <ul>
+                {intelligence.confidence_notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function BuyerMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="buyer-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  )
+}
+
+function BuyerSampleList({ title, items, empty = 'No visible opportunities.' }: { title: string; items: BuyerOpportunitySample[]; empty?: string }) {
+  return (
+    <div className="buyer-list-block">
+      <h5>{title}</h5>
+      {items.length ? (
+        <div className="buyer-sample-list">
+          {items.map((item) => (
+            <a className="buyer-sample" href={item.url ?? '#'} target={item.url ? '_blank' : undefined} rel="noreferrer" key={item.id}>
+              <span>{item.source_label}</span>
+              <strong>{item.title}</strong>
+              <small>{[formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, item.package_match].filter(Boolean).join(' · ')}</small>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">{empty}</p>
+      )}
+    </div>
+  )
+}
+
+function DiavgeiaSignals({ intelligence }: { intelligence: BuyerIntelligenceResponse }) {
+  const signals = intelligence.winner_signals.length ? intelligence.winner_signals : intelligence.diavgeia_decisions.slice(0, 3)
+  return (
+    <div className="diavgeia-block">
+      <h5>Award / winner signals</h5>
+      {intelligence.khmdhs_history_message ? <p className="muted">{intelligence.khmdhs_history_message}</p> : null}
+      {intelligence.diavgeia_message ? <p className="muted">{intelligence.diavgeia_message}</p> : null}
+      {signals.length ? (
+        <div className="diavgeia-list">
+          {signals.map((decision) => (
+            <a className="diavgeia-item" href={decision.document_url ?? decision.url ?? '#'} target={decision.document_url || decision.url ? '_blank' : undefined} rel="noreferrer" key={`${decision.ada}-${decision.subject}`}>
+              <span>{[decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision'].filter(Boolean).join(' · ')}</span>
+              <strong>{decision.subject}</strong>
+              <small>
+                {[decision.winner_name, formatCurrency(decision.amount), decision.published_at ? formatDate(decision.published_at) : null, decision.similar_to_software ? 'software-like' : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </small>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">No award/winner signal returned from KIMDIS or Diavgeia for this lookup.</p>
+      )}
     </div>
   )
 }
@@ -1501,6 +1766,39 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
   }
 
   return <NestedSection title="Source payload" value={details.raw} />
+}
+
+function enrichOpportunityFromDetails(opportunity: Opportunity, details: OpportunityDetails): Opportunity {
+  if (details.source !== 'khmdhs') {
+    return opportunity
+  }
+  const metadata = asRecord(details.metadata)
+  const rawMetadata = asRecord(asRecord(details.raw).metadata)
+  const metadataOrganization = asRecord(metadata.organization)
+  const rawOrganization = asRecord(rawMetadata.organization)
+  const organizationKey = firstString(metadataOrganization.key, rawOrganization.key)
+  if (!organizationKey) {
+    return opportunity
+  }
+  return {
+    ...opportunity,
+    source_payload: {
+      ...(opportunity.source_payload ?? {}),
+      organizationKey,
+    },
+  }
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+    if (typeof value === 'number') {
+      return String(value)
+    }
+  }
+  return null
 }
 
 function FieldTable({ title, data, skip = [] }: { title: string; data: Record<string, unknown>; skip?: string[] }) {
@@ -1772,11 +2070,21 @@ function actionWindow(opportunity: Opportunity) {
   return { label: 'Stale', detail: `${age}d old`, tone: 'stale' }
 }
 
-function rowLifecycleStage(opportunity: Opportunity) {
+function rowLifecycleStage(opportunity: Opportunity, guidance?: OpportunityGuidance) {
+  if (guidance) {
+    return guidanceLifecycleStage(guidance)
+  }
+
   const reference = opportunity.source_reference ?? ''
-  const text = `${opportunity.procedure_type ?? ''} ${opportunity.title} ${opportunity.summary}`.toLowerCase()
+  const text = `${opportunity.procedure_type ?? ''} ${opportunity.title} ${opportunity.summary} ${opportunity.status_label ?? ''} ${opportunity.notice_type ?? ''}`.toLowerCase()
 
   if (opportunity.source === 'khmdhs') {
+    if (text.includes('έγκριση') || text.includes('εγκρι') || text.includes('approved') || text.includes('approval')) {
+      return { label: 'Εγκεκριμένο Αίτημα', tone: 'watch' }
+    }
+    if (text.includes('διακήρυξη') || text.includes('πρόσκληση') || text.includes('notice') || text.includes('tender')) {
+      return { label: 'Διακήρυξη', tone: 'action' }
+    }
     if (reference.includes('REQ')) return { label: 'Αίτημα', tone: 'watch' }
     if (reference.includes('PROC')) return { label: 'Διακήρυξη', tone: 'action' }
     if (reference.includes('AWRD')) return { label: 'Ανάθεση', tone: 'closed' }
@@ -1794,6 +2102,22 @@ function rowLifecycleStage(opportunity: Opportunity) {
   }
 
   return { label: 'Example', tone: 'unknown' }
+}
+
+function guidanceLifecycleStage(guidance: OpportunityGuidance) {
+  const stage = guidance.current_stage
+  const label = guidance.current_stage_label || 'Unknown'
+
+  if (guidance.is_actionable || stage === 'notice' || stage === 'competition' || stage === 'submission') {
+    return { label, tone: 'action' }
+  }
+  if (stage === 'award' || stage === 'contract' || stage === 'payment' || stage === 'result' || stage === 'modification') {
+    return { label, tone: 'closed' }
+  }
+  if (stage === 'request' || stage === 'approved_request' || stage === 'planning') {
+    return { label, tone: 'watch' }
+  }
+  return { label, tone: 'unknown' }
 }
 
 function daysUntil(value: string) {

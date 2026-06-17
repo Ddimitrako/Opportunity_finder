@@ -8,6 +8,8 @@ from app.models import (
     BookmarkListResponse,
     BookmarkStatusResponse,
     BookmarkUpsertRequest,
+    BuyerIntelligenceRequest,
+    BuyerIntelligenceResponse,
     ConfigResponse,
     DEFAULT_CPV_CODES,
     DEFAULT_KEYWORDS,
@@ -21,6 +23,7 @@ from app.models import (
 from app.scoring import PACKAGES
 from app.services.bookmarks import BookmarkService
 from app.services.briefs import DocumentBriefService
+from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 
@@ -54,6 +57,10 @@ def get_bookmark_service(settings: Settings = Depends(get_settings)) -> Bookmark
 
 def get_brief_service(settings: Settings = Depends(get_settings)) -> DocumentBriefService:
     return DocumentBriefService(settings)
+
+
+def get_buyer_intelligence_service(settings: Settings = Depends(get_settings)) -> BuyerIntelligenceService:
+    return BuyerIntelligenceService(settings)
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -98,6 +105,14 @@ async def opportunity_activity(
     service: OpportunityService = Depends(get_service),
 ) -> ActivityResponse:
     return await service.activity(request)
+
+
+@app.post("/api/buyers/intelligence", response_model=BuyerIntelligenceResponse)
+async def buyer_intelligence(
+    request: BuyerIntelligenceRequest,
+    service: BuyerIntelligenceService = Depends(get_buyer_intelligence_service),
+) -> BuyerIntelligenceResponse:
+    return await service.analyze(request)
 
 
 @app.get("/api/bookmarks", response_model=BookmarkListResponse)

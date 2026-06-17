@@ -74,9 +74,11 @@ class KhmdhsClient:
         summary = truncate(" ".join(part for part in summary_parts if part), 320)
         url = _extract_platform_url(record)
         if not url and reference:
-            url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/request/attachment/{reference}"
+            endpoint = _attachment_endpoint(reference)
+            url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/{endpoint}/attachment/{reference}"
         status_label = first_text(record.get("status") or record.get("state") or record.get("approvalStatus"))
         notice_type = first_text(record.get("noticeType") or record.get("actType") or record.get("documentType"))
+        organization_key = _extract_key(record.get("organization"))
         return Opportunity(
             id=f"khmdhs-{stable_id(reference, title, buyer)}",
             source="khmdhs",
@@ -97,7 +99,7 @@ class KhmdhsClient:
             notice_type=notice_type or None,
             summary=summary,
             raw_text=" ".join(part for part in (summary, status_label, notice_type) if part),
-            source_payload={"referenceNumber": reference, "fetchedAt": int(time.time())},
+            source_payload={"referenceNumber": reference, "organizationKey": organization_key, "fetchedAt": int(time.time())},
         )
 
 
@@ -114,3 +116,22 @@ def _extract_platform_url(record: dict[str, Any]) -> str | None:
             if text.startswith("http"):
                 return text
     return None
+
+
+def _extract_key(value: Any) -> str | None:
+    if isinstance(value, dict):
+        text = first_text(value.get("key") or value.get("id"))
+        return text or None
+    return None
+
+
+def _attachment_endpoint(reference: str) -> str:
+    if "PROC" in reference:
+        return "notice"
+    if "AWRD" in reference:
+        return "auction"
+    if "SYMV" in reference:
+        return "contract"
+    if "PAY" in reference:
+        return "payment"
+    return "request"

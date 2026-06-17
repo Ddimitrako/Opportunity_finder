@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     ted_base_url: AnyHttpUrl = "https://api.ted.europa.eu"
     ted_timeout_seconds: float = 18
 
+    diavgeia_base_url: AnyHttpUrl = "https://diavgeia.gov.gr/opendata"
+    diavgeia_timeout_seconds: float = 18
+
     openai_api_key: str | None = Field(default=None, repr=False)
     openai_model: str = "gpt-4.1-mini"
 
