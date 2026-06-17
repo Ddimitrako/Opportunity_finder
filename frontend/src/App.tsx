@@ -1391,6 +1391,27 @@ function DetailsDrawer({
   onGenerateBrief: () => void
   onClose: () => void
 }) {
+  useEffect(() => {
+    if (!opportunity) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [opportunity, onClose])
+
   if (!opportunity) {
     return null
   }
@@ -1400,8 +1421,8 @@ function DetailsDrawer({
   const primaryLinkLabel = details?.source === 'khmdhs' ? 'Άνοιγμα βασικού εγγράφου ΚΗΜΔΗΣ' : 'Άνοιγμα record στην πλατφόρμα'
 
   return (
-    <div className="drawer-backdrop" role="presentation">
-      <aside className="details-drawer" aria-label="Opportunity details">
+    <div className="drawer-backdrop" role="presentation" onClick={onClose}>
+      <aside className="details-drawer" role="dialog" aria-modal="true" aria-label="Opportunity details" onClick={(event) => event.stopPropagation()}>
         <div className="drawer-header">
           <div>
             <p className="eyebrow">{opportunity.source_label} details</p>
@@ -1428,66 +1449,75 @@ function DetailsDrawer({
 
         {!loading && !error ? (
           <div className="drawer-content">
-            <section className="drawer-section">
+            <section className="drawer-section details-overview-section">
               <h4>Available information</h4>
-              <div className="details-grid">
-                <DetailItem label="Reference" value={details?.reference ?? opportunity.source_reference ?? 'N/A'} />
-                <DetailItem label="Source" value={opportunity.source_label} />
-                <DetailItem label="Buyer" value={String(metadata.buyer ?? metadata.organization ?? opportunity.buyer ?? 'N/A')} />
-                <DetailItem label="Published" value={String(metadata.publicationDate ?? metadata.submissionDate ?? opportunity.published_at ?? 'N/A')} />
-                <DetailItem label="Deadline" value={String(metadata.deadline ?? metadata.procurementDeliveryDate ?? opportunity.deadline ?? 'N/A')} />
-                <DetailItem label="Type" value={String(metadata.noticeType ?? metadata.procedureType ?? opportunity.procedure_type ?? 'N/A')} />
-                <DetailItem label="Budget" value={formatCurrency(opportunity.budget)} />
-                <DetailItem label="CPV" value={opportunity.cpv_codes.join(', ') || 'N/A'} />
+              <div className="details-overview-grid">
+                <div className="details-grid">
+                  <DetailItem label="Reference" value={details?.reference ?? opportunity.source_reference ?? 'N/A'} />
+                  <DetailItem label="Source" value={opportunity.source_label} />
+                  <DetailItem label="Buyer" value={formatSourceValue(metadata.buyer ?? metadata.organization ?? opportunity.buyer ?? 'N/A')} />
+                  <DetailItem label="Published" value={String(metadata.publicationDate ?? metadata.submissionDate ?? opportunity.published_at ?? 'N/A')} />
+                  <DetailItem label="Deadline" value={String(metadata.deadline ?? metadata.procurementDeliveryDate ?? opportunity.deadline ?? 'N/A')} />
+                  <DetailItem label="Type" value={String(metadata.noticeType ?? metadata.procedureType ?? opportunity.procedure_type ?? 'N/A')} />
+                  <DetailItem label="Budget" value={formatCurrency(opportunity.budget)} />
+                  <CollapsibleCpvList label="CPV" value={opportunity.cpv_codes} />
+                </div>
+                <div className="details-summary-panel">
+                  <h5>Summary</h5>
+                  <p className="drawer-summary">{details?.summary || opportunity.summary}</p>
+                  {details?.platform_url ? (
+                    <a className="drawer-primary-link" href={details.platform_url} target="_blank" rel="noreferrer">
+                      {primaryLinkLabel}
+                      <ExternalLink size={15} aria-hidden="true" />
+                    </a>
+                  ) : null}
+                </div>
               </div>
-              {details?.summary ? <p className="drawer-summary">{details.summary}</p> : null}
-              {details?.platform_url ? (
-                <a className="drawer-primary-link" href={details.platform_url} target="_blank" rel="noreferrer">
-                  {primaryLinkLabel}
-                  <ExternalLink size={15} aria-hidden="true" />
-                </a>
-              ) : null}
             </section>
 
             {details?.guidance ? (
               <GuidancePanel guidance={details.guidance} />
             ) : null}
 
-            <BuyerIntelligencePanel intelligence={buyerIntelligence} loading={buyerIntelligenceLoading} error={buyerIntelligenceError} />
+            <div className="details-insight-grid">
+              <BuyerIntelligencePanel intelligence={buyerIntelligence} loading={buyerIntelligenceLoading} error={buyerIntelligenceError} />
 
-            <DocumentBriefPanel
-              brief={brief}
-              loading={briefLoading}
-              generating={briefGenerating}
-              error={briefError}
-              canGenerate={Boolean(opportunity.source_reference)}
-              onGenerate={onGenerateBrief}
-            />
+              <DocumentBriefPanel
+                brief={brief}
+                loading={briefLoading}
+                generating={briefGenerating}
+                error={briefError}
+                canGenerate={Boolean(opportunity.source_reference)}
+                onGenerate={onGenerateBrief}
+              />
+            </div>
 
-            <section className="drawer-section">
-              <h4>Documents</h4>
-              {documents.length ? (
-                <div className="document-list">
-                  {documents.map((document) => (
-                    <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={`${document.document_type}-${document.language}-${document.reference}-${document.url}`}>
-                      <FileText size={16} aria-hidden="true" />
-                      <span>
-                        <strong>{document.label}</strong>
-                        <small>{[document.document_type, document.language, document.reference].filter(Boolean).join(' · ')}</small>
-                      </span>
-                      <ExternalLink size={14} aria-hidden="true" />
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted">Δεν βρέθηκαν διαθέσιμα links εγγράφων από την πηγή.</p>
-              )}
-            </section>
+            <div className="details-source-grid">
+              <section className="drawer-section">
+                <h4>Documents</h4>
+                {documents.length ? (
+                  <div className="document-list">
+                    {documents.map((document) => (
+                      <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={`${document.document_type}-${document.language}-${document.reference}-${document.url}`}>
+                        <FileText size={16} aria-hidden="true" />
+                        <span>
+                          <strong>{document.label}</strong>
+                          <small>{[document.document_type, document.language, document.reference].filter(Boolean).join(' · ')}</small>
+                        </span>
+                        <ExternalLink size={14} aria-hidden="true" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted">Δεν βρέθηκαν διαθέσιμα links εγγράφων από την πηγή.</p>
+                )}
+              </section>
 
-            <section className="drawer-section">
-              <h4>Visualized source data</h4>
-              <SourceDataVisualization details={details} />
-            </section>
+              <section className="drawer-section source-data-section">
+                <h4>Visualized source data</h4>
+                <SourceDataVisualization details={details} />
+              </section>
+            </div>
 
             <section className="drawer-section compact-section">
               <details className="raw-details">
@@ -1902,7 +1932,13 @@ function NestedValue({ value, depth }: { value: unknown; depth: number }) {
         {rows.map(([key, child]) => (
           <div className="visual-row" key={key}>
             <span>{labelize(key)}</span>
-            {typeof child === 'object' && child !== null ? <NestedValue value={child} depth={depth + 1} /> : <strong>{formatSourceValue(child)}</strong>}
+            {isCpvFieldKey(key) ? (
+              <CollapsibleCpvList value={child} />
+            ) : typeof child === 'object' && child !== null ? (
+              <NestedValue value={child} depth={depth + 1} />
+            ) : (
+              <strong>{formatSourceValue(child)}</strong>
+            )}
           </div>
         ))}
       </div>
@@ -1919,6 +1955,124 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   )
+}
+
+type CpvEntry = {
+  code: string
+  description?: string | null
+}
+
+function CollapsibleCpvList({ label, value }: { label?: string; value: unknown }) {
+  const [expanded, setExpanded] = useState(false)
+  const entries = normalizeCpvEntries(value)
+  const contentId = label ? `cpv-list-${label.toLowerCase()}` : undefined
+
+  const content = (() => {
+    if (!entries.length) {
+      return <strong>N/A</strong>
+    }
+
+    if (entries.length === 1) {
+      return <strong>{formatCpvEntry(entries[0])}</strong>
+    }
+
+    return (
+      <div className="cpv-collapsible">
+        <div className="cpv-collapsed-row">
+          <strong>
+            {entries[0].code} + {entries.length - 1} more
+          </strong>
+          <button className="cpv-expand-button" type="button" aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded((current) => !current)}>
+            {expanded ? 'Hide CPV' : 'Show all CPV'}
+            <ChevronDown className={expanded ? 'expanded' : undefined} size={15} aria-hidden="true" />
+          </button>
+        </div>
+        {expanded ? (
+          <div className="cpv-expanded-list" id={contentId}>
+            {entries.map((entry) => (
+              <div className="cpv-expanded-item" key={`${entry.code}-${entry.description ?? ''}`}>
+                <strong>{entry.code}</strong>
+                {entry.description ? <small>{entry.description}</small> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    )
+  })()
+
+  if (label) {
+    return (
+      <div className="detail-item cpv-detail-item">
+        <span>{label}</span>
+        {content}
+      </div>
+    )
+  }
+
+  return <div className="cpv-source-list">{content}</div>
+}
+
+function isCpvFieldKey(key: string) {
+  return key.replace(/[-_\s]/g, '').toLowerCase() === 'cpvs'
+}
+
+function normalizeCpvEntries(value: unknown): CpvEntry[] {
+  const entries: CpvEntry[] = []
+
+  const collect = (current: unknown) => {
+    if (!isUsefulValue(current)) {
+      return
+    }
+
+    if (Array.isArray(current)) {
+      current.forEach(collect)
+      return
+    }
+
+    if (typeof current === 'string' || typeof current === 'number') {
+      const text = String(current).trim()
+      const codes = text.match(/\b\d{8}-\d\b/g)
+      if (codes?.length) {
+        codes.forEach((code) => entries.push({ code }))
+      } else if (text) {
+        entries.push({ code: text })
+      }
+      return
+    }
+
+    if (typeof current === 'object') {
+      const record = asRecord(current)
+      const valueText = firstString(record.value)
+      const directCode = firstString(record.key, record.code, record.cpvCode, record.cpv, record.id)
+      const valueCode = valueText?.match(/\b\d{8}-\d\b/)?.[0] ?? null
+      const code = directCode ?? valueCode
+      const description = firstString(record.description, record.label, record.name, valueCode ? null : valueText)
+
+      if (code) {
+        entries.push({ code, description: description !== code ? description : null })
+        return
+      }
+
+      Object.values(record).forEach(collect)
+    }
+  }
+
+  collect(value)
+
+  const seen = new Set<string>()
+  return entries.filter((entry) => {
+    const key = `${entry.code}-${entry.description ?? ''}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
+function formatCpvEntry(entry: CpvEntry) {
+  return [entry.code, entry.description].filter(Boolean).join(' - ')
 }
 
 function Metric({ icon: Icon, label, value, tone = 'neutral' }: { icon: LucideIcon; label: string; value: string; tone?: string }) {
