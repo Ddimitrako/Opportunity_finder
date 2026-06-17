@@ -753,6 +753,15 @@ h5 {
   font-size: 13px;
 }
 
+.drawer-error-inline {
+  border-radius: 8px;
+  color: #873522;
+  background: #fff4f1;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 8px;
+}
+
 .legend span {
   display: inline-flex;
   align-items: center;
@@ -934,6 +943,29 @@ h5 {
 }
 
 .source-line .action-window.unknown {
+  color: #42535d;
+  background: #dfe7eb;
+}
+
+.source-line .stage-chip {
+  color: #ffffff;
+  background: #24495a;
+}
+
+.source-line .stage-chip.action {
+  background: #216a55;
+}
+
+.source-line .stage-chip.watch {
+  color: #6a430b;
+  background: #f8edda;
+}
+
+.source-line .stage-chip.closed {
+  background: #7a8790;
+}
+
+.source-line .stage-chip.unknown {
   color: #42535d;
   background: #dfe7eb;
 }
@@ -1121,6 +1153,188 @@ h5 {
 
 .drawer-section h4 {
   font-size: 16px;
+}
+
+.guidance-section {
+  gap: 14px;
+}
+
+.guidance-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guidance-header p {
+  margin-top: 4px;
+  color: #60707a;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.actionable-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.actionable-pill.yes {
+  color: #0f5f43;
+  background: #e2f3ec;
+}
+
+.actionable-pill.no {
+  color: #7a4b0a;
+  background: #f8edda;
+}
+
+.lifecycle-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.lifecycle-step {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-height: 68px;
+  border: 1px solid #d9e0e4;
+  border-top-width: 4px;
+  border-radius: 8px;
+  background: #f8fafb;
+  padding: 9px;
+}
+
+.lifecycle-step.complete {
+  border-top-color: #216a55;
+}
+
+.lifecycle-step.current {
+  border-top-color: #2f6d9f;
+  background: #eef6fb;
+}
+
+.lifecycle-step.upcoming {
+  border-top-color: #bcc9cf;
+}
+
+.lifecycle-step.unknown {
+  border-top-color: #b98322;
+}
+
+.lifecycle-step span {
+  color: #17232a;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.lifecycle-step small {
+  color: #697882;
+  font-size: 11px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.guidance-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.guidance-card {
+  display: grid;
+  gap: 4px;
+  border-radius: 8px;
+  background: #f4f7f8;
+  padding: 10px;
+}
+
+.guidance-card span,
+.checklist-block h5,
+.watch-block h5 {
+  color: #70808a;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.guidance-card strong {
+  color: #1c2a31;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.checklist-block,
+.watch-block {
+  display: grid;
+  gap: 9px;
+}
+
+.checklist-list {
+  display: grid;
+  gap: 8px;
+}
+
+.checklist-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border: 1px solid #d9e0e4;
+  border-radius: 8px;
+  background: #f8fafb;
+  padding: 10px;
+}
+
+.checklist-item svg {
+  margin-top: 1px;
+  color: #71808a;
+}
+
+.checklist-item.done svg {
+  color: #216a55;
+}
+
+.checklist-item.todo svg {
+  color: #2f6d9f;
+}
+
+.checklist-item.watch svg {
+  color: #b47616;
+}
+
+.checklist-item.blocked svg {
+  color: #c94c34;
+}
+
+.checklist-item span {
+  display: grid;
+  gap: 2px;
+}
+
+.checklist-item strong {
+  color: #17232a;
+  font-size: 13px;
+}
+
+.checklist-item small,
+.watch-block li {
+  color: #53636d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.watch-block ul {
+  margin: 0;
+  padding-left: 18px;
 }
 
 .compact-section {

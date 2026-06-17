@@ -79,6 +79,32 @@ type DocumentLink = {
   reference?: string | null
 }
 
+type LifecycleStep = {
+  id: string
+  label: string
+  status: 'complete' | 'current' | 'upcoming' | 'unknown'
+  description: string
+  references: string[]
+  url?: string | null
+}
+
+type GuidanceChecklistItem = {
+  label: string
+  detail: string
+  status: 'done' | 'todo' | 'watch' | 'blocked'
+}
+
+type OpportunityGuidance = {
+  current_stage: string
+  current_stage_label: string
+  is_actionable: boolean
+  next_action: string
+  stage_steps: LifecycleStep[]
+  checklist: GuidanceChecklistItem[]
+  watch_items: string[]
+  primary_action_link?: string | null
+}
+
 type OpportunityDetails = {
   source: SourceName
   reference: string
@@ -88,6 +114,7 @@ type OpportunityDetails = {
   metadata: Record<string, unknown>
   documents: DocumentLink[]
   related_references: Record<string, string[]>
+  guidance?: OpportunityGuidance | null
   raw: Record<string, unknown>
 }
 
@@ -121,6 +148,17 @@ type ActivityResponse = {
   daily_activity: DailyActivity[]
   source_runs: SourceRun[]
   total: number
+}
+
+type BookmarkRecord = {
+  id: string
+  opportunity: Opportunity
+  created_at: string
+  updated_at: string
+}
+
+type BookmarkListResponse = {
+  bookmarks: BookmarkRecord[]
 }
 
 type ConfigResponse = {
@@ -315,13 +353,8 @@ function App() {
   const [details, setDetails] = useState<OpportunityDetails | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
-  const [shortlist, setShortlist] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('opportunity-shortlist') ?? '[]')
-    } catch {
-      return []
-    }
-  })
+  const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([])
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null)
 
   const aiEnabled = response?.ai_enabled ?? false
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
@@ -332,6 +365,50 @@ function App() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
   }, [response])
+  const bookmarkedIds = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
+
+  const migrateLegacyShortlist = useCallback(async (opportunities: Opportunity[]) => {
+    let legacyIds: string[]
+    try {
+      const rawLegacy = localStorage.getItem('opportunity-shortlist')
+      legacyIds = rawLegacy ? JSON.parse(rawLegacy) : []
+    } catch {
+      legacyIds = []
+    }
+    if (!legacyIds.length) {
+      return
+    }
+
+    const legacySet = new Set(legacyIds)
+    const matches = opportunities.filter((opportunity) => legacySet.has(opportunity.id))
+    if (!matches.length) {
+      return
+    }
+
+    let latestBookmarks: BookmarkListResponse | null = null
+    for (const opportunity of matches) {
+      const res = await fetch(`${API_BASE}/api/bookmarks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunity }),
+      })
+      if (!res.ok) {
+        throw new Error(`Bookmarks API returned ${res.status}`)
+      }
+      latestBookmarks = (await res.json()) as BookmarkListResponse
+    }
+    if (latestBookmarks) {
+      setBookmarks(latestBookmarks.bookmarks)
+    }
+
+    const migratedIds = new Set(matches.map((opportunity) => opportunity.id))
+    const remainingIds = legacyIds.filter((id) => !migratedIds.has(id))
+    if (remainingIds.length) {
+      localStorage.setItem('opportunity-shortlist', JSON.stringify(remainingIds))
+    } else {
+      localStorage.removeItem('opportunity-shortlist')
+    }
+  }, [])
 
   const runSearch = useCallback(async (overrides?: { onlyOpen?: boolean; showAllFetched?: boolean }) => {
     setLoading(true)
@@ -367,6 +444,7 @@ function App() {
       }
       const data = (await res.json()) as SearchResponse
       setResponse(data)
+      await migrateLegacyShortlist(data.opportunities)
       if (!data.ai_enabled) {
         setUseAi(false)
       }
@@ -375,7 +453,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [aiEnabled, budgetMax, budgetMin, dateFrom, dateTo, keywords, onlyOpen, query, selectedCpvs, showAllFetched, sources, useAi])
+  }, [aiEnabled, budgetMax, budgetMin, dateFrom, dateTo, keywords, migrateLegacyShortlist, onlyOpen, query, selectedCpvs, showAllFetched, sources, useAi])
 
   const runActivity = useCallback(async () => {
     setActivityLoading(true)
@@ -402,6 +480,20 @@ function App() {
     }
   }, [sources])
 
+  const loadBookmarks = useCallback(async () => {
+    setBookmarkError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/bookmarks`)
+      if (!res.ok) {
+        throw new Error(`Bookmarks API returned ${res.status}`)
+      }
+      const data = (await res.json()) as BookmarkListResponse
+      setBookmarks(data.bookmarks)
+    } catch (exc) {
+      setBookmarkError(exc instanceof Error ? exc.message : 'Bookmarks fetch failed')
+    }
+  }, [])
+
   useEffect(() => {
     async function boot() {
       try {
@@ -415,6 +507,7 @@ function App() {
       } catch {
         setConfig(null)
       }
+      await loadBookmarks()
       await runSearch()
     }
     void boot()
@@ -427,10 +520,6 @@ function App() {
     }, 0)
     return () => window.clearTimeout(activityTimer)
   }, [runActivity])
-
-  useEffect(() => {
-    localStorage.setItem('opportunity-shortlist', JSON.stringify(shortlist))
-  }, [shortlist])
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -508,11 +597,26 @@ function App() {
     })
   }
 
-  const toggleShortlist = (id: string) => {
-    setShortlist((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+  const toggleBookmark = async (opportunity: Opportunity) => {
+    setBookmarkError(null)
+    const pinned = bookmarkedIds.has(opportunity.id)
+    try {
+      const res = await fetch(`${API_BASE}/api/bookmarks${pinned ? `/${encodeURIComponent(opportunity.id)}` : ''}`, {
+        method: pinned ? 'DELETE' : 'POST',
+        headers: pinned ? undefined : { 'Content-Type': 'application/json' },
+        body: pinned ? undefined : JSON.stringify({ opportunity }),
+      })
+      if (!res.ok) {
+        throw new Error(`Bookmarks API returned ${res.status}`)
+      }
+      const data = (await res.json()) as BookmarkListResponse
+      setBookmarks(data.bookmarks)
+    } catch (exc) {
+      setBookmarkError(exc instanceof Error ? exc.message : 'Bookmark update failed')
+    }
   }
 
-  const shortlistItems = response?.opportunities.filter((item) => shortlist.includes(item.id)) ?? []
+  const shortlistItems = bookmarks.map((bookmark) => bookmark.opportunity)
 
   return (
     <div className="app-shell">
@@ -759,9 +863,12 @@ function App() {
               <h3>Shortlist</h3>
             </div>
             <div className="shortlist-list">
+              {bookmarkError ? (
+                <p className="drawer-error-inline">{bookmarkError}</p>
+              ) : null}
               {shortlistItems.length ? (
                 shortlistItems.map((item) => (
-                  <button className="shortlist-item" key={item.id} onClick={() => toggleShortlist(item.id)} type="button">
+                  <button className="shortlist-item" key={item.id} onClick={() => void toggleBookmark(item)} type="button">
                     <span>{item.fit_score}</span>
                     {item.title}
                   </button>
@@ -796,8 +903,8 @@ function App() {
               <OpportunityRow
                 key={opportunity.id}
                 opportunity={opportunity}
-                pinned={shortlist.includes(opportunity.id)}
-                onTogglePin={() => toggleShortlist(opportunity.id)}
+                pinned={bookmarkedIds.has(opportunity.id)}
+                onTogglePin={() => void toggleBookmark(opportunity)}
                 onOpenDetails={() => void openDetails(opportunity)}
               />
             ))
@@ -892,6 +999,7 @@ function OpportunityRow({
   const bandClass = bandToClass(opportunity.fit_score)
   const daysLeft = opportunity.deadline ? daysUntil(opportunity.deadline) : null
   const window = actionWindow(opportunity)
+  const stage = rowLifecycleStage(opportunity)
   const PinIcon = pinned ? BookmarkCheck : BookmarkPlus
 
   return (
@@ -911,6 +1019,7 @@ function OpportunityRow({
               <span>{opportunity.source_label}</span>
               {opportunity.procedure_type ? <span>{opportunity.procedure_type}</span> : null}
               {opportunity.package_match ? <span>{packageLabel(opportunity.package_match)}</span> : null}
+              <span className={`stage-chip ${stage.tone}`}>{stage.label}</span>
               <span className={`action-window ${window.tone}`}>{window.label}</span>
             </div>
             <h4>{opportunity.title}</h4>
@@ -975,6 +1084,79 @@ function OpportunityRow({
         </div>
       </div>
     </article>
+  )
+}
+
+function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
+  return (
+    <section className="drawer-section guidance-section">
+      <div className="guidance-header">
+        <div>
+          <h4>Lifecycle guidance</h4>
+          <p>{guidance.is_actionable ? 'This looks actionable now.' : 'This is not clearly actionable yet.'}</p>
+        </div>
+        <span className={`actionable-pill ${guidance.is_actionable ? 'yes' : 'no'}`}>
+          {guidance.is_actionable ? 'Actionable' : 'Watch'}
+        </span>
+      </div>
+
+      <div className="lifecycle-bar">
+        {guidance.stage_steps.map((step) => (
+          <div className={`lifecycle-step ${step.status}`} key={step.id}>
+            <span>{step.label}</span>
+            <small>{step.references.length ? step.references.join(', ') : step.status}</small>
+          </div>
+        ))}
+      </div>
+
+      <div className="guidance-cards">
+        <GuidanceCard title="Where we are now" value={guidance.current_stage_label} />
+        <GuidanceCard title="Can I act now?" value={guidance.is_actionable ? 'Yes, review and prepare a bid.' : 'Not yet. Monitor the next official step.'} />
+        <GuidanceCard title="Next action" value={guidance.next_action} />
+      </div>
+
+      {guidance.primary_action_link ? (
+        <a className="drawer-primary-link" href={guidance.primary_action_link} target="_blank" rel="noreferrer">
+          Open recommended document
+          <ExternalLink size={15} aria-hidden="true" />
+        </a>
+      ) : null}
+
+      <div className="checklist-block">
+        <h5>Beginner checklist</h5>
+        <div className="checklist-list">
+          {guidance.checklist.map((item) => (
+            <div className={`checklist-item ${item.status}`} key={`${item.label}-${item.status}`}>
+              <CheckCircle2 size={16} aria-hidden="true" />
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.detail}</small>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {guidance.watch_items.length ? (
+        <div className="watch-block">
+          <h5>What to watch next</h5>
+          <ul>
+            {guidance.watch_items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function GuidanceCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="guidance-card">
+      <span>{title}</span>
+      <strong>{value}</strong>
+    </div>
   )
 }
 
@@ -1048,6 +1230,10 @@ function DetailsDrawer({
                 </a>
               ) : null}
             </section>
+
+            {details?.guidance ? (
+              <GuidancePanel guidance={details.guidance} />
+            ) : null}
 
             <section className="drawer-section">
               <h4>Documents</h4>
@@ -1371,6 +1557,30 @@ function actionWindow(opportunity: Opportunity) {
     return { label: 'Fresh', detail: `${age}d old`, tone: 'fresh' }
   }
   return { label: 'Stale', detail: `${age}d old`, tone: 'stale' }
+}
+
+function rowLifecycleStage(opportunity: Opportunity) {
+  const reference = opportunity.source_reference ?? ''
+  const text = `${opportunity.procedure_type ?? ''} ${opportunity.title} ${opportunity.summary}`.toLowerCase()
+
+  if (opportunity.source === 'khmdhs') {
+    if (reference.includes('REQ')) return { label: 'Αίτημα', tone: 'watch' }
+    if (reference.includes('PROC')) return { label: 'Διακήρυξη', tone: 'action' }
+    if (reference.includes('AWRD')) return { label: 'Ανάθεση', tone: 'closed' }
+    if (reference.includes('SYMV')) return { label: 'Σύμβαση', tone: 'closed' }
+    return { label: 'KIMDIS', tone: 'unknown' }
+  }
+
+  if (opportunity.source === 'ted') {
+    if (text.includes('award') || text.includes('result')) return { label: 'Result', tone: 'closed' }
+    if (text.includes('prior') || text.includes('planning') || text.includes('consultation')) {
+      return { label: 'Planning', tone: 'watch' }
+    }
+    if (opportunity.deadline && daysUntil(opportunity.deadline) >= 0) return { label: 'Competition', tone: 'action' }
+    return { label: 'TED', tone: 'unknown' }
+  }
+
+  return { label: 'Example', tone: 'unknown' }
 }
 
 function daysUntil(value: string) {

@@ -129,6 +129,32 @@ class DocumentLink(BaseModel):
     reference: str | None = None
 
 
+class LifecycleStep(BaseModel):
+    id: str
+    label: str
+    status: Literal["complete", "current", "upcoming", "unknown"] = "upcoming"
+    description: str
+    references: list[str] = Field(default_factory=list)
+    url: str | None = None
+
+
+class GuidanceChecklistItem(BaseModel):
+    label: str
+    detail: str
+    status: Literal["done", "todo", "watch", "blocked"] = "todo"
+
+
+class OpportunityGuidance(BaseModel):
+    current_stage: str
+    current_stage_label: str
+    is_actionable: bool
+    next_action: str
+    stage_steps: list[LifecycleStep] = Field(default_factory=list)
+    checklist: list[GuidanceChecklistItem] = Field(default_factory=list)
+    watch_items: list[str] = Field(default_factory=list)
+    primary_action_link: str | None = None
+
+
 class OpportunityDetails(BaseModel):
     source: SourceName
     reference: str
@@ -138,6 +164,7 @@ class OpportunityDetails(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     documents: list[DocumentLink] = Field(default_factory=list)
     related_references: dict[str, list[str]] = Field(default_factory=dict)
+    guidance: OpportunityGuidance | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -173,6 +200,27 @@ class ActivityResponse(BaseModel):
     daily_activity: list[DailyActivity]
     source_runs: list[SourceRun]
     total: int
+
+
+class BookmarkRecord(BaseModel):
+    id: str
+    opportunity: Opportunity
+    created_at: datetime
+    updated_at: datetime
+
+
+class BookmarkListResponse(BaseModel):
+    bookmarks: list[BookmarkRecord]
+
+
+class BookmarkStatusResponse(BaseModel):
+    db_path: str
+    exists: bool
+    bookmark_count: int
+
+
+class BookmarkUpsertRequest(BaseModel):
+    opportunity: Opportunity
 
 
 class HealthResponse(BaseModel):

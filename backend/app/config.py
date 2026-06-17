@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,6 +19,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(default=None, repr=False)
     openai_model: str = "gpt-4.1-mini"
+
+    bookmark_db_path: Path = Path("data/opportunity_finder.sqlite3")
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local", "backend/.env", "backend/.env.local"),

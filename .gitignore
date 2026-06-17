@@ -1,9 +1,14 @@
 .venv/
 __pycache__/
 *.py[cod]
+.idea/
 
 frontend/node_modules/
 frontend/dist/
+
+*.sqlite3
+data/
+backend/data/
 
 .env
 .env.local

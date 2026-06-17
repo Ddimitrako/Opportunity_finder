@@ -5,6 +5,9 @@ from app.config import Settings, get_settings
 from app.models import (
     ActivityRequest,
     ActivityResponse,
+    BookmarkListResponse,
+    BookmarkStatusResponse,
+    BookmarkUpsertRequest,
     ConfigResponse,
     DEFAULT_CPV_CODES,
     DEFAULT_KEYWORDS,
@@ -15,6 +18,7 @@ from app.models import (
     SourceName,
 )
 from app.scoring import PACKAGES
+from app.services.bookmarks import BookmarkService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 
@@ -40,6 +44,10 @@ def get_service(settings: Settings = Depends(get_settings)) -> OpportunityServic
 
 def get_details_service(settings: Settings = Depends(get_settings)) -> OpportunityDetailsService:
     return OpportunityDetailsService(settings)
+
+
+def get_bookmark_service(settings: Settings = Depends(get_settings)) -> BookmarkService:
+    return BookmarkService(settings)
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -84,6 +92,34 @@ async def opportunity_activity(
     service: OpportunityService = Depends(get_service),
 ) -> ActivityResponse:
     return await service.activity(request)
+
+
+@app.get("/api/bookmarks", response_model=BookmarkListResponse)
+async def list_bookmarks(service: BookmarkService = Depends(get_bookmark_service)) -> BookmarkListResponse:
+    return service.list_bookmarks()
+
+
+@app.get("/api/bookmarks/status", response_model=BookmarkStatusResponse)
+async def bookmark_status(service: BookmarkService = Depends(get_bookmark_service)) -> BookmarkStatusResponse:
+    return service.status()
+
+
+@app.post("/api/bookmarks", response_model=BookmarkListResponse)
+async def save_bookmark(
+    request: BookmarkUpsertRequest,
+    service: BookmarkService = Depends(get_bookmark_service),
+) -> BookmarkListResponse:
+    service.upsert_bookmark(request.opportunity)
+    return service.list_bookmarks()
+
+
+@app.delete("/api/bookmarks/{bookmark_id}", response_model=BookmarkListResponse)
+async def delete_bookmark(
+    bookmark_id: str,
+    service: BookmarkService = Depends(get_bookmark_service),
+) -> BookmarkListResponse:
+    service.delete_bookmark(bookmark_id)
+    return service.list_bookmarks()
 
 
 @app.get("/api/opportunities/{source}/{reference}/details", response_model=OpportunityDetails)
