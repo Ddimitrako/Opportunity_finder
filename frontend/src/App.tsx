@@ -1302,11 +1302,16 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
         </span>
       </div>
 
-      <div className="lifecycle-bar">
-        {guidance.stage_steps.map((step) => (
-          <div className={`lifecycle-step ${step.status}`} key={step.id}>
-            <span>{step.label}</span>
-            <small>{step.references.length ? step.references.join(', ') : step.status}</small>
+      <div className="lifecycle-tracker" aria-label="Lifecycle tracker">
+        {guidance.stage_steps.map((step, index) => (
+          <div className={`lifecycle-node ${step.status}`} key={step.id}>
+            <div className="lifecycle-number" aria-label={`${index + 1}. ${step.label}`}>
+              {index + 1}
+            </div>
+            <div className="lifecycle-node-copy">
+              <strong>{step.label}</strong>
+              <small>{step.references.length ? step.references.join(', ') : lifecycleStatusLabel(step.status)}</small>
+            </div>
           </div>
         ))}
       </div>
@@ -1325,17 +1330,20 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
       ) : null}
 
       <div className="checklist-block">
-        <h5>Beginner checklist</h5>
+        <h5>Checklist για αρχάριους</h5>
         <div className="checklist-list">
-          {guidance.checklist.map((item) => (
+          {guidance.checklist.map((item, index) => {
+            const translatedItem = translateChecklistItem(item)
+            return (
             <div className={`checklist-item ${item.status}`} key={`${item.label}-${item.status}`}>
-              <CheckCircle2 size={16} aria-hidden="true" />
+              <span className="checklist-index">{index + 1}</span>
               <span>
-                <strong>{item.label}</strong>
-                <small>{item.detail}</small>
+                <strong>{translatedItem.label}</strong>
+                <small>{translatedItem.detail}</small>
               </span>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -1353,6 +1361,30 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
   )
 }
 
+function DocumentsPanel({ documents }: { documents: DocumentLink[] }) {
+  return (
+    <section className="drawer-section documents-section">
+      <h4>Documents</h4>
+      {documents.length ? (
+        <div className="document-list">
+          {documents.map((document) => (
+            <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={`${document.document_type}-${document.language}-${document.reference}-${document.url}`}>
+              <FileText size={16} aria-hidden="true" />
+              <span>
+                <strong>{document.label}</strong>
+                <small>{[document.document_type, document.language, document.reference].filter(Boolean).join(' · ')}</small>
+              </span>
+              <ExternalLink size={14} aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">Δεν βρέθηκαν διαθέσιμα links εγγράφων από την πηγή.</p>
+      )}
+    </section>
+  )
+}
+
 function GuidanceCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="guidance-card">
@@ -1360,6 +1392,52 @@ function GuidanceCard({ title, value }: { title: string; value: string }) {
       <strong>{value}</strong>
     </div>
   )
+}
+
+function lifecycleStatusLabel(status: LifecycleStep['status']) {
+  if (status === 'complete') return 'Completed'
+  if (status === 'current') return 'Current'
+  if (status === 'upcoming') return 'Upcoming'
+  return 'Unknown'
+}
+
+function translateChecklistItem(item: GuidanceChecklistItem) {
+  const normalizedLabel = item.label.trim().toLowerCase()
+  const translations: Record<string, { label: string; detail: string }> = {
+    'open source document': {
+      label: 'Άνοιξε το επίσημο έγγραφο',
+      detail: 'Διάβασε πρώτα το αρχικό έγγραφο της πηγής.',
+    },
+    'confirm competition notice': {
+      label: 'Επιβεβαίωσε διακήρυξη',
+      detail: 'Ψάξε για πρόσκληση, notice ή διαγωνισμό πριν προχωρήσεις.',
+    },
+    'check deadline and submission method': {
+      label: 'Έλεγξε προθεσμία και υποβολή',
+      detail: 'Κλείδωσε ημερομηνία, πλατφόρμα, υπογραφές και μορφές αρχείων.',
+    },
+    'collect company/legal documents': {
+      label: 'Μάζεψε εταιρικά δικαιολογητικά',
+      detail: 'Ετοίμασε φορολογικά, ασφαλιστικά, δηλώσεις και πιστοποιητικά.',
+    },
+    'prepare technical offer': {
+      label: 'Ετοίμασε τεχνική προσφορά',
+      detail: 'Σύνδεσε τη λύση σου με κάθε τεχνική απαίτηση.',
+    },
+    'prepare financial offer': {
+      label: 'Ετοίμασε οικονομική προσφορά',
+      detail: 'Υπολόγισε κόστος, ΦΠΑ, υποστήριξη, hosting και άδειες.',
+    },
+    'submit and monitor': {
+      label: 'Υπέβαλε και παρακολούθησε',
+      detail: 'Κάνε υποβολή και έλεγχε διευκρινίσεις, ανάθεση και σύμβαση.',
+    },
+  }
+
+  return translations[normalizedLabel] ?? {
+    label: item.label,
+    detail: item.detail,
+  }
 }
 
 function DetailsDrawer({
@@ -1475,6 +1553,8 @@ function DetailsDrawer({
               </div>
             </section>
 
+            <DocumentsPanel documents={documents} />
+
             {details?.guidance ? (
               <GuidancePanel guidance={details.guidance} />
             ) : null}
@@ -1492,32 +1572,10 @@ function DetailsDrawer({
               />
             </div>
 
-            <div className="details-source-grid">
-              <section className="drawer-section">
-                <h4>Documents</h4>
-                {documents.length ? (
-                  <div className="document-list">
-                    {documents.map((document) => (
-                      <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={`${document.document_type}-${document.language}-${document.reference}-${document.url}`}>
-                        <FileText size={16} aria-hidden="true" />
-                        <span>
-                          <strong>{document.label}</strong>
-                          <small>{[document.document_type, document.language, document.reference].filter(Boolean).join(' · ')}</small>
-                        </span>
-                        <ExternalLink size={14} aria-hidden="true" />
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="muted">Δεν βρέθηκαν διαθέσιμα links εγγράφων από την πηγή.</p>
-                )}
-              </section>
-
-              <section className="drawer-section source-data-section">
-                <h4>Visualized source data</h4>
-                <SourceDataVisualization details={details} />
-              </section>
-            </div>
+            <section className="drawer-section source-data-section">
+              <h4>Visualized source data</h4>
+              <SourceDataVisualization details={details} />
+            </section>
 
             <section className="drawer-section compact-section">
               <details className="raw-details">
@@ -1773,10 +1831,17 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
     const metadata = asRecord(details.raw.metadata)
     const chain = asRecord(details.raw.adamChain)
     const objectDetails = Array.isArray(metadata.objectDetails) ? metadata.objectDetails : []
+    const cpvCount = countCpvEntries(objectDetails)
     return (
       <div className="source-visualization">
+        <div className="source-summary-grid">
+          <SourceMetric icon={DatabaseZap} label="Source" value="KIMDIS" detail={details.reference} />
+          <SourceMetric icon={FileText} label="Documents" value={String(details.documents.length)} detail="available links" />
+          <SourceMetric icon={CircleDollarSign} label="Budget" value={formatCurrency(firstNumber(metadata.totalCostWithoutVAT, metadata.totalCostWithVAT))} detail="source value" />
+          <SourceMetric icon={Layers3} label="CPV" value={String(cpvCount)} detail="classified codes" />
+        </div>
+        <ChainSignalPanel chain={chain} />
         <FieldTable title="ΚΗΜΔΗΣ metadata" data={metadata} skip={['objectDetails']} />
-        <ChainTable chain={chain} />
         {objectDetails.length ? (
           <NestedSection title="Object details" value={objectDetails} />
         ) : null}
@@ -1787,8 +1852,16 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
   if (details.source === 'ted') {
     const notice = asRecord(details.raw.notice)
     const links = asRecord(notice.links)
+    const linkCount = countUsefulValues(links)
+    const cpvCount = countCpvEntries(notice)
     return (
       <div className="source-visualization">
+        <div className="source-summary-grid">
+          <SourceMetric icon={Globe2} label="Source" value="TED" detail={details.reference} />
+          <SourceMetric icon={ExternalLink} label="Links" value={String(linkCount)} detail="notice groups" />
+          <SourceMetric icon={CalendarClock} label="Published" value={formatSourceValue(firstString(notice.publicationDate, notice.publication_date, notice.dispatchDate))} detail="notice date" />
+          <SourceMetric icon={Layers3} label="CPV" value={String(cpvCount)} detail="classified codes" />
+        </div>
         <FieldTable title="TED notice fields" data={notice} skip={['links']} />
         <LinkGroups links={links} />
       </div>
@@ -1796,6 +1869,19 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
   }
 
   return <NestedSection title="Source payload" value={details.raw} />
+}
+
+function SourceMetric({ icon: Icon, label, value, detail }: { icon: LucideIcon; label: string; value: string; detail: string }) {
+  return (
+    <div className="source-metric">
+      <span className="source-metric-icon">
+        <Icon size={17} aria-hidden="true" />
+      </span>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  )
 }
 
 function enrichOpportunityFromDetails(opportunity: Opportunity, details: OpportunityDetails): Opportunity {
@@ -1831,6 +1917,38 @@ function firstString(...values: unknown[]) {
   return null
 }
 
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === 'string') {
+      const normalized = Number(value.replace(',', '.'))
+      if (Number.isFinite(normalized)) {
+        return normalized
+      }
+    }
+  }
+  return null
+}
+
+function countUsefulValues(value: unknown): number {
+  if (!isUsefulValue(value)) {
+    return 0
+  }
+  if (Array.isArray(value)) {
+    return value.filter(isUsefulValue).length
+  }
+  if (typeof value === 'object') {
+    return Object.values(asRecord(value)).filter(isUsefulValue).length
+  }
+  return 1
+}
+
+function countCpvEntries(value: unknown) {
+  return normalizeCpvEntries(value).length
+}
+
 function FieldTable({ title, data, skip = [] }: { title: string; data: Record<string, unknown>; skip?: string[] }) {
   const rows = Object.entries(data).filter(([key, value]) => !skip.includes(key) && isUsefulValue(value))
   if (!rows.length) {
@@ -1851,21 +1969,26 @@ function FieldTable({ title, data, skip = [] }: { title: string; data: Record<st
   )
 }
 
-function ChainTable({ chain }: { chain: Record<string, unknown> }) {
+function ChainSignalPanel({ chain }: { chain: Record<string, unknown> }) {
   const groups = Object.entries(chain).filter(([, value]) => Array.isArray(value))
   if (!groups.length) {
     return null
   }
+
   return (
-    <div className="visual-block">
-      <h5>Συνδεδεμένες πράξεις ΚΗΜΔΗΣ</h5>
-      <div className="chain-grid">
+    <div className="visual-block chain-signal-panel">
+      <h5><Activity size={15} aria-hidden="true" /> Lifecycle source signals</h5>
+      <div className="chain-signal-grid">
         {groups.map(([key, value]) => {
           const refs = (value as unknown[]).filter(Boolean).map(String)
           return (
-            <div className="chain-group" key={key}>
+            <div className={`chain-signal-card ${refs.length ? 'active' : 'idle'}`} key={key}>
+              <span className="chain-signal-icon">
+                {refs.length ? <CheckCircle2 size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}
+              </span>
               <span>{labelize(key)}</span>
-              {refs.length ? refs.map((ref) => <strong key={ref}>{ref}</strong>) : <em>None</em>}
+              <strong>{refs.length}</strong>
+              <small>{refs.length ? refs.slice(0, 2).join(', ') : 'No linked record'}</small>
             </div>
           )
         })}
