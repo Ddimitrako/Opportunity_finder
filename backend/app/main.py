@@ -1,4 +1,7 @@
-from fastapi import Depends, FastAPI
+from urllib.parse import urlparse
+
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
@@ -63,6 +66,15 @@ def get_buyer_intelligence_service(settings: Settings = Depends(get_settings)) -
     return BuyerIntelligenceService(settings)
 
 
+def _allowed_document_hosts(settings: Settings) -> set[str]:
+    hosts = {
+        urlparse(str(settings.khmdhs_base_url)).hostname,
+        urlparse(str(settings.ted_base_url)).hostname,
+        urlparse(str(settings.diavgeia_base_url)).hostname,
+    }
+    return {host for host in hosts if host}
+
+
 @app.get("/api/health", response_model=HealthResponse)
 async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     return HealthResponse(
@@ -88,6 +100,43 @@ async def config() -> ConfigResponse:
             {"id": "ted", "label": "TED"},
             {"id": "demo", "label": "Demo patterns"},
         ],
+    )
+
+
+@app.get("/api/documents/pdf")
+async def proxy_pdf_document(
+    url: str = Query(min_length=8, max_length=2000),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in _allowed_document_hosts(settings):
+        raise HTTPException(status_code=400, detail="Document URL is not allowed.")
+
+    verify_ssl = settings.khmdhs_verify_ssl if parsed.hostname == urlparse(str(settings.khmdhs_base_url)).hostname else True
+    if parsed.hostname == urlparse(str(settings.khmdhs_base_url)).hostname:
+        timeout = settings.khmdhs_timeout_seconds
+    elif parsed.hostname == urlparse(str(settings.diavgeia_base_url)).hostname:
+        timeout = settings.diavgeia_timeout_seconds
+    else:
+        timeout = settings.ted_timeout_seconds
+    try:
+        async with httpx.AsyncClient(timeout=timeout, verify=verify_ssl, follow_redirects=True) as client:
+            upstream = await client.get(url, headers={"Accept": "application/pdf,*/*"})
+            upstream.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Document fetch failed: {exc.__class__.__name__}") from exc
+
+    content_type = upstream.headers.get("content-type") or "application/pdf"
+    if "html" in content_type.lower():
+        raise HTTPException(status_code=502, detail="Document endpoint returned HTML instead of a PDF.")
+
+    return Response(
+        content=upstream.content,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": 'inline; filename="document.pdf"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

@@ -303,6 +303,11 @@ class BuyerIntelligenceResponse(BaseModel):
     source_counts: dict[SourceName, int] = Field(default_factory=dict)
     budget_profile: BudgetProfile
     small_software_count: int = 0
+    current_cpv_categories: list[str] = Field(default_factory=list)
+    khmdhs_history_date_from: date | None = None
+    khmdhs_history_date_to: date | None = None
+    khmdhs_history_result_date_from: date | None = None
+    khmdhs_history_result_date_to: date | None = None
     similar_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
     recent_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
     has_similar_procurement: bool = False

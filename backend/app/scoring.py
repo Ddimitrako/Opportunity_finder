@@ -4,6 +4,9 @@ from datetime import date
 
 from app.models import FitBand, Opportunity, ProcurementSearchRequest
 
+SOFTWARE_CPV_PREFIXES = ("48", "72")
+GENERIC_SOFTWARE_PACKAGE = "Custom software"
+
 TARGET_BUYER_WORDS = (
     "δήμος",
     "δημου",
@@ -62,6 +65,34 @@ PACKAGES = [
         "keywords": ("έγγραφα", "document", "case", "υπόθεση", "πρωτόκολλο", "dms"),
     },
 ]
+
+PACKAGE_NAMES = {package["name"] for package in PACKAGES}
+
+BROAD_CPV_CATEGORIES = (
+    (("15", "55"), "Food / catering"),
+    (("30", "32", "48"), "IT equipment / software supplies"),
+    (("34", "60", "63"), "Transport / logistics"),
+    (("35",), "Security / defence supplies"),
+    (("38",), "Laboratory / measurement equipment"),
+    (("39",), "Furniture / facility supplies"),
+    (("42", "43"), "Industrial equipment"),
+    (("44", "45"), "Construction / works"),
+    (("50",), "Repair / maintenance services"),
+    (("66",), "Financial / insurance services"),
+    (("71",), "Engineering / technical services"),
+    (("73",), "Research / consulting services"),
+    (("79",), "Business services"),
+    (("80",), "Training / education"),
+    (("85",), "Health / social care"),
+    (("90",), "Waste / environmental services"),
+    (("92",), "Culture / recreation"),
+)
+
+TEXT_CATEGORIES = (
+    (("σαλάτ", "salad", "τρόφι", "τροφ", "φαγη", "σίτιση", "catering"), "Food / catering"),
+    (("υπολογιστ", "laptop", "desktop", "εκτυπωτ", "printer", "server", "δικτυακ", "router"), "IT equipment / software supplies"),
+    (("όχημα", "οχημα", "μεταφορ", "logistics"), "Transport / logistics"),
+)
 
 
 def score_opportunity(opportunity: Opportunity, request: ProcurementSearchRequest) -> Opportunity:
@@ -127,8 +158,8 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
         score += 10
         reasons.append("Δεν εντοπίστηκαν προφανή red flags στο διαθέσιμο κείμενο")
 
-    package_match = choose_package(text)
-    if package_match != "Custom software":
+    package_match = choose_package(text, opportunity.cpv_codes)
+    if package_match in PACKAGE_NAMES:
         score += 5
         reasons.append(f"Μπορεί να πακεταριστεί ως {package_match}")
 
@@ -162,10 +193,36 @@ def recommendation(score: int) -> str:
     return "Ignore"
 
 
-def choose_package(text: str) -> str:
+def choose_package(text: str, cpv_codes: list[str] | None = None) -> str:
     scores: list[tuple[int, str]] = []
     for package in PACKAGES:
         hits = sum(1 for keyword in package["keywords"] if keyword in text)
         scores.append((hits, package["name"]))
     hits, name = max(scores, key=lambda item: item[0])
-    return name if hits else "Custom software"
+    if hits:
+        return name
+    if _has_software_cpv(cpv_codes or []) or _looks_software_by_text(text):
+        return GENERIC_SOFTWARE_PACKAGE
+    return _broad_category(text, cpv_codes or [])
+
+
+def _has_software_cpv(cpv_codes: list[str]) -> bool:
+    return any(_cpv_digits(code).startswith(SOFTWARE_CPV_PREFIXES) for code in cpv_codes)
+
+
+def _looks_software_by_text(text: str) -> bool:
+    return any(term in text for term in ("software", "λογισμ", "πληροφοριακ", "πλατφόρ", "πλατφορ", "εφαρμογ", "portal", "dashboard", "ψηφιακ"))
+
+
+def _broad_category(text: str, cpv_codes: list[str]) -> str:
+    for prefixes, label in BROAD_CPV_CATEGORIES:
+        if any(_cpv_digits(code).startswith(prefixes) for code in cpv_codes):
+            return label
+    for terms, label in TEXT_CATEGORIES:
+        if any(term in text for term in terms):
+            return label
+    return "Other procurement"
+
+
+def _cpv_digits(code: str) -> str:
+    return "".join(char for char in code if char.isdigit())

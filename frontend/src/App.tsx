@@ -27,7 +27,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react'
-import { type CSSProperties, type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 type SourceName = 'khmdhs' | 'ted' | 'demo'
@@ -190,6 +190,11 @@ type BuyerIntelligenceResponse = {
   source_counts: Partial<Record<SourceName, number>>
   budget_profile: BudgetProfile
   small_software_count: number
+  current_cpv_categories: string[]
+  khmdhs_history_date_from?: string | null
+  khmdhs_history_date_to?: string | null
+  khmdhs_history_result_date_from?: string | null
+  khmdhs_history_result_date_to?: string | null
   similar_opportunities: BuyerOpportunitySample[]
   recent_opportunities: BuyerOpportunitySample[]
   has_similar_procurement: boolean
@@ -1329,8 +1334,7 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
         </a>
       ) : null}
 
-      <div className="checklist-block">
-        <h5>Checklist για αρχάριους</h5>
+      <CollapsiblePanel title="Checklist για αρχάριους" meta={`${guidance.checklist.length} βήματα`}>
         <div className="checklist-list">
           {guidance.checklist.map((item, index) => {
             const translatedItem = translateChecklistItem(item)
@@ -1345,7 +1349,7 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
             )
           })}
         </div>
-      </div>
+      </CollapsiblePanel>
 
       {guidance.watch_items.length ? (
         <div className="watch-block">
@@ -1361,27 +1365,129 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
   )
 }
 
-function DocumentsPanel({ documents }: { documents: DocumentLink[] }) {
+type PdfPreview = {
+  title: string
+  url: string
+  meta: string
+}
+
+function DocumentsDetailItem({ documents }: { documents: DocumentLink[] }) {
+  const [preview, setPreview] = useState<PdfPreview | null>(null)
+
   return (
-    <section className="drawer-section documents-section">
-      <h4>Documents</h4>
+    <div className="detail-item documents-detail-item">
+      <span>Documents</span>
       {documents.length ? (
-        <div className="document-list">
-          {documents.map((document) => (
-            <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={`${document.document_type}-${document.language}-${document.reference}-${document.url}`}>
-              <FileText size={16} aria-hidden="true" />
-              <span>
-                <strong>{document.label}</strong>
-                <small>{[document.document_type, document.language, document.reference].filter(Boolean).join(' · ')}</small>
-              </span>
-              <ExternalLink size={14} aria-hidden="true" />
-            </a>
-          ))}
+        <div className="document-inline-list" aria-label={`${documents.length} available source documents`}>
+          {documents.map((document) => {
+            const meta = [document.document_type, document.language, document.reference].filter(Boolean).join(' · ')
+            const key = `${document.document_type}-${document.language}-${document.reference}-${document.url}`
+            if (isPdfDocument(document)) {
+              return (
+                <button
+                  className="document-link"
+                  type="button"
+                  key={key}
+                  onClick={() => setPreview({ title: document.label, url: document.url, meta })}
+                >
+                  <FileText size={16} aria-hidden="true" />
+                  <span>
+                    <strong>{document.label}</strong>
+                    <small>{meta}</small>
+                  </span>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </button>
+              )
+            }
+            return (
+              <a className="document-link" href={document.url} target="_blank" rel="noreferrer" key={key}>
+                <FileText size={16} aria-hidden="true" />
+                <span>
+                  <strong>{document.label}</strong>
+                  <small>{meta}</small>
+                </span>
+                <ExternalLink size={14} aria-hidden="true" />
+              </a>
+            )
+          })}
         </div>
       ) : (
         <p className="muted">Δεν βρέθηκαν διαθέσιμα links εγγράφων από την πηγή.</p>
       )}
-    </section>
+      {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
+    </div>
+  )
+}
+
+function PdfPreviewModal({ preview, onClose }: { preview: PdfPreview; onClose: () => void }) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  return (
+    <div className="pdf-preview-backdrop" role="presentation" onClick={onClose}>
+      <section className="pdf-preview-modal" role="dialog" aria-modal="true" aria-label={preview.title} onClick={(event) => event.stopPropagation()}>
+        <div className="pdf-preview-header">
+          <span>
+            <strong>{preview.title}</strong>
+            {preview.meta ? <small>{preview.meta}</small> : null}
+          </span>
+          <div className="pdf-preview-actions">
+            <a className="icon-action" href={preview.url} target="_blank" rel="noreferrer" aria-label="Open PDF in new tab">
+              <ExternalLink size={17} aria-hidden="true" />
+            </a>
+            <button className="icon-action" type="button" onClick={onClose} aria-label="Close PDF preview">
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <iframe className="pdf-preview-frame" src={pdfViewerUrl(preview.url)} title={preview.title} />
+      </section>
+    </div>
+  )
+}
+
+function pdfViewerUrl(url: string): string {
+  return `${API_BASE}/api/documents/pdf?url=${encodeURIComponent(url)}`
+}
+
+function isPdfDocument(document: DocumentLink): boolean {
+  const type = document.document_type.toLowerCase()
+  return ['pdf', 'pdfs', 'request', 'notice', 'auction', 'contract', 'payment'].includes(type) || isPreviewableFileUrl(document.url)
+}
+
+function isPreviewableFileUrl(url?: string | null): url is string {
+  if (!url) {
+    return false
+  }
+  const lowerUrl = url.toLowerCase()
+  return lowerUrl.includes('/attachment/') || lowerUrl.includes('/document') || lowerUrl.endsWith('.pdf')
+}
+
+function previewFromUrl(title: string, url: string, meta: string): PdfPreview {
+  return { title, url, meta }
+}
+
+function CollapsiblePanel({ title, meta, children }: { title: string; meta?: string; children: ReactNode }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="collapsible-panel">
+      <button className="collapsible-panel-button" type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}>
+        <span>
+          <strong>{title}</strong>
+          {meta ? <small>{meta}</small> : null}
+        </span>
+        <ChevronDown className={expanded ? 'expanded' : undefined} size={17} aria-hidden="true" />
+      </button>
+      {expanded ? <div className="collapsible-panel-body">{children}</div> : null}
+    </div>
   )
 }
 
@@ -1539,6 +1645,7 @@ function DetailsDrawer({
                   <DetailItem label="Type" value={String(metadata.noticeType ?? metadata.procedureType ?? opportunity.procedure_type ?? 'N/A')} />
                   <DetailItem label="Budget" value={formatCurrency(opportunity.budget)} />
                   <CollapsibleCpvList label="CPV" value={opportunity.cpv_codes} />
+                  <DocumentsDetailItem documents={documents} />
                 </div>
                 <div className="details-summary-panel">
                   <h5>Summary</h5>
@@ -1552,8 +1659,6 @@ function DetailsDrawer({
                 </div>
               </div>
             </section>
-
-            <DocumentsPanel documents={documents} />
 
             {details?.guidance ? (
               <GuidancePanel guidance={details.guidance} />
@@ -1599,6 +1704,8 @@ function BuyerIntelligencePanel({
   loading: boolean
   error: string | null
 }) {
+  const [preview, setPreview] = useState<PdfPreview | null>(null)
+
   return (
     <section className="drawer-section buyer-intel-section">
       <div className="buyer-intel-header">
@@ -1634,7 +1741,7 @@ function BuyerIntelligencePanel({
         <div className="buyer-intel-content">
           <div className="buyer-metrics">
             <BuyerMetric label="Buyer opportunities" value={String(intelligence.buyer_opportunity_count)} />
-            <BuyerMetric label="KIMDIS history" value={String(intelligence.history_opportunity_count)} />
+            <BuyerMetric label="KIMDIS history" value={String(intelligence.history_opportunity_count)} detail={kimdisHistoryRangeLabel(intelligence)} />
             <BuyerMetric label="Typical budget" value={intelligence.budget_profile.typical_range} />
             <BuyerMetric label="Small software" value={String(intelligence.small_software_count)} />
             <BuyerMetric label="Similar past work" value={intelligence.has_similar_procurement ? 'Yes' : 'Not found'} />
@@ -1648,12 +1755,14 @@ function BuyerIntelligencePanel({
             </div>
           ) : null}
 
+          <BuyerIntelligenceGraph intelligence={intelligence} onPreview={setPreview} />
+
           <div className="buyer-intel-grid">
-            <BuyerSampleList title="Recent visible opportunities" items={intelligence.recent_opportunities} />
-            <BuyerSampleList title="Similar procurements" items={intelligence.similar_opportunities} empty="No similar procurement found in visible or KIMDIS historical records." />
+            <BuyerSampleList title="Recent visible opportunities" items={intelligence.recent_opportunities} onPreview={setPreview} />
+            <BuyerSampleList title="Similar procurements" items={intelligence.similar_opportunities} empty="No similar procurement found in visible or KIMDIS historical records." onPreview={setPreview} />
           </div>
 
-          <DiavgeiaSignals intelligence={intelligence} />
+          <DiavgeiaSignals intelligence={intelligence} onPreview={setPreview} />
 
           {intelligence.confidence_notes.length ? (
             <div className="confidence-notes">
@@ -1667,32 +1776,334 @@ function BuyerIntelligencePanel({
           ) : null}
         </div>
       ) : null}
+      {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
     </section>
   )
 }
 
-function BuyerMetric({ label, value }: { label: string; value: string }) {
+type BuyerGraphNode = {
+  id: string
+  label: string
+  meta: string
+  tooltip: string
+  url?: string | null
+  tone: 'buyer' | 'recent' | 'similar' | 'signal'
+  icon: LucideIcon
+}
+
+function BuyerIntelligenceGraph({ intelligence, onPreview }: { intelligence: BuyerIntelligenceResponse; onPreview: (preview: PdfPreview) => void }) {
+  const nodes = buildBuyerGraphNodes(intelligence)
+
+  if (!nodes.length) {
+    return null
+  }
+
   return (
-    <div className="buyer-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="buyer-graph-block">
+      <div className="buyer-graph-header">
+        <h5><Target size={15} aria-hidden="true" /> Buyer graph</h5>
+        <span>{nodes.filter((node) => Boolean(node.url)).length} clickable nodes</span>
+      </div>
+      <div className="buyer-graph-canvas" aria-label="Buyer intelligence graph">
+        {nodes.map((node) => (
+          <BuyerGraphNodeView node={node} onPreview={onPreview} key={node.id} />
+        ))}
+      </div>
     </div>
   )
 }
 
-function BuyerSampleList({ title, items, empty = 'No visible opportunities.' }: { title: string; items: BuyerOpportunitySample[]; empty?: string }) {
+function BuyerGraphNodeView({ node, onPreview }: { node: BuyerGraphNode; onPreview: (preview: PdfPreview) => void }) {
+  const Icon = node.icon
+  const content = (
+    <>
+      <span className="buyer-graph-node-icon">
+        <Icon size={16} aria-hidden="true" />
+      </span>
+      <span>
+        <strong>{node.label}</strong>
+        <small>{node.meta}</small>
+      </span>
+    </>
+  )
+
+  const previewableNodeUrl = isPreviewableFileUrl(node.url) ? node.url : null
+  if (previewableNodeUrl) {
+    return (
+      <button
+        className={`buyer-graph-node ${node.tone}`}
+        type="button"
+        aria-label={`Open ${node.label}`}
+        data-tooltip={node.tooltip}
+        title={node.tooltip}
+        onClick={() => onPreview(previewFromUrl(node.label, previewableNodeUrl, node.meta))}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  if (node.url) {
+    return (
+      <a
+        className={`buyer-graph-node ${node.tone}`}
+        href={node.url}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Open ${node.label}`}
+        data-tooltip={node.tooltip}
+        title={node.tooltip}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  return (
+    <div className={`buyer-graph-node ${node.tone} disabled`} aria-disabled="true" data-tooltip={node.tooltip} title={node.tooltip}>
+      {content}
+    </div>
+  )
+}
+
+function buildBuyerGraphNodes(intelligence: BuyerIntelligenceResponse): BuyerGraphNode[] {
+  const relatedOpportunityNodes = intelligence.similar_opportunities
+    .filter((item) => sharesCurrentCpvCategory(intelligence.current_cpv_categories, item.cpv_codes))
+    .slice(0, 6)
+    .map((item) => buyerOpportunityGraphNode(item, 'similar'))
+  const relatedSignalNodes = (intelligence.winner_signals.length ? intelligence.winner_signals : intelligence.diavgeia_decisions)
+    .filter((decision) => sharesCurrentCpvCategory(intelligence.current_cpv_categories, decision.cpv_codes))
+    .slice(0, 3)
+    .map((decision, index) => buyerDecisionGraphNode(decision, index))
+  const nodes: BuyerGraphNode[] = [
+    {
+      id: 'buyer-root',
+      label: intelligence.buyer,
+      meta: `${intelligence.buyer_opportunity_count} opportunities · ${intelligence.budget_profile.typical_range}`,
+      tooltip: [
+        `Buyer: ${intelligence.buyer}`,
+        `Buyer opportunities: ${intelligence.buyer_opportunity_count}`,
+        `Visible in current window: ${intelligence.visible_buyer_opportunity_count}`,
+        `KIMDIS history: ${intelligence.history_opportunity_count}`,
+        `Typical budget: ${intelligence.budget_profile.typical_range}`,
+        `Related graph nodes: ${relatedOpportunityNodes.length + relatedSignalNodes.length}`,
+      ].join('\n'),
+      tone: 'buyer',
+      icon: Building2,
+    },
+  ]
+
+  return [...nodes, ...relatedOpportunityNodes, ...relatedSignalNodes].slice(0, 10)
+}
+
+function buyerDecisionGraphNode(decision: DiavgeiaDecisionSignal, index: number): BuyerGraphNode {
+  const meta = [decision.source_label, decision.winner_name, decision.published_at ? formatDate(decision.published_at) : null].filter(Boolean).join(' · ') || 'Award signal'
+  return {
+    id: `signal-${decision.ada ?? decision.url ?? decision.document_url ?? index}`,
+    label: decision.subject,
+    meta,
+    tooltip: [
+      `Title: ${decision.subject}`,
+      `Source: ${decision.source_label}`,
+      decision.ada ? `Reference: ${decision.ada}` : null,
+      decision.decision_type ? `Decision type: ${decision.decision_type}` : null,
+      decision.winner_name ? `Winner: ${decision.winner_name}` : null,
+      decision.amount ? `Amount: ${formatCurrency(decision.amount)}` : null,
+      decision.published_at ? `Published: ${formatDate(decision.published_at)}` : null,
+      decision.cpv_codes.length ? `CPV: ${decision.cpv_codes.join(', ')}` : null,
+      decision.document_url ?? decision.url ? `Link: ${decision.document_url ?? decision.url}` : null,
+    ].filter(Boolean).join('\n'),
+    url: decision.document_url ?? decision.url,
+    tone: 'signal',
+    icon: ShieldCheck,
+  }
+}
+
+function buyerOpportunityGraphNode(item: BuyerOpportunitySample, tone: 'recent' | 'similar'): BuyerGraphNode {
+  const category = buyerOpportunityTag(item)
+  const meta = [item.source_label, formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, category].filter(Boolean).join(' · ')
+  return {
+    id: `opportunity-${item.id}`,
+    label: item.title,
+    meta,
+    tooltip: [
+      `Title: ${item.title}`,
+      `Source: ${item.source_label}`,
+      `Category: ${category}`,
+      item.budget ? `Budget: ${formatCurrency(item.budget)}` : null,
+      item.published_at ? `Published: ${formatDate(item.published_at)}` : null,
+      item.deadline ? `Deadline: ${formatDate(item.deadline)}` : null,
+      item.cpv_codes.length ? `CPV: ${item.cpv_codes.join(', ')}` : null,
+      `Fit score: ${item.fit_score}`,
+      item.url ? `Link: ${item.url}` : null,
+    ].filter(Boolean).join('\n'),
+    url: item.url,
+    tone,
+    icon: tone === 'similar' ? Layers3 : FileText,
+  }
+}
+
+function buyerOpportunityTag(item: BuyerOpportunitySample): string {
+  const broadTag = broadProcurementTag(item.cpv_codes, item.title)
+  if (!item.package_match || item.package_match === 'Custom software') {
+    return broadTag === 'Software' ? 'Custom software' : broadTag
+  }
+  if (broadTag !== 'Software' && item.package_match.toLowerCase().includes('software')) {
+    return broadTag
+  }
+  return item.package_match
+}
+
+function broadProcurementTag(cpvCodes: string[], title = ''): string {
+  const categoryLabels: Record<string, string> = {
+    software: 'Software',
+    'food-catering': 'Food / catering',
+    'it-equipment-maintenance': 'IT equipment / maintenance',
+    'transport-logistics': 'Transport / logistics',
+    'security-defence': 'Security / defence',
+    'laboratory-measurement': 'Laboratory / measurement',
+    'furniture-facilities': 'Furniture / facilities',
+    'industrial-equipment': 'Industrial equipment',
+    'construction-works': 'Construction / works',
+    'financial-insurance': 'Financial / insurance',
+    'engineering-technical': 'Engineering / technical',
+    'research-consulting': 'Research / consulting',
+    'business-services': 'Business services',
+    'training-education': 'Training / education',
+    'health-social-care': 'Health / social care',
+    'waste-environment': 'Waste / environment',
+    'culture-recreation': 'Culture / recreation',
+  }
+  const category = cpvCategoryKeys(cpvCodes)[0]
+  if (category) {
+    return categoryLabels[category] ?? 'Other procurement'
+  }
+  const loweredTitle = title.toLocaleLowerCase('el-GR')
+  if (['σαλάτ', 'salad', 'τρόφι', 'τροφ', 'φαγη', 'σίτιση', 'catering'].some((term) => loweredTitle.includes(term))) {
+    return 'Food / catering'
+  }
+  return 'Other procurement'
+}
+
+function sharesCurrentCpvCategory(currentCategories: string[], cpvCodes: string[]): boolean {
+  if (!currentCategories.length) {
+    return false
+  }
+  const itemCategories = cpvCategoryKeys(cpvCodes)
+  return currentCategories.some((category) => itemCategories.includes(category))
+}
+
+function cpvCategoryKeys(cpvCodes: string[]): string[] {
+  const categoryPrefixes: Array<[string, string[]]> = [
+    ['software', ['48', '72']],
+    ['food-catering', ['15', '55']],
+    ['it-equipment-maintenance', ['30', '32', '50']],
+    ['transport-logistics', ['34', '60', '63']],
+    ['security-defence', ['35']],
+    ['laboratory-measurement', ['38']],
+    ['furniture-facilities', ['39']],
+    ['industrial-equipment', ['42', '43']],
+    ['construction-works', ['44', '45']],
+    ['financial-insurance', ['66']],
+    ['engineering-technical', ['71']],
+    ['research-consulting', ['73']],
+    ['business-services', ['79']],
+    ['training-education', ['80']],
+    ['health-social-care', ['85']],
+    ['waste-environment', ['90']],
+    ['culture-recreation', ['92']],
+  ]
+  const prefixes = cpvCodes.map((code) => cpvDigits(code).slice(0, 2)).filter(Boolean)
+  return categoryPrefixes
+    .filter(([, candidates]) => prefixes.some((prefix) => candidates.includes(prefix)))
+    .map(([category]) => category)
+}
+
+function cpvDigits(code: string): string {
+  return code.replace(/\D/g, '')
+}
+
+function BuyerMetric({ label, value, detail }: { label: string; value: string; detail?: string | null }) {
+  return (
+    <div className="buyer-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail ? <small>{detail}</small> : null}
+    </div>
+  )
+}
+
+function kimdisHistoryRangeLabel(intelligence: BuyerIntelligenceResponse): string | null {
+  const searchRange = dateRangeLabel(intelligence.khmdhs_history_date_from, intelligence.khmdhs_history_date_to)
+  const resultRange = dateRangeLabel(intelligence.khmdhs_history_result_date_from, intelligence.khmdhs_history_result_date_to)
+  if (searchRange && resultRange && searchRange !== resultRange) {
+    return `Search ${searchRange} · Returned ${resultRange}`
+  }
+  if (searchRange) {
+    return `Search ${searchRange}`
+  }
+  if (resultRange) {
+    return `Returned ${resultRange}`
+  }
+  return null
+}
+
+function dateRangeLabel(from?: string | null, to?: string | null): string | null {
+  if (!from && !to) {
+    return null
+  }
+  if (from && to) {
+    return `${formatDate(from)} - ${formatDate(to)}`
+  }
+  return formatDate(from ?? to)
+}
+
+function BuyerSampleList({
+  title,
+  items,
+  empty = 'No visible opportunities.',
+  onPreview,
+}: {
+  title: string
+  items: BuyerOpportunitySample[]
+  empty?: string
+  onPreview: (preview: PdfPreview) => void
+}) {
   return (
     <div className="buyer-list-block">
       <h5>{title}</h5>
       {items.length ? (
         <div className="buyer-sample-list">
-          {items.map((item) => (
-            <a className="buyer-sample" href={item.url ?? '#'} target={item.url ? '_blank' : undefined} rel="noreferrer" key={item.id}>
-              <span>{item.source_label}</span>
-              <strong>{item.title}</strong>
-              <small>{[formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, item.package_match].filter(Boolean).join(' · ')}</small>
-            </a>
-          ))}
+          {items.map((item) => {
+            const meta = [item.source_label, formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, buyerOpportunityTag(item)].filter(Boolean).join(' · ')
+            const content = (
+              <>
+                <span>{item.source_label}</span>
+                <strong>{item.title}</strong>
+                <small>{[formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, buyerOpportunityTag(item)].filter(Boolean).join(' · ')}</small>
+              </>
+            )
+            const previewableItemUrl = isPreviewableFileUrl(item.url) ? item.url : null
+            if (previewableItemUrl) {
+              return (
+                <button className="buyer-sample" type="button" key={item.id} onClick={() => onPreview(previewFromUrl(item.title, previewableItemUrl, meta))}>
+                  {content}
+                </button>
+              )
+            }
+            if (item.url) {
+              return (
+                <a className="buyer-sample" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+                  {content}
+                </a>
+              )
+            }
+            return (
+              <div className="buyer-sample disabled" key={item.id}>
+                {content}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <p className="muted">{empty}</p>
@@ -1701,7 +2112,7 @@ function BuyerSampleList({ title, items, empty = 'No visible opportunities.' }: 
   )
 }
 
-function DiavgeiaSignals({ intelligence }: { intelligence: BuyerIntelligenceResponse }) {
+function DiavgeiaSignals({ intelligence, onPreview }: { intelligence: BuyerIntelligenceResponse; onPreview: (preview: PdfPreview) => void }) {
   const signals = intelligence.winner_signals.length ? intelligence.winner_signals : intelligence.diavgeia_decisions.slice(0, 3)
   return (
     <div className="diavgeia-block">
@@ -1710,17 +2121,44 @@ function DiavgeiaSignals({ intelligence }: { intelligence: BuyerIntelligenceResp
       {intelligence.diavgeia_message ? <p className="muted">{intelligence.diavgeia_message}</p> : null}
       {signals.length ? (
         <div className="diavgeia-list">
-          {signals.map((decision) => (
-            <a className="diavgeia-item" href={decision.document_url ?? decision.url ?? '#'} target={decision.document_url || decision.url ? '_blank' : undefined} rel="noreferrer" key={`${decision.ada}-${decision.subject}`}>
-              <span>{[decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision'].filter(Boolean).join(' · ')}</span>
-              <strong>{decision.subject}</strong>
-              <small>
-                {[decision.winner_name, formatCurrency(decision.amount), decision.published_at ? formatDate(decision.published_at) : null, decision.similar_to_software ? 'software-like' : null]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </small>
-            </a>
-          ))}
+          {signals.map((decision) => {
+            const href = decision.document_url ?? decision.url
+            const amountLabel = decision.amount ? formatCurrency(decision.amount) : null
+            const projectMeta = [amountLabel, decision.published_at ? formatDate(decision.published_at) : null, decision.similar_to_software ? 'software-like' : null].filter(Boolean)
+            const linkMeta = [decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision', ...projectMeta].filter(Boolean).join(' · ')
+            const content = (
+              <>
+                <div className="diavgeia-company-block">
+                  <span>Company</span>
+                  <strong>{decision.winner_name || 'Unknown winner'}</strong>
+                </div>
+                <div className="diavgeia-project-block">
+                  <span>{[decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision'].filter(Boolean).join(' · ')}</span>
+                  <strong>{decision.subject}</strong>
+                  {projectMeta.length ? <small>{projectMeta.join(' · ')}</small> : null}
+                </div>
+              </>
+            )
+            if (isPreviewableFileUrl(href)) {
+              return (
+                <button className="diavgeia-item" type="button" key={`${decision.ada}-${decision.subject}`} onClick={() => onPreview(previewFromUrl(decision.subject, href, linkMeta))}>
+                  {content}
+                </button>
+              )
+            }
+            if (!href) {
+              return (
+                <div className="diavgeia-item disabled" key={`${decision.ada}-${decision.subject}`}>
+                  {content}
+                </div>
+              )
+            }
+            return (
+              <a className="diavgeia-item" href={href} target="_blank" rel="noreferrer" key={`${decision.ada}-${decision.subject}`}>
+                {content}
+              </a>
+            )
+          })}
         </div>
       ) : (
         <p className="muted">No award/winner signal returned from KIMDIS or Diavgeia for this lookup.</p>
@@ -1831,19 +2269,19 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
     const metadata = asRecord(details.raw.metadata)
     const chain = asRecord(details.raw.adamChain)
     const objectDetails = Array.isArray(metadata.objectDetails) ? metadata.objectDetails : []
-    const cpvCount = countCpvEntries(objectDetails)
+    const metadataCount = fieldRowCount(metadata, ['objectDetails'])
     return (
       <div className="source-visualization">
-        <div className="source-summary-grid">
-          <SourceMetric icon={DatabaseZap} label="Source" value="KIMDIS" detail={details.reference} />
-          <SourceMetric icon={FileText} label="Documents" value={String(details.documents.length)} detail="available links" />
-          <SourceMetric icon={CircleDollarSign} label="Budget" value={formatCurrency(firstNumber(metadata.totalCostWithoutVAT, metadata.totalCostWithVAT))} detail="source value" />
-          <SourceMetric icon={Layers3} label="CPV" value={String(cpvCount)} detail="classified codes" />
-        </div>
         <ChainSignalPanel chain={chain} />
-        <FieldTable title="ΚΗΜΔΗΣ metadata" data={metadata} skip={['objectDetails']} />
+        {metadataCount ? (
+          <CollapsiblePanel title="KIMDIS metadata" meta={`${metadataCount} fields`}>
+            <FieldTable title="KIMDIS metadata" data={metadata} skip={['objectDetails']} />
+          </CollapsiblePanel>
+        ) : null}
         {objectDetails.length ? (
-          <NestedSection title="Object details" value={objectDetails} />
+          <CollapsiblePanel title="Object details" meta={`${objectDetails.length} records`}>
+            <NestedSection title="Object details" value={objectDetails} />
+          </CollapsiblePanel>
         ) : null}
       </div>
     )
@@ -1852,16 +2290,8 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
   if (details.source === 'ted') {
     const notice = asRecord(details.raw.notice)
     const links = asRecord(notice.links)
-    const linkCount = countUsefulValues(links)
-    const cpvCount = countCpvEntries(notice)
     return (
       <div className="source-visualization">
-        <div className="source-summary-grid">
-          <SourceMetric icon={Globe2} label="Source" value="TED" detail={details.reference} />
-          <SourceMetric icon={ExternalLink} label="Links" value={String(linkCount)} detail="notice groups" />
-          <SourceMetric icon={CalendarClock} label="Published" value={formatSourceValue(firstString(notice.publicationDate, notice.publication_date, notice.dispatchDate))} detail="notice date" />
-          <SourceMetric icon={Layers3} label="CPV" value={String(cpvCount)} detail="classified codes" />
-        </div>
         <FieldTable title="TED notice fields" data={notice} skip={['links']} />
         <LinkGroups links={links} />
       </div>
@@ -1869,19 +2299,6 @@ function SourceDataVisualization({ details }: { details: OpportunityDetails | nu
   }
 
   return <NestedSection title="Source payload" value={details.raw} />
-}
-
-function SourceMetric({ icon: Icon, label, value, detail }: { icon: LucideIcon; label: string; value: string; detail: string }) {
-  return (
-    <div className="source-metric">
-      <span className="source-metric-icon">
-        <Icon size={17} aria-hidden="true" />
-      </span>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </div>
-  )
 }
 
 function enrichOpportunityFromDetails(opportunity: Opportunity, details: OpportunityDetails): Opportunity {
@@ -1917,36 +2334,8 @@ function firstString(...values: unknown[]) {
   return null
 }
 
-function firstNumber(...values: unknown[]) {
-  for (const value of values) {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value
-    }
-    if (typeof value === 'string') {
-      const normalized = Number(value.replace(',', '.'))
-      if (Number.isFinite(normalized)) {
-        return normalized
-      }
-    }
-  }
-  return null
-}
-
-function countUsefulValues(value: unknown): number {
-  if (!isUsefulValue(value)) {
-    return 0
-  }
-  if (Array.isArray(value)) {
-    return value.filter(isUsefulValue).length
-  }
-  if (typeof value === 'object') {
-    return Object.values(asRecord(value)).filter(isUsefulValue).length
-  }
-  return 1
-}
-
-function countCpvEntries(value: unknown) {
-  return normalizeCpvEntries(value).length
+function fieldRowCount(data: Record<string, unknown>, skip: string[] = []) {
+  return Object.entries(data).filter(([key, value]) => !skip.includes(key) && isUsefulValue(value)).length
 }
 
 function FieldTable({ title, data, skip = [] }: { title: string; data: Record<string, unknown>; skip?: string[] }) {

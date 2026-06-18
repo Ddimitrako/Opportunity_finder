@@ -22,6 +22,32 @@ from app.sources.khmdhs import KhmdhsClient
 
 SOFTWARE_CPV_PREFIXES = ("72", "48")
 SMALL_SOFTWARE_BUDGET_MAX = 100_000
+CPV_CATEGORY_PREFIXES = (
+    ("software", ("48", "72")),
+    ("food-catering", ("15", "55")),
+    ("it-equipment-maintenance", ("30", "32", "50")),
+    ("transport-logistics", ("34", "60", "63")),
+    ("security-defence", ("35",)),
+    ("laboratory-measurement", ("38",)),
+    ("furniture-facilities", ("39",)),
+    ("industrial-equipment", ("42", "43")),
+    ("construction-works", ("44", "45")),
+    ("financial-insurance", ("66",)),
+    ("engineering-technical", ("71",)),
+    ("research-consulting", ("73",)),
+    ("business-services", ("79",)),
+    ("training-education", ("80",)),
+    ("health-social-care", ("85",)),
+    ("waste-environment", ("90",)),
+    ("culture-recreation", ("92",)),
+)
+SOFTWARE_PACKAGE_LABELS = {
+    "Public Applications Platform",
+    "Field Monitoring & Reporting App",
+    "Cultural / Multimedia Digital Experience",
+    "Dashboard & Data Intelligence",
+    "Document & Case Management",
+}
 SOFTWARE_TERMS = (
     "software",
     "λογισμ",
@@ -49,7 +75,11 @@ class BuyerIntelligenceService:
         khmdhs_awards: list[DiavgeiaDecisionSignal] = []
         khmdhs_history_status = "skipped"
         khmdhs_history_message: str | None = None
+        khmdhs_history_date_from: date | None = None
+        khmdhs_history_date_to: date | None = None
         if khmdhs_org_key and request.history_days > 0 and request.history_limit > 0:
+            khmdhs_history_date_to = date.today()
+            khmdhs_history_date_from = khmdhs_history_date_to - timedelta(days=request.history_days)
             try:
                 khmdhs_history = await self._khmdhs_history(khmdhs_org_key, request.history_days, request.history_limit)
                 khmdhs_history_status = "ok"
@@ -93,6 +123,7 @@ class BuyerIntelligenceService:
         source_counts = _source_counts(buyer_items)
         confidence_notes = _confidence_notes(market, visible_buyer_items, khmdhs_history, khmdhs_org_key, khmdhs_history_status, diavgeia_status)
         insight_flags = _insight_flags(buyer_items, budget_profile, has_similar, winner_signals)
+        khmdhs_result_date_from, khmdhs_result_date_to = _published_date_range(khmdhs_history)
 
         return BuyerIntelligenceResponse(
             buyer=buyer,
@@ -104,6 +135,11 @@ class BuyerIntelligenceService:
             source_counts=source_counts,
             budget_profile=budget_profile,
             small_software_count=sum(1 for item in buyer_items if _is_small_software(item)),
+            current_cpv_categories=sorted(_cpv_category_keys(current.cpv_codes) if current else set()),
+            khmdhs_history_date_from=khmdhs_history_date_from,
+            khmdhs_history_date_to=khmdhs_history_date_to,
+            khmdhs_history_result_date_from=khmdhs_result_date_from,
+            khmdhs_history_result_date_to=khmdhs_result_date_to,
             similar_opportunities=[_sample(item) for item in similar[:5]],
             recent_opportunities=[_sample(item) for item in recent],
             has_similar_procurement=has_similar,
@@ -240,20 +276,34 @@ def _source_counts(items: list[Opportunity]) -> dict[SourceName, int]:
     return counts
 
 
+def _published_date_range(items: list[Opportunity]) -> tuple[date | None, date | None]:
+    dates = sorted(item.published_at for item in items if item.published_at is not None)
+    if not dates:
+        return None, None
+    return dates[0], dates[-1]
+
+
 def _similar_opportunities(items: list[Opportunity], current: Opportunity | None) -> list[Opportunity]:
     if not current:
         return [item for item in items if _is_software_like(item)]
-    current_cpvs = {code.split("-")[0][:2] for code in current.cpv_codes}
-    current_terms = _term_set(f"{current.title} {current.summary} {current.package_match}")
+    current_categories = _cpv_category_keys(current.cpv_codes)
+    current_family_cpvs = _cpv_prefixes(current.cpv_codes, 3)
+    current_terms = _term_set(f"{current.title} {current.summary}")
     output: list[Opportunity] = []
     for item in items:
         if item.id == current.id:
             continue
-        item_cpvs = {code.split("-")[0][:2] for code in item.cpv_codes}
-        if current_cpvs.intersection(item_cpvs) or current.package_match == item.package_match:
+        item_categories = _cpv_category_keys(item.cpv_codes)
+        if current_categories and not current_categories.intersection(item_categories):
+            continue
+        item_family_cpvs = _cpv_prefixes(item.cpv_codes, 3)
+        if current_family_cpvs and current_family_cpvs.intersection(item_family_cpvs):
             output.append(item)
             continue
-        if current_terms.intersection(_term_set(f"{item.title} {item.summary} {item.package_match}")):
+        if current_categories and current_categories.intersection(item_categories):
+            output.append(item)
+            continue
+        if not current_categories and current_terms and current_terms.intersection(_term_set(f"{item.title} {item.summary}")):
             output.append(item)
     return sorted(output, key=lambda item: (item.fit_score, item.published_at or date.min), reverse=True)
 
@@ -264,13 +314,33 @@ def _term_set(text: str) -> set[str]:
 
 
 def _is_software_like(item: Opportunity) -> bool:
-    if any(code.startswith(SOFTWARE_CPV_PREFIXES) for code in item.cpv_codes):
+    if any(prefix.startswith(SOFTWARE_CPV_PREFIXES) for prefix in _cpv_prefixes(item.cpv_codes, 2)):
         return True
-    return bool(_term_set(f"{item.title} {item.summary} {item.package_match}"))
+    if item.package_match in SOFTWARE_PACKAGE_LABELS:
+        return True
+    return bool(_term_set(f"{item.title} {item.summary}"))
 
 
 def _is_small_software(item: Opportunity) -> bool:
     return _is_software_like(item) and item.budget is not None and item.budget <= SMALL_SOFTWARE_BUDGET_MAX
+
+
+def _cpv_prefixes(cpv_codes: list[str], length: int) -> set[str]:
+    prefixes: set[str] = set()
+    for code in cpv_codes:
+        digits = "".join(char for char in code if char.isdigit())
+        if len(digits) >= length:
+            prefixes.add(digits[:length])
+    return prefixes
+
+
+def _cpv_category_keys(cpv_codes: list[str]) -> set[str]:
+    categories: set[str] = set()
+    prefixes = _cpv_prefixes(cpv_codes, 2)
+    for category, category_prefixes in CPV_CATEGORY_PREFIXES:
+        if any(prefix.startswith(category_prefixes) for prefix in prefixes):
+            categories.add(category)
+    return categories
 
 
 def _sample(item: Opportunity) -> BuyerOpportunitySample:
