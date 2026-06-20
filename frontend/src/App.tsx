@@ -223,6 +223,46 @@ type SearchResponse = {
   }
 }
 
+type PatternOpportunitySample = {
+  id: string
+  title: string
+  buyer: string
+  source: SourceName
+  source_label: string
+  budget?: number | null
+  published_at?: string | null
+  deadline?: string | null
+  cpv_codes: string[]
+  fit_score: number
+  package_match?: string | null
+}
+
+type NeedPattern = {
+  pattern_id: string
+  label: string
+  category: string
+  recommended_package: string
+  repeat_score: number
+  productization_score: number
+  opportunity_count: number
+  buyer_count: number
+  median_budget?: number | null
+  min_budget?: number | null
+  max_budget?: number | null
+  budget_range: string
+  keywords: string[]
+  cpv_families: string[]
+  buyers: string[]
+  samples: PatternOpportunitySample[]
+}
+
+type NeedPatternResponse = {
+  generated_at: string
+  patterns: NeedPattern[]
+  unmatched_count: number
+  patternable_count: number
+}
+
 type DailyActivity = {
   date: string
   label: string
@@ -451,15 +491,37 @@ function App() {
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([])
   const [bookmarkError, setBookmarkError] = useState<string | null>(null)
   const [guidanceByOpportunityId, setGuidanceByOpportunityId] = useState<Record<string, OpportunityGuidance>>({})
+  const [patterns, setPatterns] = useState<NeedPattern[]>([])
+  const [patternsLoading, setPatternsLoading] = useState(false)
+  const [patternsError, setPatternsError] = useState<string | null>(null)
+  const [selectedBuyer, setSelectedBuyer] = useState('all')
 
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
   const cpvGroups = useMemo(() => buildCpvGroups(cpvOptions), [cpvOptions])
+  const buyerOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const opportunity of response?.opportunities ?? []) {
+      const buyer = opportunity.buyer.trim() || 'Unknown buyer'
+      counts.set(buyer, (counts.get(buyer) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .map(([buyer, count]) => ({ buyer, count }))
+      .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer))
+  }, [response])
+  const filteredOpportunities = useMemo(() => {
+    const opportunities = response?.opportunities ?? []
+    if (selectedBuyer === 'all') {
+      return opportunities
+    }
+    return opportunities.filter((opportunity) => opportunity.buyer === selectedBuyer)
+  }, [response, selectedBuyer])
+  const filteredStats = useMemo(() => opportunityStats(filteredOpportunities), [filteredOpportunities])
   const packageRows = useMemo(() => {
-    const packages = response?.stats.by_package ?? {}
+    const packages = filteredStats.by_package
     return Object.entries(packages)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-  }, [response])
+  }, [filteredStats])
   const bookmarkedIds = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
 
   const migrateLegacyShortlist = useCallback(async (opportunities: Opportunity[]) => {
@@ -505,9 +567,38 @@ function App() {
     }
   }, [])
 
+  const loadPatterns = useCallback(async (opportunities: Opportunity[]) => {
+    setPatternsLoading(true)
+    setPatternsError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/patterns/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunities,
+          min_opportunities: 2,
+          max_patterns: 8,
+        }),
+      })
+      if (!res.ok) {
+        throw new Error(`Patterns API returned ${res.status}`)
+      }
+      const data = (await res.json()) as NeedPatternResponse
+      setPatterns(data.patterns)
+    } catch (exc) {
+      setPatterns([])
+      setPatternsError(exc instanceof Error ? exc.message : 'Patterns discovery failed')
+    } finally {
+      setPatternsLoading(false)
+    }
+  }, [])
+
   const runSearch = useCallback(async (overrides?: { onlyOpen?: boolean; showAllFetched?: boolean }) => {
     setLoading(true)
     setError(null)
+    setPatterns([])
+    setPatternsError(null)
+    setSelectedBuyer('all')
     const requestOnlyOpen = overrides?.onlyOpen ?? onlyOpen
     const requestShowAllFetched = overrides?.showAllFetched ?? showAllFetched
     try {
@@ -663,6 +754,13 @@ function App() {
     }, 0)
     return () => window.clearTimeout(activityTimer)
   }, [runActivity])
+
+  useEffect(() => {
+    if (!response) {
+      return
+    }
+    void loadPatterns(filteredOpportunities)
+  }, [filteredOpportunities, loadPatterns, response])
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -914,6 +1012,23 @@ function App() {
           </div>
 
           <div className="filter-group">
+            <label className="field">
+              <span>
+                <Building2 size={16} aria-hidden="true" />
+                Buyers
+              </span>
+              <select value={selectedBuyer} disabled={!buyerOptions.length || loading} onChange={(event) => setSelectedBuyer(event.target.value)}>
+                <option value="all">All buyers ({response?.opportunities.length ?? 0})</option>
+                {buyerOptions.map((option) => (
+                  <option value={option.buyer} key={option.buyer}>
+                    {option.buyer} ({option.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="filter-group">
             <div className="group-title">
               <Layers3 size={16} aria-hidden="true" />
               CPV focus
@@ -997,14 +1112,22 @@ function App() {
         ) : null}
 
         <section className="metric-strip">
-          <Metric icon={DatabaseZap} label="Results" value={loading ? '...' : String(response?.stats.total ?? 0)} />
-          <Metric icon={Target} label="Bid candidates" value={String(response?.stats.bid_candidates ?? 0)} tone="green" />
-          <Metric icon={Gauge} label="Average fit" value={`${response?.stats.average_score ?? 0}/100`} tone="blue" />
-          <Metric icon={CircleDollarSign} label="Tracked budget" value={formatCurrency(response?.stats.total_budget ?? 0)} tone="amber" />
+          <Metric icon={DatabaseZap} label="Results" value={loading ? '...' : String(filteredStats.total)} />
+          <Metric icon={Target} label="Bid candidates" value={String(filteredStats.bid_candidates)} tone="green" />
+          <Metric icon={Gauge} label="Average fit" value={`${filteredStats.average_score}/100`} tone="blue" />
+          <Metric icon={CircleDollarSign} label="Tracked budget" value={formatCurrency(filteredStats.total_budget)} tone="amber" />
         </section>
 
         <section className="insight-layout">
           <SmartCalendarPanel activity={activity} loading={activityLoading} error={activityError} selectedSources={sources} />
+
+          <PatternsPanel
+            patterns={patterns}
+            loading={patternsLoading}
+            error={patternsError}
+            opportunities={filteredOpportunities}
+            onOpenOpportunity={(opportunity) => void openDetails(opportunity)}
+          />
 
           <div className="source-panel">
             <div className="panel-heading">
@@ -1079,7 +1202,7 @@ function App() {
         <section className="results-header">
           <div>
             <p className="eyebrow">Ranked opportunities</p>
-            <h3>{loading ? 'Loading opportunities' : `${response?.opportunities.length ?? 0} matches`}</h3>
+            <h3>{loading ? 'Loading opportunities' : `${filteredOpportunities.length} matches`}</h3>
           </div>
           <div className="legend">
             <span><i className="legend-dot green" />80+</span>
@@ -1095,7 +1218,7 @@ function App() {
               <span>Fetching and scoring sources...</span>
             </div>
           ) : (
-            response?.opportunities.map((opportunity) => (
+            filteredOpportunities.map((opportunity) => (
               <OpportunityRow
                 key={opportunity.id}
                 opportunity={opportunity}
@@ -1124,6 +1247,86 @@ function App() {
         onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
+    </div>
+  )
+}
+
+function PatternsPanel({
+  patterns,
+  loading,
+  error,
+  opportunities,
+  onOpenOpportunity,
+}: {
+  patterns: NeedPattern[]
+  loading: boolean
+  error: string | null
+  opportunities: Opportunity[]
+  onOpenOpportunity: (opportunity: Opportunity) => void
+}) {
+  const opportunityById = useMemo(() => new Map(opportunities.map((opportunity) => [opportunity.id, opportunity])), [opportunities])
+
+  return (
+    <div className="pattern-panel">
+      <div className="panel-heading">
+        <Layers3 size={18} aria-hidden="true" />
+        <h3>Repeated needs</h3>
+      </div>
+      <p className="panel-note">Curated product/service patterns detected in the loaded results.</p>
+      {loading ? (
+        <div className="pattern-state">
+          <Loader2 className="spin" size={18} aria-hidden="true" />
+          <span>Detecting patterns...</span>
+        </div>
+      ) : error ? (
+        <p className="drawer-error-inline">{error}</p>
+      ) : patterns.length ? (
+        <div className="pattern-list">
+          {patterns.slice(0, 3).map((pattern) => (
+            <article className="pattern-card" key={pattern.pattern_id}>
+              <div className="pattern-card-header">
+                <div>
+                  <span>{pattern.category}</span>
+                  <h4>{pattern.label}</h4>
+                </div>
+                <strong>{pattern.productization_score}</strong>
+              </div>
+              <p>{pattern.recommended_package}</p>
+              <div className="pattern-metrics">
+                <span><Target size={14} aria-hidden="true" />{pattern.opportunity_count} matches</span>
+                <span><Building2 size={14} aria-hidden="true" />{pattern.buyer_count} buyers</span>
+                <span><CircleDollarSign size={14} aria-hidden="true" />{formatCurrency(pattern.median_budget)}</span>
+                <span><Gauge size={14} aria-hidden="true" />Repeat {pattern.repeat_score}</span>
+              </div>
+              {pattern.keywords.length ? (
+                <div className="pattern-keywords">
+                  {pattern.keywords.slice(0, 5).map((keyword) => (
+                    <span key={keyword}>{keyword}</span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="pattern-examples">
+                {pattern.samples.slice(0, 3).map((sample) => {
+                  const opportunity = opportunityById.get(sample.id)
+                  return (
+                    <button
+                      type="button"
+                      key={sample.id}
+                      disabled={!opportunity}
+                      onClick={() => opportunity ? onOpenOpportunity(opportunity) : undefined}
+                    >
+                      <strong>{sample.fit_score}</strong>
+                      <span>{sample.title}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">No repeated need patterns yet.</p>
+      )}
     </div>
   )
 }
@@ -2631,6 +2834,22 @@ function isUsefulValue(value: unknown) {
     return Object.keys(value as Record<string, unknown>).length > 0
   }
   return true
+}
+
+function opportunityStats(items: Opportunity[]) {
+  const totalBudget = items.reduce((sum, item) => sum + (item.budget ?? 0), 0)
+  const byPackage: Record<string, number> = {}
+  for (const item of items) {
+    byPackage[item.package_match] = (byPackage[item.package_match] ?? 0) + 1
+  }
+  return {
+    total: items.length,
+    bid_candidates: items.filter((item) => item.fit_score >= 80).length,
+    worth_reading: items.filter((item) => item.fit_score >= 60).length,
+    total_budget: totalBudget,
+    average_score: items.length ? Math.round((items.reduce((sum, item) => sum + item.fit_score, 0) / items.length) * 10) / 10 : 0,
+    by_package: byPackage,
+  }
 }
 
 function formatSourceValue(value: unknown): string {

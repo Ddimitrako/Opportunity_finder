@@ -18,6 +18,8 @@ from app.models import (
     DEFAULT_KEYWORDS,
     DocumentBriefResponse,
     HealthResponse,
+    NeedPatternRequest,
+    NeedPatternResponse,
     OpportunityDetails,
     ProcurementSearchRequest,
     SearchResponse,
@@ -29,6 +31,7 @@ from app.services.briefs import DocumentBriefService
 from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
+from app.services.patterns import PatternDiscoveryService
 
 app = FastAPI(title="Opportunity Finder API", version="0.1.0")
 
@@ -64,6 +67,10 @@ def get_brief_service(settings: Settings = Depends(get_settings)) -> DocumentBri
 
 def get_buyer_intelligence_service(settings: Settings = Depends(get_settings)) -> BuyerIntelligenceService:
     return BuyerIntelligenceService(settings)
+
+
+def get_pattern_service() -> PatternDiscoveryService:
+    return PatternDiscoveryService()
 
 
 def _allowed_document_hosts(settings: Settings) -> set[str]:
@@ -162,6 +169,14 @@ async def buyer_intelligence(
     service: BuyerIntelligenceService = Depends(get_buyer_intelligence_service),
 ) -> BuyerIntelligenceResponse:
     return await service.analyze(request)
+
+
+@app.post("/api/patterns/discover", response_model=NeedPatternResponse)
+async def discover_patterns(
+    request: NeedPatternRequest,
+    service: PatternDiscoveryService = Depends(get_pattern_service),
+) -> NeedPatternResponse:
+    return service.discover(request)
 
 
 @app.get("/api/bookmarks", response_model=BookmarkListResponse)

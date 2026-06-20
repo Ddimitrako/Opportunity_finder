@@ -137,7 +137,8 @@ h5 {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #cbd6dc;
@@ -158,7 +159,8 @@ h5 {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: #2f7f9f;
   box-shadow: 0 0 0 3px rgba(47, 127, 159, 0.14);
 }
@@ -564,6 +566,7 @@ h5 {
 
 .smart-calendar-panel,
 .source-panel,
+.pattern-panel,
 .package-panel,
 .shortlist-panel {
   min-height: 156px;
@@ -591,9 +594,135 @@ h5 {
 .source-run-list,
 .shortlist-entry,
 .shortlist-list,
+.pattern-list,
 .package-bars {
   display: grid;
   gap: 10px;
+}
+
+.pattern-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 92px;
+  color: #53636d;
+  font-size: 13px;
+}
+
+.pattern-card {
+  display: grid;
+  gap: 10px;
+  border-radius: 8px;
+  background: #f5f8f9;
+  padding: 11px;
+}
+
+.pattern-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 10px;
+  align-items: start;
+}
+
+.pattern-card-header span {
+  display: block;
+  color: #697882;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pattern-card-header h4 {
+  margin-top: 2px;
+  color: #17232a;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.pattern-card-header strong {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 34px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #216a55;
+  font-size: 15px;
+}
+
+.pattern-card > p {
+  color: #4b5c66;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pattern-metrics,
+.pattern-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pattern-metrics span,
+.pattern-keywords span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 23px;
+  border-radius: 999px;
+  background: #e7eef1;
+  color: #42535d;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.pattern-keywords span {
+  color: #205b87;
+  background: #e4f0f8;
+}
+
+.pattern-examples {
+  display: grid;
+  gap: 6px;
+}
+
+.pattern-examples button {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #22313a;
+  padding: 7px;
+  text-align: left;
+}
+
+.pattern-examples button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pattern-examples button strong {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #24495a;
+  font-size: 11px;
+}
+
+.pattern-examples button span {
+  overflow: hidden;
+  color: #2d3c45;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-list {

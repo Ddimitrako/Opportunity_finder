@@ -119,6 +119,52 @@ class Opportunity(BaseModel):
     source_payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class PatternOpportunitySample(BaseModel):
+    id: str
+    title: str
+    buyer: str
+    source: SourceName
+    source_label: str
+    budget: float | None = None
+    published_at: date | None = None
+    deadline: date | None = None
+    cpv_codes: list[str] = Field(default_factory=list)
+    fit_score: int = 0
+    package_match: str | None = None
+
+
+class NeedPattern(BaseModel):
+    pattern_id: str
+    label: str
+    category: str
+    recommended_package: str
+    repeat_score: int
+    productization_score: int
+    opportunity_count: int
+    buyer_count: int
+    median_budget: float | None = None
+    min_budget: float | None = None
+    max_budget: float | None = None
+    budget_range: str = "Unknown"
+    keywords: list[str] = Field(default_factory=list)
+    cpv_families: list[str] = Field(default_factory=list)
+    buyers: list[str] = Field(default_factory=list)
+    samples: list[PatternOpportunitySample] = Field(default_factory=list)
+
+
+class NeedPatternRequest(BaseModel):
+    opportunities: list[Opportunity] = Field(default_factory=list)
+    min_opportunities: int = Field(default=2, ge=1, le=20)
+    max_patterns: int = Field(default=8, ge=1, le=20)
+
+
+class NeedPatternResponse(BaseModel):
+    generated_at: datetime
+    patterns: list[NeedPattern] = Field(default_factory=list)
+    unmatched_count: int = 0
+    patternable_count: int = 0
+
+
 class DocumentLink(BaseModel):
     label: str
     url: str
