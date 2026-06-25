@@ -49,9 +49,13 @@ class TedClient:
             records = extract_records(response.json())
         return [self._to_opportunity(record) for record in records[: request.limit]]
 
-    async def activity(self, date_from: date, date_to: date, limit: int = 100) -> list[Opportunity]:
+    async def activity(self, date_from: date, date_to: date, limit: int = 100, cpv_codes: list[str] | None = None) -> list[Opportunity]:
+        cpv_terms = " OR ".join(f"classification-cpv={code.split('-')[0]}" for code in cpv_codes or [])
+        query = "organisation-country-buyer=GRC"
+        if cpv_terms:
+            query = f"{query} AND ({cpv_terms})"
         body: dict[str, Any] = {
-            "query": "organisation-country-buyer=GRC",
+            "query": query,
             "fields": [
                 "publication-number",
                 "notice-title",

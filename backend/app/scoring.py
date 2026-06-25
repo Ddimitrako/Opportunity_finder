@@ -42,7 +42,7 @@ PACKAGES = [
     {
         "name": "Public Applications Platform",
         "label": "Αιτήσεις / workflows",
-        "keywords": ("αίτηση", "αιτήσεις", "δικαιολογητικά", "workflow", "status", "πλατφόρμα"),
+        "keywords": ("αίτηση", "αιτήσεις", "δικαιολογητικά", "workflow", "status"),
     },
     {
         "name": "Field Monitoring & Reporting App",
@@ -114,15 +114,12 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
     opportunity_cpvs = {code.split("-")[0] for code in opportunity.cpv_codes}
     if target_cpvs.intersection(opportunity_cpvs):
         score += 25
-        reasons.append("Σχετικός CPV για custom software ή web/data εφαρμογές")
 
     if opportunity.budget is not None:
         if 10_000 <= opportunity.budget <= 80_000:
             score += 20
-            reasons.append("Budget στο γλυκό σημείο μικρής ομάδας")
         elif request.budget_min <= opportunity.budget <= request.budget_max:
             score += 12
-            reasons.append("Budget μέσα στα φίλτρα αναζήτησης")
         elif opportunity.budget > 250_000:
             score -= 15
             red_flags.append("Προϋπολογισμός πάνω από 250k")
@@ -130,7 +127,6 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
     matched_keywords = sorted({keyword for keyword in request.keywords if keyword.casefold() in text})
     if matched_keywords:
         score += min(15, 5 + len(matched_keywords) * 2)
-        reasons.append("Ταιριάζει με λέξεις-κλειδιά full-stack έργου")
 
     buyer_text = f"{opportunity.buyer} {opportunity.buyer_type or ''}".casefold()
     if any(word in buyer_text for word in TARGET_BUYER_WORDS):
@@ -144,7 +140,6 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
         days_left = (opportunity.deadline - date.today()).days
         if days_left >= 15:
             score += 10
-            reasons.append("Υπάρχει χρόνος για ανάγνωση φακέλου και προσφορά")
         elif days_left < 5:
             score -= 10
             red_flags.append("Πολύ κοντινή προθεσμία")
@@ -166,8 +161,8 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
     opportunity.fit_score = max(0, min(100, score))
     opportunity.fit_band = fit_band(opportunity.fit_score)
     opportunity.recommendation = recommendation(opportunity.fit_score)
-    opportunity.score_reasons = reasons[:6]
-    opportunity.red_flags = red_flags[:6]
+    opportunity.score_reasons = []
+    opportunity.red_flags = []
     opportunity.matched_keywords = matched_keywords[:8]
     opportunity.package_match = package_match
     return opportunity

@@ -10,7 +10,7 @@ def demo_opportunities() -> list[Opportunity]:
             id="demo-green-taxi",
             source="demo",
             source_label="Demo pattern",
-            title="Ανάπτυξη και υποστήριξη πλατφόρμας αιτήσεων για δημόσια δράση",
+            title="Ανάπτυξη και υποστήριξη εφαρμογής αιτήσεων για δημόσια δράση",
             buyer="Επιτελική Δομή ΕΣΠΑ - Υπουργείο Περιβάλλοντος",
             buyer_type="Κεντρική διοίκηση / δημόσια δράση",
             procedure_type="Πρόσκληση υποβολής προσφοράς",
@@ -27,7 +27,7 @@ def demo_opportunities() -> list[Opportunity]:
                 "Web εφαρμογή αιτήσεων με ρόλους χρηστών, upload δικαιολογητικών, "
                 "status tracking, admin review, notifications και exports."
             ),
-            raw_text="ανάπτυξη εφαρμογής πλατφόρμα αιτήσεις δικαιολογητικά dashboard reports API",
+            raw_text="ανάπτυξη εφαρμογής αιτήσεις δικαιολογητικά dashboard reports API",
         ),
         Opportunity(
             id="demo-monitoring",
@@ -93,7 +93,7 @@ def demo_opportunities() -> list[Opportunity]:
             status_label="Contract award",
             notice_type="Contract award notice",
             summary=(
-                "Μεγάλο έργο data platform, predictive analytics, integrations, SLA, "
+                "Μεγάλο έργο data analytics, predictive analytics, integrations, SLA, "
                 "ασφάλεια και εκτεταμένη τεκμηρίωση."
             ),
             raw_text="forecasting business intelligence dashboard ISO 27001 κύκλο εργασιών full-time",

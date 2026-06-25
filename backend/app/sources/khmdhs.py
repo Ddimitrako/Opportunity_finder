@@ -57,6 +57,28 @@ class KhmdhsClient:
             records = extract_records(response.json())
         return [self._to_opportunity(record) for record in records[:limit]]
 
+    async def activity_count(self, date_from: date, date_to: date, cpv_codes: list[str] | None = None) -> int:
+        body: dict[str, Any] = {
+            "dateFrom": date_from.isoformat(),
+            "dateTo": date_to.isoformat(),
+        }
+        if cpv_codes:
+            body["cpvItems"] = cpv_codes
+        url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/notice"
+        async with httpx.AsyncClient(
+            timeout=self.settings.khmdhs_timeout_seconds,
+            verify=self.settings.khmdhs_verify_ssl,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        ) as client:
+            response = await client.post(url, params={"page": 0}, json=body)
+            if response.status_code == 404:
+                return 0
+            response.raise_for_status()
+            payload = response.json()
+        if isinstance(payload, dict) and isinstance(payload.get("totalElements"), int):
+            return int(payload["totalElements"])
+        return len(extract_records(payload))
+
     def _to_opportunity(self, record: dict[str, Any]) -> Opportunity:
         reference = first_text(record.get("referenceNumber"))
         title = first_text(record.get("title"), "ΚΗΜΔΗΣ πράξη χωρίς τίτλο")

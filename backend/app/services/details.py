@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from typing import Any
 
@@ -57,10 +58,14 @@ class OpportunityDetailsService:
             verify=self.settings.khmdhs_verify_ssl,
             headers={"Accept": "application/json"},
         ) as client:
-            metadata = await self._khmdhs_metadata(client, reference)
-            chain_response = await client.get(f"{base}/khmdhs-opendata/adamChain/{reference}")
-            chain_response.raise_for_status()
-            chain = chain_response.json()
+            metadata, metadata_error = await self._khmdhs_metadata(client, reference)
+            chain, chain_error = await _khmdhs_json(
+                client,
+                "GET",
+                f"{base}/khmdhs-opendata/adamChain/{reference}",
+            )
+            chain = chain or {}
+            upstream_errors = [error for error in (metadata_error, chain_error) if error]
 
         documents: list[DocumentLink] = []
         related_references: dict[str, list[str]] = {}
@@ -88,26 +93,31 @@ class OpportunityDetailsService:
             reference=reference,
             title=title,
             platform_url=primary_document_url or f"{base}/upgkimdis/unprotected/home.xhtml",
-            summary=first_text(metadata.get("shortDescription")) if metadata else None,
+            summary=first_text(metadata.get("shortDescription")) if metadata else _khmdhs_fallback_summary(upstream_errors),
             metadata=_compact_khmdhs_metadata(metadata),
             documents=documents,
             related_references=related_references,
             guidance=_khmdhs_guidance(reference, metadata, related_references, documents),
-            raw={"metadata": metadata, "adamChain": chain},
+            raw={"metadata": metadata, "adamChain": chain, "upstream_errors": upstream_errors},
         )
 
-    async def _khmdhs_metadata(self, client: httpx.AsyncClient, reference: str) -> dict[str, Any]:
+    async def _khmdhs_metadata(self, client: httpx.AsyncClient, reference: str) -> tuple[dict[str, Any], str | None]:
         base = str(self.settings.khmdhs_base_url).rstrip("/")
         endpoint = _khmdhs_search_endpoint(reference)
         if not endpoint:
-            return {}
+            return {}, None
         body = _khmdhs_reference_search_body(reference)
-        response = await client.post(f"{base}/khmdhs-opendata/{endpoint}", params={"page": 0}, json=body)
-        if response.status_code == 404:
-            return {}
-        response.raise_for_status()
-        records = extract_records(response.json())
-        return records[0] if records else {}
+        data, error = await _khmdhs_json(
+            client,
+            "POST",
+            f"{base}/khmdhs-opendata/{endpoint}",
+            params={"page": 0},
+            json=body,
+        )
+        if not data:
+            return {}, error
+        records = extract_records(data)
+        return records[0] if records else {}, error
 
     async def _ted_details(self, reference: str) -> OpportunityDetails:
         body: dict[str, Any] = {
@@ -162,6 +172,34 @@ def _khmdhs_reference_search_body(reference: str) -> dict[str, Any]:
     if "REQ" in reference:
         common.update({"isInitial": True, "isApproved": True, "isApproval": True})
     return common
+
+
+async def _khmdhs_json(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    *,
+    params: dict[str, Any] | None = None,
+    json: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, str | None]:
+    for attempt in range(3):
+        response = await client.request(method, url, params=params, json=json)
+        if response.status_code == 404:
+            return None, None
+        if response.status_code == 429:
+            if attempt < 2:
+                await asyncio.sleep(1.2 * (attempt + 1))
+                continue
+            return None, "KIMDIS rate limit reached while loading details. Try again in a little while."
+        response.raise_for_status()
+        return response.json(), None
+    return None, "KIMDIS details request did not complete."
+
+
+def _khmdhs_fallback_summary(upstream_errors: list[str]) -> str | None:
+    if not upstream_errors:
+        return None
+    return "KIMDIS temporarily limited the details request. Open the source link or try again shortly."
 
 
 def _compact_khmdhs_metadata(record: dict[str, Any]) -> dict[str, Any]:
@@ -308,7 +346,7 @@ def _khmdhs_guidance(
     )
     watch_items = [
         "A linked PROC notice in KIMDIS notices.",
-        "Submission method: ESIDIS, email, platform, or instructions inside the notice.",
+        "Submission method: ESIDIS, email, or instructions inside the notice.",
         "Clarifications, amended notices, award decisions, contract and payment records.",
     ]
     return OpportunityGuidance(
@@ -333,7 +371,7 @@ def _ted_guidance(notice: dict[str, Any], documents: list[DocumentLink], platfor
     stage_defs = [
         ("planning", "Planning / consultation", "Early market signal or prior information."),
         ("competition", "Competition", "Active tender or contract notice. This is usually actionable."),
-        ("submission", "Submission", "Prepare and submit response through the platform/instructions."),
+        ("submission", "Submission", "Prepare and submit response through the required instructions."),
         ("result", "Result / award", "Award or result notice. Usually no longer open for bidding."),
         ("modification", "Contract modification", "Post-award modification/completion information."),
     ]
@@ -378,7 +416,7 @@ def _ted_guidance(notice: dict[str, Any], documents: list[DocumentLink], platfor
         ),
         watch_items=[
             "TED document links and buyer instructions.",
-            "Deadline and submission platform, often eSubmission/eTendering or buyer portal.",
+            "Deadline and submission method, often eSubmission/eTendering or buyer portal.",
             "Clarifications, corrigenda, result/award notices and contract modifications.",
         ],
         primary_action_link=primary_link,
@@ -437,7 +475,7 @@ def _bid_checklist(
         ),
         GuidanceChecklistItem(
             label="Check deadline and submission method",
-            detail="Confirm exact due date, platform, required signatures and file formats.",
+            detail="Confirm exact due date, submission method, required signatures and file formats.",
             status="done" if actionable and deadline_ok else "watch" if has_competition else "blocked",
         ),
         GuidanceChecklistItem(
@@ -457,7 +495,7 @@ def _bid_checklist(
         ),
         GuidanceChecklistItem(
             label="Submit and monitor",
-            detail="Submit through the required platform/instructions, then watch clarifications and award results.",
+            detail="Submit through the required instructions, then watch clarifications and award results.",
             status="todo" if actionable else "watch",
         ),
     ]

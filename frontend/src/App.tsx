@@ -7,6 +7,8 @@ import {
   Building2,
   CalendarClock,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   CircleDollarSign,
   DatabaseZap,
@@ -270,6 +272,25 @@ type DailyActivity = {
   by_source: Partial<Record<SourceName, number>>
 }
 
+type CalendarDayCell = {
+  date: string
+  dayOfMonth: number
+  offset: number
+  inMonth: boolean
+  isToday: boolean
+  isFuture: boolean
+  total: number
+  by_source: Partial<Record<SourceName, number>>
+}
+
+type CalendarMonth = {
+  year: number
+  month: number
+  label: string
+  total: number
+  cells: CalendarDayCell[]
+}
+
 type ActivityResponse = {
   generated_at: string
   date_from: string
@@ -277,6 +298,7 @@ type ActivityResponse = {
   daily_activity: DailyActivity[]
   source_runs: SourceRun[]
   total: number
+  cached: boolean
 }
 
 type BookmarkRecord = {
@@ -298,6 +320,8 @@ type ConfigResponse = {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+
+const CALENDAR_WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
 const SOURCE_META: Record<SourceName, { label: string; icon: LucideIcon }> = {
   khmdhs: { label: 'ΚΗΜΔΗΣ', icon: DatabaseZap },
@@ -343,6 +367,38 @@ const FALLBACK_CPV = [
   '50312000-5',
   '50312300-8',
   '72700000-7',
+  '48730000-4',
+  '48732000-8',
+  '72212730-5',
+  '72810000-1',
+  '72500000-0',
+  '72510000-3',
+  '72590000-7',
+  '72910000-2',
+  '38221000-0',
+  '71354100-5',
+  '72314000-9',
+  '48400000-2',
+  '48440000-4',
+  '48450000-7',
+  '72212440-5',
+  '72212450-8',
+  '72212460-1',
+  '72212461-8',
+  '72212463-2',
+  '72212481-3',
+  '79999100-4',
+  '72311100-9',
+  '92512000-3',
+  '48190000-6',
+  '72212190-7',
+  '80533100-0',
+  '80420000-4',
+  '72220000-3',
+  '72221000-0',
+  '72222000-7',
+  '72224000-1',
+  '72246000-1',
 ]
 
 const CPV_DESCRIPTIONS: Record<string, string> = {
@@ -354,11 +410,11 @@ const CPV_DESCRIPTIONS: Record<string, string> = {
   '72212100-0': 'Industry specific software development services. Domain-specific custom software.',
   '72250000-2': 'System and support services. Operational support around information systems.',
   '72253000-3': 'Helpdesk and support services. User support and service desk work.',
-  '72261000-2': 'Software support services. Support for existing software products or platforms.',
+  '72261000-2': 'Software support services. Support for existing software products or applications.',
   '72262000-9': 'Software development services. Broad custom development CPV.',
   '72263000-6': 'Software implementation services. Implementation, setup and rollout.',
   '72268000-1': 'Software supply services. Supply or delivery of software services/products.',
-  '72420000-0': 'Internet development services. Web platforms and internet applications.',
+  '72420000-0': 'Internet development services. Web and internet applications.',
   '72421000-7': 'Internet or intranet client application development services.',
   '72413000-8': 'World wide web site design services. Websites, portals and redesign work.',
   '72415000-2': 'World wide web site operation host services. Hosting/operation for websites.',
@@ -384,6 +440,38 @@ const CPV_DESCRIPTIONS: Record<string, string> = {
   '50312000-5': 'Maintenance and repair of computer equipment. Hardware maintenance.',
   '50312300-8': 'Maintenance and repair of data network equipment. Network equipment support.',
   '72700000-7': 'Computer network services. Network services, operation and support.',
+  '48730000-4': 'Security software package. Ready-made cybersecurity software.',
+  '48732000-8': 'Data security software package. Security tooling for data protection.',
+  '72212730-5': 'Security software development services. Custom cybersecurity tooling.',
+  '72810000-1': 'Computer audit services. IT audit, controls and compliance checks.',
+  '72500000-0': 'Computer-related services. Managed or professional IT services.',
+  '72510000-3': 'Computer-related management services. Management of IT operations or systems.',
+  '72590000-7': 'Computer-related professional services. Specialist IT professional services.',
+  '72910000-2': 'Computer back-up services. Backup, restore and continuity services.',
+  '38221000-0': 'Geographic information systems. GIS platforms and related systems.',
+  '71354100-5': 'Digital mapping services. Mapping, geospatial production and map updates.',
+  '72314000-9': 'Data collection and collation services. Structured data gathering work.',
+  '48400000-2': 'Business transaction and personal business software package. ERP/CRM-style systems.',
+  '48440000-4': 'Financial analysis and accounting software package. Accounting/finance systems.',
+  '48450000-7': 'Time accounting or human resources software package. HR/time management systems.',
+  '72212440-5': 'Financial analysis and accounting software development services.',
+  '72212450-8': 'Time accounting or human resources software development services.',
+  '72212460-1': 'Analytical, scientific, mathematical or forecasting software development services.',
+  '72212461-8': 'Analytical or scientific software development services.',
+  '72212463-2': 'Statistical software development services.',
+  '72212481-3': 'Sales, marketing and business intelligence software development services.',
+  '79999100-4': 'Scanning services. Digitisation and scan-to-file work.',
+  '72311100-9': 'Data conversion services. Migration, transformation and conversion work.',
+  '92512000-3': 'Archive services. Archiving and records-related services.',
+  '48190000-6': 'Educational software package. Learning or training software.',
+  '72212190-7': 'Educational software development services. Custom e-learning platforms.',
+  '80533100-0': 'Computer training services. IT training and user enablement.',
+  '80420000-4': 'E-learning services. Online training services and learning delivery.',
+  '72220000-3': 'Systems and technical consultancy services.',
+  '72221000-0': 'Business analysis consultancy services.',
+  '72222000-7': 'Information systems or technology strategic review and planning services.',
+  '72224000-1': 'Project management consultancy services.',
+  '72246000-1': 'Systems consultancy services.',
 }
 
 type CpvCategory = {
@@ -392,6 +480,7 @@ type CpvCategory = {
   description: string
   codes: string[]
   defaultOpen?: boolean
+  advanced?: boolean
 }
 
 const CPV_CATEGORIES: CpvCategory[] = [
@@ -444,12 +533,67 @@ const CPV_CATEGORIES: CpvCategory[] = [
     description: 'Servers, network equipment and maintenance services',
     codes: ['32400000-7', '32420000-3', '48800000-6', '48820000-2', '50312000-5', '50312300-8', '72700000-7'],
   },
+  {
+    id: 'security',
+    label: 'Cybersecurity',
+    description: 'Security software, data protection, audit and controls',
+    advanced: true,
+    codes: ['48730000-4', '48732000-8', '72212730-5', '72810000-1'],
+  },
+  {
+    id: 'managed-it',
+    label: 'Cloud / Managed IT',
+    description: 'Managed services, IT operations, professional services and backup',
+    advanced: true,
+    codes: ['72500000-0', '72510000-3', '72590000-7', '72910000-2'],
+  },
+  {
+    id: 'gis',
+    label: 'GIS / Maps',
+    description: 'Geospatial systems, digital mapping and field data collection',
+    advanced: true,
+    codes: ['38221000-0', '71354100-5', '72314000-9'],
+  },
+  {
+    id: 'business-systems',
+    label: 'ERP / CRM / HR',
+    description: 'Business systems, accounting, HR and custom enterprise modules',
+    advanced: true,
+    codes: ['48400000-2', '48440000-4', '48450000-7', '72212440-5', '72212450-8'],
+  },
+  {
+    id: 'ai-analytics',
+    label: 'AI / Advanced analytics',
+    description: 'Analytical, statistical, forecasting and business intelligence systems',
+    advanced: true,
+    codes: ['72212460-1', '72212461-8', '72212463-2', '72212481-3'],
+  },
+  {
+    id: 'digitisation',
+    label: 'Digitisation / Archives',
+    description: 'Scanning, data conversion and archive-related work',
+    advanced: true,
+    codes: ['79999100-4', '72311100-9', '92512000-3'],
+  },
+  {
+    id: 'learning',
+    label: 'E-learning / Training',
+    description: 'Educational software, e-learning services and computer training',
+    advanced: true,
+    codes: ['48190000-6', '72212190-7', '80533100-0', '80420000-4'],
+  },
+  {
+    id: 'consulting',
+    label: 'IT consulting',
+    description: 'Business analysis, technical consultancy, strategy and project management',
+    advanced: true,
+    codes: ['72220000-3', '72221000-0', '72222000-7', '72224000-1', '72246000-1'],
+  },
 ]
 
 const FALLBACK_KEYWORDS = [
   'ανάπτυξη εφαρμογής',
   'ανάπτυξη λογισμικού',
-  'πλατφόρμα',
   'dashboard',
   'workflow',
   'portal',
@@ -495,9 +639,14 @@ function App() {
   const [patternsLoading, setPatternsLoading] = useState(false)
   const [patternsError, setPatternsError] = useState<string | null>(null)
   const [selectedBuyer, setSelectedBuyer] = useState('all')
+  const [moreCpvsOpen, setMoreCpvsOpen] = useState(false)
 
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
   const cpvGroups = useMemo(() => buildCpvGroups(cpvOptions), [cpvOptions])
+  const primaryCpvGroups = useMemo(() => cpvGroups.filter((group) => !group.advanced), [cpvGroups])
+  const moreCpvGroups = useMemo(() => cpvGroups.filter((group) => group.advanced), [cpvGroups])
+  const moreCpvCodes = useMemo(() => new Set(moreCpvGroups.flatMap((group) => group.codes)), [moreCpvGroups])
+  const moreSelectedCount = useMemo(() => selectedCpvs.filter((code) => moreCpvCodes.has(code)).length, [moreCpvCodes, selectedCpvs])
   const buyerOptions = useMemo(() => {
     const counts = new Map<string, number>()
     for (const opportunity of response?.opportunities ?? []) {
@@ -646,8 +795,9 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sources: sources.filter((source) => source !== 'demo'),
-          days: 3,
-          limit: 100,
+          cpv_codes: selectedCpvs,
+          days: daysElapsedInYear(new Date()),
+          limit: 1000,
         }),
       })
       if (!res.ok) {
@@ -660,7 +810,7 @@ function App() {
     } finally {
       setActivityLoading(false)
     }
-  }, [sources])
+  }, [selectedCpvs, sources])
 
   const loadBookmarks = useCallback(async () => {
     setBookmarkError(null)
@@ -912,6 +1062,52 @@ function App() {
   }
 
   const shortlistItems = bookmarks.map((bookmark) => bookmark.opportunity)
+  const renderCpvCategory = (group: CpvCategory) => {
+    const expanded = expandedCpvGroups[group.id] ?? Boolean(group.defaultOpen)
+    const selectedCount = group.codes.filter((code) => selectedCpvs.includes(code)).length
+
+    return (
+      <section className="cpv-category" key={group.id}>
+        <div className="cpv-category-header">
+          <button className="cpv-category-button" type="button" onClick={() => toggleCpvGroup(group.id)}>
+            <span>
+              <ChevronDown className={`cpv-chevron ${expanded ? 'expanded' : ''}`} size={16} aria-hidden="true" />
+              {group.label}
+            </span>
+            <small>{selectedCount}/{group.codes.length}</small>
+          </button>
+          <button className="cpv-category-select" type="button" onClick={() => toggleCpvCategorySelection(group.codes)}>
+            {selectedCount === group.codes.length ? 'Deselect' : 'Select all'}
+          </button>
+        </div>
+        {expanded ? (
+          <div className="cpv-category-body">
+            <p>{group.description}</p>
+            <div className="cpv-grid">
+              {group.codes.map((code) => (
+                <label className="cpv-chip" key={code}>
+                  <input type="checkbox" checked={selectedCpvs.includes(code)} onChange={() => toggleCpv(code)} />
+                  <span>{code}</span>
+                  <button
+                    type="button"
+                    className="cpv-info"
+                    aria-label={`CPV ${code}: ${cpvDescription(code)}`}
+                    title={cpvDescription(code)}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                  >
+                    <Info size={13} aria-hidden="true" />
+                  </button>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -1034,52 +1230,38 @@ function App() {
               CPV focus
             </div>
             <div className="cpv-category-list">
-              {cpvGroups.map((group) => {
-                const expanded = expandedCpvGroups[group.id] ?? Boolean(group.defaultOpen)
-                const selectedCount = group.codes.filter((code) => selectedCpvs.includes(code)).length
-                return (
-                  <section className="cpv-category" key={group.id}>
-                    <div className="cpv-category-header">
-                      <button className="cpv-category-button" type="button" onClick={() => toggleCpvGroup(group.id)}>
-                        <span>
-                          <ChevronDown className={`cpv-chevron ${expanded ? 'expanded' : ''}`} size={16} aria-hidden="true" />
-                          {group.label}
-                        </span>
-                        <small>{selectedCount}/{group.codes.length}</small>
-                      </button>
-                      <button className="cpv-category-select" type="button" onClick={() => toggleCpvCategorySelection(group.codes)}>
-                        {selectedCount === group.codes.length ? 'Deselect' : 'Select all'}
-                      </button>
-                    </div>
-                    {expanded ? (
-                      <div className="cpv-category-body">
-                        <p>{group.description}</p>
-                        <div className="cpv-grid">
-                          {group.codes.map((code) => (
-                            <label className="cpv-chip" key={code}>
-                              <input type="checkbox" checked={selectedCpvs.includes(code)} onChange={() => toggleCpv(code)} />
-                              <span>{code}</span>
-                              <button
-                                type="button"
-                                className="cpv-info"
-                                aria-label={`CPV ${code}: ${cpvDescription(code)}`}
-                                title={cpvDescription(code)}
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                }}
-                              >
-                                <Info size={13} aria-hidden="true" />
-                              </button>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </section>
-                )
-              })}
+              {primaryCpvGroups.map(renderCpvCategory)}
             </div>
+            {moreCpvGroups.length ? (
+              <>
+                <button className="cpv-more-button" type="button" onClick={() => setMoreCpvsOpen(true)}>
+                  More CPV categories
+                  <span>{moreSelectedCount}/{moreCpvCodes.size}</span>
+                </button>
+                {moreCpvsOpen ? (
+                  <div className="cpv-more-overlay" role="presentation" onMouseDown={() => setMoreCpvsOpen(false)}>
+                    <div
+                      className="cpv-more-dialog"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="cpv-more-title"
+                      onMouseDown={(event) => event.stopPropagation()}
+                    >
+                      <div className="cpv-more-header">
+                        <div>
+                          <h3 id="cpv-more-title">More CPV categories</h3>
+                          <p>{moreSelectedCount} selected from {moreCpvCodes.size} extra codes</p>
+                        </div>
+                        <button className="icon-button" type="button" aria-label="Close CPV categories" onClick={() => setMoreCpvsOpen(false)}>
+                          <X size={18} aria-hidden="true" />
+                        </button>
+                      </div>
+                      <div className="cpv-more-list">{moreCpvGroups.map(renderCpvCategory)}</div>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
           </div>
 
           </div>
@@ -1281,8 +1463,8 @@ function PatternsPanel({
       ) : error ? (
         <p className="drawer-error-inline">{error}</p>
       ) : patterns.length ? (
-        <div className="pattern-list">
-          {patterns.slice(0, 3).map((pattern) => (
+        <div className="pattern-list scrollable">
+          {patterns.map((pattern) => (
             <article className="pattern-card" key={pattern.pattern_id}>
               <div className="pattern-card-header">
                 <div>
@@ -1342,20 +1524,40 @@ function SmartCalendarPanel({
   error: string | null
   selectedSources: SourceName[]
 }) {
-  const visibleSources = selectedSources.filter((source) => source !== 'demo')
+  const visibleSources = useMemo(() => selectedSources.filter((source) => source !== 'demo'), [selectedSources])
+  const calendarYear = new Date().getFullYear()
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth())
+  const yearMonths = useMemo(
+    () => buildCalendarYear(calendarYear, activity?.daily_activity ?? [], visibleSources),
+    [activity?.daily_activity, calendarYear, visibleSources],
+  )
+  const currentMonth = yearMonths[selectedMonth] ?? yearMonths[new Date().getMonth()]
+  const activeDayCount = currentMonth?.cells.filter((cell) => cell.inMonth && cell.total > 0).length ?? 0
+  const sourceSummary = visibleSources.map((source) => SOURCE_META[source].label).join(' + ')
+  const moveMonth = (direction: -1 | 1) => {
+    setSelectedMonth((month) => (month + direction + 12) % 12)
+  }
 
   return (
     <div className="smart-calendar-panel">
-      <div className="panel-heading">
-        <CalendarClock size={18} aria-hidden="true" />
-        <h3>Smart calendar</h3>
+      <div className="calendar-panel-top">
+        <div>
+          <div className="panel-heading">
+            <CalendarClock size={18} aria-hidden="true" />
+            <h3>Smart calendar</h3>
+          </div>
+          <p className="panel-note">Monthly view for new publications from selected sources. Data is refreshed once per day.</p>
+        </div>
+        <div className="calendar-summary" aria-label={`Activity summary for ${currentMonth?.label ?? calendarYear}`}>
+          <strong>{currentMonth?.total ?? 0}</strong>
+          <span>{currentMonth?.label ?? calendarYear}</span>
+        </div>
       </div>
-      <p className="panel-note">New publications from selected sources. Search filters do not affect this count.</p>
 
       {loading ? (
         <div className="calendar-state">
           <Loader2 className="spin" size={17} aria-hidden="true" />
-          <span>Loading activity...</span>
+          <span>Loading yearly activity...</span>
         </div>
       ) : null}
 
@@ -1367,26 +1569,63 @@ function SmartCalendarPanel({
       ) : null}
 
       {!loading && !error ? (
-        <div className="calendar-list">
-          {(activity?.daily_activity ?? []).map((day) => (
-            <div className="calendar-row" key={day.date}>
-              <div>
-                <strong>{calendarLabel(day)}</strong>
-                <span>{formatDate(day.date)}</span>
+        <div className="calendar-month-wrap">
+          <div className="calendar-toolbar" aria-label="Calendar navigation">
+            <button className="calendar-nav-button" type="button" onClick={() => moveMonth(-1)} aria-label="Previous month">
+              <ChevronLeft size={17} aria-hidden="true" />
+            </button>
+            <label className="calendar-month-picker">
+              <span>Month</span>
+              <select value={selectedMonth} onChange={(event) => setSelectedMonth(Number(event.target.value))}>
+                {yearMonths.map((month) => (
+                  <option value={month.month} key={`${month.year}-${month.month}`}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="calendar-nav-button" type="button" onClick={() => moveMonth(1)} aria-label="Next month">
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="calendar-year-meta">
+            <span>{sourceSummary || 'No live sources selected'}</span>
+            <span>{activeDayCount} active days</span>
+            <span>{activity?.cached ? 'Cached today' : 'Fresh today'}</span>
+            {activity ? <span>Updated {formatDateTime(activity.generated_at)}</span> : null}
+          </div>
+          {currentMonth ? (
+            <section className="calendar-month current" key={`${currentMonth.year}-${currentMonth.month}`}>
+              <div className="calendar-month-title">
+                <strong>{currentMonth.label}</strong>
+                <span>{currentMonth.total}</span>
               </div>
-              <div className="calendar-count">
-                <strong>{day.total}</strong>
-                <span>new</span>
-              </div>
-              <div className="calendar-sources">
-                {visibleSources.map((source) => (
-                  <span key={`${day.date}-${source}`}>
-                    {SOURCE_META[source].label}: {day.by_source[source] ?? 0}
-                  </span>
+              <div className="calendar-weekdays" aria-hidden="true">
+                {CALENDAR_WEEKDAYS.map((day) => (
+                  <span key={`${currentMonth.label}-${day}`}>{day}</span>
                 ))}
               </div>
-            </div>
-          ))}
+              <div className="calendar-days">
+                {currentMonth.cells.map((cell) => (
+                  <div
+                    className={[
+                      'calendar-day',
+                      cell.inMonth ? '' : 'outside',
+                      cell.isToday ? 'today' : '',
+                      cell.isFuture ? 'future' : '',
+                      cell.total > 0 ? 'has-activity' : '',
+                    ].filter(Boolean).join(' ')}
+                    key={`${currentMonth.year}-${currentMonth.month}-${cell.date}-${cell.offset}`}
+                    title={calendarDayTitle(cell, visibleSources)}
+                    aria-label={calendarDayTitle(cell, visibleSources)}
+                  >
+                    <span className="calendar-day-number">{cell.dayOfMonth}</span>
+                    <span className="calendar-day-count">{cell.total}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -1441,7 +1680,7 @@ function OpportunityRow({
             </button>
             {opportunity.url ? (
               <a className="platform-link" href={opportunity.url} target="_blank" rel="noreferrer">
-                Στην πλατφόρμα
+                Open source
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
             ) : null}
@@ -1460,29 +1699,6 @@ function OpportunityRow({
           <Meta icon={CalendarClock} label="Deadline" value={daysLeft === null ? 'Unknown' : `${formatDate(opportunity.deadline)} - ${daysLeft}d`} />
           <Meta icon={Gauge} label="Action window" value={window.detail} />
           <Meta icon={FileText} label="CPV" value={opportunity.cpv_codes.slice(0, 3).join(', ') || 'N/A'} />
-        </div>
-
-        <div className="evidence-grid">
-          <div>
-            <h5><ShieldCheck size={15} aria-hidden="true" /> Fit reasons</h5>
-            <ul>
-              {opportunity.score_reasons.slice(0, 4).map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h5><AlertTriangle size={15} aria-hidden="true" /> Red flags</h5>
-            {opportunity.red_flags.length ? (
-              <ul>
-                {opportunity.red_flags.slice(0, 4).map((flag) => (
-                  <li key={flag}>{flag}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="quiet">No obvious red flags.</p>
-            )}
-          </div>
         </div>
 
         <div className="row-footer">
@@ -1723,7 +1939,7 @@ function translateChecklistItem(item: GuidanceChecklistItem) {
     },
     'check deadline and submission method': {
       label: 'Έλεγξε προθεσμία και υποβολή',
-      detail: 'Κλείδωσε ημερομηνία, πλατφόρμα, υπογραφές και μορφές αρχείων.',
+      detail: 'Κλείδωσε ημερομηνία, τρόπο υποβολής, υπογραφές και μορφές αρχείων.',
     },
     'collect company/legal documents': {
       label: 'Μάζεψε εταιρικά δικαιολογητικά',
@@ -1805,7 +2021,7 @@ function DetailsDrawer({
 
   const metadata = details?.metadata ?? {}
   const documents = details?.documents ?? []
-  const primaryLinkLabel = details?.source === 'khmdhs' ? 'Άνοιγμα βασικού εγγράφου ΚΗΜΔΗΣ' : 'Άνοιγμα record στην πλατφόρμα'
+  const primaryLinkLabel = details?.source === 'khmdhs' ? 'Άνοιγμα βασικού εγγράφου ΚΗΜΔΗΣ' : 'Άνοιγμα record'
 
   return (
     <div className="drawer-backdrop" role="presentation" onClick={onClose}>
@@ -2430,7 +2646,6 @@ function DocumentBriefPanel({
             <BriefBlock title="Deadline / submission" items={[brief.deadline_submission]} />
             <BriefBlock title="Required documents" items={brief.required_documents} empty="Not identified in the readable text." />
             <BriefBlock title="Technical requirements" items={brief.technical_requirements} empty="Not identified in the readable text." />
-            <BriefBlock title="Red flags" items={brief.red_flags} empty="No red flags identified by the brief." />
             <BriefBlock title="Next steps" items={brief.next_steps} empty="Open the official source documents first." />
           </div>
 
@@ -2924,11 +3139,46 @@ function formatPublishedDate(value?: string | null) {
   return `${formatDate(value)} - ${freshnessLabel(value)}`
 }
 
-function calendarLabel(day: DailyActivity) {
-  if (day.label === 'today') return 'Today'
-  if (day.label === 'yesterday') return 'Yesterday'
-  if (day.label === 'day_before_yesterday') return 'Day before'
-  return freshnessLabel(day.date)
+function buildCalendarYear(year: number, dailyActivity: DailyActivity[], sources: SourceName[]): CalendarMonth[] {
+  const activityByDate = new Map(dailyActivity.map((day) => [day.date, day]))
+  const today = startOfDay(new Date())
+
+  return Array.from({ length: 12 }, (_, month) => {
+    const firstOfMonth = new Date(year, month, 1)
+    const gridStart = addDays(firstOfMonth, -firstOfMonth.getDay())
+    const cells = Array.from({ length: 42 }, (__, offset) => {
+      const date = addDays(gridStart, offset)
+      const dateKey = toDateInput(date)
+      const activity = activityByDate.get(dateKey)
+      const by_source = Object.fromEntries(sources.map((source) => [source, activity?.by_source[source] ?? 0])) as Partial<Record<SourceName, number>>
+
+      return {
+        date: dateKey,
+        dayOfMonth: date.getDate(),
+        offset,
+        inMonth: date.getMonth() === month && date.getFullYear() === year,
+        isToday: isSameCalendarDay(date, today),
+        isFuture: date.getTime() > today.getTime(),
+        total: activity?.total ?? 0,
+        by_source,
+      }
+    })
+
+    return {
+      year,
+      month,
+      label: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(firstOfMonth),
+      total: cells.reduce((sum, cell) => sum + (cell.inMonth ? cell.total : 0), 0),
+      cells,
+    }
+  })
+}
+
+function calendarDayTitle(cell: CalendarDayCell, sources: SourceName[]) {
+  const sourceText = sources.length
+    ? sources.map((source) => `${SOURCE_META[source].label}: ${cell.by_source[source] ?? 0}`).join(' | ')
+    : 'No live sources selected'
+  return `${formatDate(cell.date)} - ${cell.total} new (${sourceText})`
 }
 
 function freshnessLabel(value?: string | null) {
@@ -3031,6 +3281,10 @@ function startOfDay(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate())
 }
 
+function isSameCalendarDay(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate()
+}
+
 function bandToClass(score: number) {
   if (score >= 80) return 'green'
   if (score >= 60) return 'blue'
@@ -3042,6 +3296,12 @@ function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
   return next
+}
+
+function daysElapsedInYear(date: Date) {
+  const currentUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  const startUtc = Date.UTC(date.getFullYear(), 0, 1)
+  return Math.floor((currentUtc - startUtc) / 86_400_000) + 1
 }
 
 function toDateInput(date: Date) {
@@ -3084,6 +3344,7 @@ function buildCpvGroups(cpvOptions: string[]): CpvCategory[] {
       label: 'Other CPV',
       description: 'Additional configured CPV codes',
       codes: otherCodes,
+      advanced: true,
     },
   ]
 }

@@ -43,6 +43,38 @@ DEFAULT_CPV_CODES = [
     "50312000-5",
     "50312300-8",
     "72700000-7",
+    "48730000-4",
+    "48732000-8",
+    "72212730-5",
+    "72810000-1",
+    "72500000-0",
+    "72510000-3",
+    "72590000-7",
+    "72910000-2",
+    "38221000-0",
+    "71354100-5",
+    "72314000-9",
+    "48400000-2",
+    "48440000-4",
+    "48450000-7",
+    "72212440-5",
+    "72212450-8",
+    "72212460-1",
+    "72212461-8",
+    "72212463-2",
+    "72212481-3",
+    "79999100-4",
+    "72311100-9",
+    "92512000-3",
+    "48190000-6",
+    "72212190-7",
+    "80533100-0",
+    "80420000-4",
+    "72220000-3",
+    "72221000-0",
+    "72222000-7",
+    "72224000-1",
+    "72246000-1",
 ]
 
 
@@ -50,8 +82,6 @@ DEFAULT_KEYWORDS = [
     "ανάπτυξη εφαρμογής",
     "ανάπτυξη λογισμικού",
     "πληροφοριακό σύστημα",
-    "πλατφόρμα",
-    "διαδικτυακή πλατφόρμα",
     "web εφαρμογή",
     "dashboard",
     "αναφορές",
@@ -83,8 +113,9 @@ class ProcurementSearchRequest(BaseModel):
 
 class ActivityRequest(BaseModel):
     sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted"])
-    days: int = Field(default=3, ge=1, le=14)
-    limit: int = Field(default=100, ge=1, le=100)
+    cpv_codes: list[str] = Field(default_factory=lambda: DEFAULT_CPV_CODES)
+    days: int = Field(default=3, ge=1, le=366)
+    limit: int = Field(default=100, ge=1, le=1000)
 
 
 class Opportunity(BaseModel):
@@ -243,6 +274,7 @@ class ActivityResponse(BaseModel):
     daily_activity: list[DailyActivity]
     source_runs: list[SourceRun]
     total: int
+    cached: bool = False
 
 
 class BookmarkRecord(BaseModel):

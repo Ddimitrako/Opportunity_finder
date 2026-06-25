@@ -97,7 +97,6 @@ PATTERN_DEFINITIONS = (
             "web application",
             "e-services",
             "eservices",
-            "platform",
             "applications",
             "application form",
             "forms",
