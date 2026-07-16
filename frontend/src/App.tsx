@@ -21,11 +21,18 @@ import {
   Layers3,
   Loader2,
   PanelRightOpen,
+  Radar,
   RefreshCw,
+  Save,
   Search,
   ShieldCheck,
   Sparkles,
   Target,
+  TrendingUp,
+  Users,
+  Handshake,
+  Tags,
+  Plus,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -121,17 +128,91 @@ type OpportunityDetails = {
   raw: Record<string, unknown>
 }
 
+type BriefEvidence = {
+  id: string
+  document_label: string
+  url: string
+  excerpt: string
+  page?: number | null
+  reference?: string | null
+}
+
+type BriefFinding = {
+  text: string
+  evidence_ids: string[]
+}
+
+type BriefScoreDimension = {
+  key: string
+  label: string
+  score: number
+  max_score: number
+  reason: string
+  evidence_ids: string[]
+}
+
 type DocumentBrief = {
   source: SourceName
   reference: string
+  schema_version: number
+  rules_version: string
+  verdict: 'GO' | 'CONDITIONAL GO' | 'NO-GO' | 'INSUFFICIENT DATA'
+  score: number
+  confidence: 'high' | 'medium' | 'low'
+  executive_recommendation: string
+  decision_reasons: BriefFinding[]
   project_summary: string
   actionable: 'yes' | 'no' | 'maybe' | 'unknown'
+  procurement_access: {
+    status: 'open_competition' | 'named_invitation' | 'awarded' | 'contracted' | 'paid' | 'planning_only' | 'expired' | 'unknown'
+    reason: string
+    procedure?: string | null
+    deadline?: string | null
+    days_remaining?: number | null
+    submission_method: string
+    named_invitee?: string | null
+    evidence_ids: string[]
+  }
+  continuity: {
+    status: 'confirmed_continuation' | 'not_confirmed' | 'unknown'
+    reason: string
+    incumbent_name?: string | null
+    prior_reference?: string | null
+    evidence_ids: string[]
+  }
+  budget_assessment: {
+    amount_without_vat?: number | null
+    amount_with_vat?: number | null
+    currency: string
+    direct_award_eligible?: boolean | null
+    threshold_without_vat: number
+    determination: string
+    legal_basis_url: string
+    evidence_ids: string[]
+  }
+  score_dimensions: BriefScoreDimension[]
   deadline_submission: string
   required_documents: string[]
+  eligibility_requirements: BriefFinding[]
+  evaluation_criteria: BriefFinding[]
   technical_requirements: string[]
+  technical_findings: BriefFinding[]
+  commercial_findings: BriefFinding[]
+  contractual_findings: BriefFinding[]
   red_flags: string[]
+  red_flag_findings: BriefFinding[]
+  unknowns: string[]
   recommendation: string
   next_steps: string[]
+  history_12_months: Array<{
+    title: string
+    reference?: string | null
+    amount?: number | null
+    published_at?: string | null
+    supplier?: string | null
+    url?: string | null
+  }>
+  evidence: BriefEvidence[]
   source_documents: DocumentLink[]
   generated_at: string
   model?: string | null
@@ -141,6 +222,7 @@ type DocumentBrief = {
 type DocumentBriefResponse = {
   brief?: DocumentBrief | null
   cached: boolean
+  outdated: boolean
   message?: string | null
 }
 
@@ -317,6 +399,164 @@ type ConfigResponse = {
   default_keywords: string[]
   packages: Array<{ name: string; label: string; keywords: string[] }>
   sources: Array<{ id: SourceName; label: string }>
+}
+
+type TrackingState = 'new' | 'watching' | 'researching' | 'contact_planned' | 'contacted' | 'meeting' | 'proposal' | 'partner_target' | 'won' | 'lost' | 'archived'
+
+type EvidenceRef = {
+  source: string
+  external_id?: string | null
+  url?: string | null
+  title: string
+  published_at?: string | null
+  excerpt: string
+}
+
+type MarketSignal = {
+  id: string
+  organization_id: string
+  organization_name: string
+  category: string
+  kind: string
+  stage: 'early' | 'open' | 'awarded' | 'historical'
+  need_score: number
+  confidence: number
+  why_now: string
+  score_reasons: string[]
+  evidence: EvidenceRef
+  is_new: boolean
+  created_at: string
+  updated_at: string
+}
+
+type MarketOrganization = {
+  id: string
+  name: string
+  normalized_name: string
+  role: 'buyer' | 'supplier' | 'both'
+  country: string
+  gemi_number?: string | null
+  tax_id?: string | null
+  khmdhs_key?: string | null
+  aliases: string[]
+  website?: string | null
+  strongest_signal_score: number
+  strongest_signal_kind?: string | null
+  strongest_category?: string | null
+  last_signal_at?: string | null
+  incumbent_suppliers: string[]
+  software_brands: string[]
+  tracking_state?: TrackingState | null
+  next_action?: string | null
+  updated_at: string
+}
+
+type SupplierAward = {
+  id: string
+  buyer_id: string
+  buyer_name: string
+  supplier_id: string
+  supplier_name: string
+  title: string
+  category: string
+  amount?: number | null
+  currency: string
+  awarded_at?: string | null
+  software_brands: string[]
+  evidence: EvidenceRef
+}
+
+type BrandMention = {
+  id: string
+  brand_id: string
+  brand_name: string
+  product_name?: string | null
+  buyer_id?: string | null
+  supplier_id?: string | null
+  confidence: number
+  evidence: EvidenceRef
+}
+
+type TrackingEntry = {
+  id: string
+  entity_type: 'buyer' | 'supplier' | 'brand' | 'opportunity'
+  entity_id: string
+  entity_name: string
+  state: TrackingState
+  notes: string
+  next_action?: string | null
+  next_action_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+type WatchSource = {
+  id: string
+  organization_id: string
+  organization_name: string
+  source_type: 'careers' | 'newsroom'
+  url: string
+  label: string
+  enabled: boolean
+  last_checked_at?: string | null
+  last_changed_at?: string | null
+  last_error?: string | null
+}
+
+type MarketOrganizationDetail = {
+  organization: MarketOrganization
+  signals: MarketSignal[]
+  awards_as_buyer: SupplierAward[]
+  awards_as_supplier: SupplierAward[]
+  brand_mentions: BrandMention[]
+  tracking?: TrackingEntry | null
+  watch_sources: WatchSource[]
+}
+
+type SoftwareBrand = {
+  id: string
+  name: string
+  origin_region: 'Europe' | 'United States' | 'China' | 'Other'
+  aliases: string[]
+  mention_count: number
+  observed_spend: number
+  supplier_names: string[]
+  buyer_names: string[]
+  last_seen_at?: string | null
+}
+
+type MarketOverview = {
+  generated_at: string
+  period_days: number
+  new_signals: number
+  hot_buyers: number
+  open_opportunities: number
+  observed_public_spend: number
+  tracked_entities: number
+  categories: Array<{ category: string; current_count: number; previous_count: number; delta_percent?: number | null; observed_spend: number }>
+  hot_organizations: MarketOrganization[]
+  recent_signals: MarketSignal[]
+  top_suppliers: MarketOrganization[]
+  top_brands: SoftwareBrand[]
+  coverage: Record<string, string>
+  last_refresh_at?: string | null
+}
+
+type MarketConfig = {
+  gemi_enabled: boolean
+  refresh_enabled: boolean
+  refresh_hour: number
+  categories: string[]
+  tracking_states: TrackingState[]
+}
+
+type MarketRefresh = {
+  run_id: string
+  status: 'running' | 'ok' | 'partial' | 'error' | 'skipped'
+  started_at: string
+  finished_at?: string | null
+  source_results: Array<{ source: string; status: 'ok' | 'error' | 'skipped'; fetched: number; created: number; updated: number; error?: string | null }>
+  message?: string | null
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
@@ -601,6 +841,7 @@ const FALLBACK_KEYWORDS = [
 ]
 
 function App() {
+  const [activeView, setActiveView] = useState<'opportunities' | 'market'>('opportunities')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
   const [query, setQuery] = useState('')
   const [budgetMin, setBudgetMin] = useState(5000)
@@ -626,6 +867,7 @@ function App() {
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
   const [documentBrief, setDocumentBrief] = useState<DocumentBrief | null>(null)
+  const [documentBriefOutdated, setDocumentBriefOutdated] = useState(false)
   const [documentBriefLoading, setDocumentBriefLoading] = useState(false)
   const [documentBriefGenerating, setDocumentBriefGenerating] = useState(false)
   const [documentBriefError, setDocumentBriefError] = useState<string | null>(null)
@@ -829,6 +1071,7 @@ function App() {
   const loadCachedBrief = useCallback(async (opportunity: Opportunity) => {
     if (!opportunity.source_reference) {
       setDocumentBrief(null)
+      setDocumentBriefOutdated(false)
       return
     }
     setDocumentBriefLoading(true)
@@ -842,8 +1085,10 @@ function App() {
       }
       const data = (await res.json()) as DocumentBriefResponse
       setDocumentBrief(data.brief ?? null)
+      setDocumentBriefOutdated(data.outdated)
     } catch (exc) {
       setDocumentBrief(null)
+      setDocumentBriefOutdated(false)
       setDocumentBriefError(exc instanceof Error ? exc.message : 'AI brief fetch failed')
     } finally {
       setDocumentBriefLoading(false)
@@ -909,6 +1154,8 @@ function App() {
     if (!response) {
       return
     }
+    // The request is intentionally synchronized with the currently visible result set.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadPatterns(filteredOpportunities)
   }, [filteredOpportunities, loadPatterns, response])
 
@@ -926,6 +1173,7 @@ function App() {
 
   const openDetails = async (opportunity: Opportunity) => {
     setDocumentBrief(null)
+    setDocumentBriefOutdated(false)
     setDocumentBriefError(null)
     setDocumentBriefLoading(false)
     setDocumentBriefGenerating(false)
@@ -976,6 +1224,7 @@ function App() {
     setDetailsError(null)
     setDetailsLoading(false)
     setDocumentBrief(null)
+    setDocumentBriefOutdated(false)
     setDocumentBriefError(null)
     setDocumentBriefLoading(false)
     setDocumentBriefGenerating(false)
@@ -1042,7 +1291,7 @@ function App() {
     setDocumentBriefError(null)
     try {
       const res = await fetch(
-        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief`,
+        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief?regenerate=${documentBrief ? 'true' : 'false'}`,
         { method: 'POST' },
       )
       if (!res.ok) {
@@ -1051,6 +1300,8 @@ function App() {
       const data = (await res.json()) as DocumentBriefResponse
       if (data.brief) {
         setDocumentBrief(data.brief)
+        setDocumentBriefOutdated(data.outdated)
+        if (data.message) setDocumentBriefError(data.message)
       } else {
         setDocumentBriefError(data.message ?? 'No AI brief was generated.')
       }
@@ -1107,6 +1358,10 @@ function App() {
         ) : null}
       </section>
     )
+  }
+
+  if (activeView === 'market') {
+    return <MarketRadar onOpenOpportunities={() => setActiveView('opportunities')} />
   }
 
   return (
@@ -1282,6 +1537,10 @@ function App() {
             <h2>Shortlist μικρών full-stack έργων</h2>
           </div>
           <div className="topbar-actions">
+            <button className="market-nav-button" type="button" onClick={() => setActiveView('market')}>
+              <Radar size={17} aria-hidden="true" />
+              Market Radar
+            </button>
             <StatusPill ok={!error} label={error ? 'API issue' : 'API live'} />
           </div>
         </header>
@@ -1420,6 +1679,7 @@ function App() {
         loading={detailsLoading}
         error={detailsError}
         brief={documentBrief}
+        briefOutdated={documentBriefOutdated}
         briefLoading={documentBriefLoading}
         briefGenerating={documentBriefGenerating}
         briefError={documentBriefError}
@@ -1431,6 +1691,436 @@ function App() {
       />
     </div>
   )
+}
+
+function MarketRadar({ onOpenOpportunities }: { onOpenOpportunities: () => void }) {
+  const [config, setConfig] = useState<MarketConfig | null>(null)
+  const [overview, setOverview] = useState<MarketOverview | null>(null)
+  const [buyers, setBuyers] = useState<MarketOrganization[]>([])
+  const [suppliers, setSuppliers] = useState<MarketOrganization[]>([])
+  const [brands, setBrands] = useState<SoftwareBrand[]>([])
+  const [signals, setSignals] = useState<MarketSignal[]>([])
+  const [activeTab, setActiveTab] = useState<'buyers' | 'suppliers' | 'brands' | 'opportunities'>('buyers')
+  const [category, setCategory] = useState('all')
+  const [search, setSearch] = useState('')
+  const [minScore, setMinScore] = useState(25)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshStatus, setRefreshStatus] = useState<MarketRefresh | null>(null)
+  const [selectedDetail, setSelectedDetail] = useState<MarketOrganizationDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [profileName, setProfileName] = useState('Greek software demand')
+  const [profileActivities, setProfileActivities] = useState('')
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+
+  const loadMarket = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const categoryQuery = category === 'all' ? '' : `&category=${encodeURIComponent(category)}`
+    const searchQuery = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ''
+    try {
+      const [configRes, overviewRes, buyersRes, suppliersRes, brandsRes, signalsRes, refreshRes] = await Promise.all([
+        fetch(`${API_BASE}/api/market/config`),
+        fetch(`${API_BASE}/api/market/overview?period_days=30`),
+        fetch(`${API_BASE}/api/market/buyers?limit=100&min_score=${minScore}${categoryQuery}${searchQuery}`),
+        fetch(`${API_BASE}/api/market/suppliers?limit=100${categoryQuery}${searchQuery}`),
+        fetch(`${API_BASE}/api/market/brands?limit=100${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ''}`),
+        fetch(`${API_BASE}/api/market/signals?limit=100&min_score=${minScore}${categoryQuery}`),
+        fetch(`${API_BASE}/api/market/refresh/status`),
+      ])
+      const responses = [configRes, overviewRes, buyersRes, suppliersRes, brandsRes, signalsRes]
+      if (responses.some((response) => !response.ok)) {
+        throw new Error(`Market API returned ${responses.find((response) => !response.ok)?.status ?? 'an error'}`)
+      }
+      const [configData, overviewData, buyersData, suppliersData, brandsData, signalsData] = await Promise.all(responses.map((response) => response.json()))
+      setConfig(configData as MarketConfig)
+      setOverview(overviewData as MarketOverview)
+      setBuyers((buyersData as { items: MarketOrganization[] }).items)
+      setSuppliers((suppliersData as { items: MarketOrganization[] }).items)
+      setBrands((brandsData as { items: SoftwareBrand[] }).items)
+      setSignals((signalsData as { items: MarketSignal[] }).items)
+      setRefreshStatus(refreshRes.ok ? (await refreshRes.json()) as MarketRefresh | null : null)
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Market radar failed to load')
+    } finally {
+      setLoading(false)
+    }
+  }, [category, minScore, search])
+
+  useEffect(() => {
+    // Fetching is the external synchronization performed by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadMarket()
+  }, [loadMarket])
+
+  const runRefresh = async () => {
+    setRefreshing(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/market/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) throw new Error(`Refresh API returned ${res.status}`)
+      setRefreshStatus((await res.json()) as MarketRefresh)
+      await loadMarket()
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Market refresh failed')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const openOrganization = async (organization: MarketOrganization) => {
+    setDetailLoading(true)
+    setSelectedDetail(null)
+    try {
+      const route = organization.role === 'supplier' ? 'suppliers' : 'buyers'
+      const res = await fetch(`${API_BASE}/api/market/${route}/${encodeURIComponent(organization.id)}`)
+      if (!res.ok) throw new Error(`Organization details returned ${res.status}`)
+      setSelectedDetail((await res.json()) as MarketOrganizationDetail)
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Organization details failed')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const createDiscoveryProfile = async (event: FormEvent) => {
+    event.preventDefault()
+    setProfileMessage(null)
+    const activities = profileActivities.split(',').map((item) => item.trim()).filter(Boolean)
+    if (!activities.length) {
+      setProfileMessage('Πρόσθεσε τουλάχιστον έναν ΚΑΔ.')
+      return
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/market/discovery-profiles`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: profileName, activities, prefectures: [], municipalities: [], is_active: true, enabled: true }),
+      })
+      if (!res.ok) throw new Error(`Discovery profile returned ${res.status}`)
+      setProfileMessage('Το discovery profile αποθηκεύτηκε.')
+      setProfileActivities('')
+    } catch (exc) {
+      setProfileMessage(exc instanceof Error ? exc.message : 'Profile save failed')
+    }
+  }
+
+  const activeOrganizations = activeTab === 'suppliers' ? suppliers : buyers
+  const visibleSignals = activeTab === 'opportunities' ? signals.filter((signal) => signal.stage === 'open' || signal.stage === 'early') : signals
+
+  return (
+    <div className="market-shell">
+      <aside className="market-sidebar">
+        <div className="brand-block market-brand-block">
+          <div className="brand-mark"><Radar size={22} aria-hidden="true" /></div>
+          <div><p className="eyebrow">Opportunity Finder</p><h1>Market Radar</h1></div>
+        </div>
+
+        <button className="secondary-action market-back-button" type="button" onClick={onOpenOpportunities}>
+          <Target size={16} aria-hidden="true" /> Δημόσιες ευκαιρίες
+        </button>
+
+        <div className="market-filter-stack">
+          <label className="field">
+            <span><Search size={16} aria-hidden="true" /> Αναζήτηση οργανισμού</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buyer, integrator ή brand" />
+          </label>
+          <label className="field">
+            <span><Tags size={16} aria-hidden="true" /> Κατηγορία ανάγκης</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="all">Όλες οι κατηγορίες</option>
+              {(config?.categories ?? []).map((item) => <option value={item} key={item}>{item}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span><Gauge size={16} aria-hidden="true" /> Ελάχιστο need score: {minScore}</span>
+            <input type="range" min="0" max="100" step="5" value={minScore} onChange={(event) => setMinScore(Number(event.target.value))} />
+          </label>
+        </div>
+
+        <div className="market-source-coverage">
+          <h3>Κάλυψη δεδομένων</h3>
+          {Object.entries(overview?.coverage ?? {}).map(([source, status]) => (
+            <div key={source}><span>{source}</span><strong>{status}</strong></div>
+          ))}
+        </div>
+
+        <form className="market-discovery-form" onSubmit={createDiscoveryProfile}>
+          <h3>ΓΕΜΗ discovery</h3>
+          <p>{config?.gemi_enabled ? 'API ενεργό' : 'Αναμένει GEMI_API_KEY'}</p>
+          <input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Όνομα profile" />
+          <textarea value={profileActivities} onChange={(event) => setProfileActivities(event.target.value)} placeholder="ΚΑΔ χωρισμένοι με κόμμα" rows={3} />
+          <button className="secondary-action" type="submit" disabled={!config?.gemi_enabled}><Plus size={15} /> Αποθήκευση profile</button>
+          {profileMessage ? <small>{profileMessage}</small> : null}
+        </form>
+      </aside>
+
+      <main className="market-workspace">
+        <header className="market-topbar">
+          <div><p className="eyebrow">Buyer-need intelligence · Ελλάδα</p><h2>Πού κινείται η αγορά software</h2></div>
+          <div className="market-refresh-actions">
+            <span>{overview?.last_refresh_at ? `Τελευταίο refresh ${formatDateTime(overview.last_refresh_at)}` : 'Δεν έχει γίνει refresh'}</span>
+            <button className="primary-action market-refresh-button" type="button" onClick={() => void runRefresh()} disabled={refreshing}>
+              {refreshing ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />} Refresh now
+            </button>
+          </div>
+        </header>
+
+        {error ? <section className="error-band"><AlertTriangle size={18} /><span>{error}</span></section> : null}
+
+        <section className="market-metric-grid">
+          <MarketMetric icon={Sparkles} label="Νέα signals" value={overview?.new_signals ?? 0} detail="Από το τελευταίο 24ωρο" tone="pink" />
+          <MarketMetric icon={Users} label="Hot buyers" value={overview?.hot_buyers ?? 0} detail="Need score 75+" tone="green" />
+          <MarketMetric icon={Target} label="Open opportunities" value={overview?.open_opportunities ?? 0} detail="Planning ή ενεργή αγορά" tone="blue" />
+          <MarketMetric icon={CircleDollarSign} label="Observed public spend" value={formatCurrency(overview?.observed_public_spend ?? 0)} detail="Τεκμηριωμένες αναθέσεις" tone="amber" />
+        </section>
+
+        <section className="market-trends-panel">
+          <div className="panel-heading"><TrendingUp size={18} /><h3>Τάσεις 30 ημερών</h3></div>
+          <div className="market-trend-grid">
+            {(overview?.categories ?? []).filter((item) => item.current_count || item.previous_count).map((item) => (
+              <div className="market-trend-card" key={item.category}>
+                <span>{item.category}</span><strong>{item.current_count}</strong>
+                <small className={(item.delta_percent ?? 0) >= 0 ? 'positive' : 'negative'}>
+                  {item.delta_percent === null || item.delta_percent === undefined ? 'Νέα ένδειξη' : `${item.delta_percent > 0 ? '+' : ''}${item.delta_percent}%`} vs προηγούμενες 30 ημέρες
+                </small>
+                <div className="trend-track"><i style={{ width: `${Math.min(100, Math.max(8, item.current_count * 12))}%` }} /></div>
+              </div>
+            ))}
+            {!overview?.categories.some((item) => item.current_count || item.previous_count) ? <p className="muted">Οι τάσεις θα εμφανιστούν μόλις ολοκληρωθεί το πρώτο refresh.</p> : null}
+          </div>
+        </section>
+
+        <nav className="market-tabs" aria-label="Market views">
+          <button className={activeTab === 'buyers' ? 'active' : ''} onClick={() => setActiveTab('buyers')}><Users size={16} /> Αγοραστές <span>{buyers.length}</span></button>
+          <button className={activeTab === 'suppliers' ? 'active' : ''} onClick={() => setActiveTab('suppliers')}><Handshake size={16} /> Ανάδοχοι <span>{suppliers.length}</span></button>
+          <button className={activeTab === 'brands' ? 'active' : ''} onClick={() => setActiveTab('brands')}><Tags size={16} /> Software Brands <span>{brands.filter((item) => item.mention_count).length}</span></button>
+          <button className={activeTab === 'opportunities' ? 'active' : ''} onClick={() => setActiveTab('opportunities')}><Target size={16} /> Ευκαιρίες <span>{signals.filter((item) => item.stage === 'open' || item.stage === 'early').length}</span></button>
+        </nav>
+
+        {loading ? <div className="loading-state"><Loader2 className="spin" size={24} /><span>Building market map...</span></div> : null}
+
+        {!loading && (activeTab === 'buyers' || activeTab === 'suppliers') ? (
+          <MarketOrganizationTable organizations={activeOrganizations} mode={activeTab} onOpen={(organization) => void openOrganization(organization)} />
+        ) : null}
+
+        {!loading && activeTab === 'brands' ? <BrandMarketGrid brands={brands} /> : null}
+
+        {!loading && activeTab === 'opportunities' ? <MarketSignalList signals={visibleSignals} onOpenOrganization={(id) => {
+          const organization = buyers.find((item) => item.id === id)
+          if (organization) void openOrganization(organization)
+        }} /> : null}
+
+        {refreshStatus ? <RefreshRunSummary refresh={refreshStatus} /> : null}
+      </main>
+
+      {detailLoading ? <div className="market-detail-loading"><Loader2 className="spin" size={24} /></div> : null}
+      <MarketOrganizationDrawer detail={selectedDetail} onClose={() => setSelectedDetail(null)} onChanged={async () => {
+        if (selectedDetail) await openOrganization(selectedDetail.organization)
+        await loadMarket()
+      }} />
+    </div>
+  )
+}
+
+function MarketMetric({ icon: Icon, label, value, detail, tone }: { icon: LucideIcon; label: string; value: string | number; detail: string; tone: string }) {
+  return <div className={`market-metric ${tone}`}><span><Icon size={18} /></span><div><small>{label}</small><strong>{value}</strong><p>{detail}</p></div></div>
+}
+
+function MarketOrganizationTable({ organizations, mode, onOpen }: { organizations: MarketOrganization[]; mode: 'buyers' | 'suppliers'; onOpen: (organization: MarketOrganization) => void }) {
+  return (
+    <section className="market-table-panel">
+      <div className="market-table-header">
+        <span>{mode === 'buyers' ? 'Οργανισμός / Why now' : 'Ανάδοχος / market footprint'}</span>
+        <span>Κατηγορία</span><span>{mode === 'buyers' ? 'Incumbent / Brands' : 'Brands / Buyers'}</span><span>Score</span><span>Επόμενη κίνηση</span>
+      </div>
+      {organizations.length ? organizations.map((organization) => (
+        <button className="market-table-row" type="button" key={organization.id} onClick={() => onOpen(organization)}>
+          <span className="market-org-name"><strong>{organization.name}</strong><small>{organization.strongest_signal_kind ? signalKindLabel(organization.strongest_signal_kind) : 'Market evidence'} · {formatDate(organization.last_signal_at)}</small></span>
+          <span><i className="market-category-chip">{organization.strongest_category ?? 'General Software'}</i></span>
+          <span className="market-evidence-stack"><strong>{(organization.incumbent_suppliers.length ? organization.incumbent_suppliers : organization.software_brands).slice(0, 2).join(', ') || 'Δεν έχει εντοπιστεί'}</strong><small>{organization.software_brands.slice(0, 3).join(' · ')}</small></span>
+          <span><NeedScore score={organization.strongest_signal_score} /></span>
+          <span className="market-next-action"><strong>{organization.tracking_state ? trackingLabel(organization.tracking_state) : 'Νέο'}</strong><small>{organization.next_action ?? 'Άνοιγμα intelligence'}</small></span>
+        </button>
+      )) : <p className="market-empty">Δεν υπάρχουν ακόμη οργανισμοί με αυτά τα φίλτρα. Τρέξε refresh ή χαμήλωσε το score.</p>}
+    </section>
+  )
+}
+
+function BrandMarketGrid({ brands }: { brands: SoftwareBrand[] }) {
+  const visible = brands.filter((brand) => brand.mention_count > 0)
+  return <section className="brand-market-grid">{visible.length ? visible.map((brand) => (
+    <article className="brand-market-card" key={brand.id}>
+      <div><span className={`region-badge ${brand.origin_region.toLowerCase().replaceAll(' ', '-')}`}>{brand.origin_region}</span><strong>{brand.name}</strong></div>
+      <div className="brand-market-stats"><span><b>{brand.mention_count}</b> mentions</span><span><b>{formatCurrency(brand.observed_spend)}</b> observed spend</span></div>
+      <p><b>Integrators:</b> {brand.supplier_names.slice(0, 4).join(', ') || 'Δεν έχουν εντοπιστεί'}</p>
+      <p><b>Buyers:</b> {brand.buyer_names.slice(0, 4).join(', ') || 'Δεν έχουν εντοπιστεί'}</p>
+      <small>Τελευταίο evidence: {formatDate(brand.last_seen_at)}</small>
+    </article>
+  )) : <p className="market-empty">Τα brands θα εμφανιστούν όταν εντοπιστούν μέσα σε τεκμηριωμένα source records.</p>}</section>
+}
+
+function MarketSignalList({ signals, onOpenOrganization }: { signals: MarketSignal[]; onOpenOrganization: (id: string) => void }) {
+  return <section className="market-signal-list">{signals.length ? signals.map((signal) => (
+    <article className={`market-signal-card ${signal.stage}`} key={signal.id}>
+      <div className="market-signal-score"><NeedScore score={signal.need_score} />{signal.is_new ? <span>NEW</span> : null}</div>
+      <div className="market-signal-body">
+        <div className="market-signal-meta"><span>{signal.category}</span><i>{signalStageLabel(signal.stage)}</i><small>{signal.evidence.source}</small></div>
+        <button type="button" onClick={() => onOpenOrganization(signal.organization_id)}>{signal.organization_name}</button>
+        <strong>{signal.evidence.title}</strong><p>{signal.why_now}</p><small>{signal.evidence.excerpt}</small>
+      </div>
+      <div className="market-signal-actions"><span>Confidence {signal.confidence}%</span>{signal.evidence.url ? <EvidencePreviewButton evidence={signal.evidence} label="Evidence" /> : null}</div>
+    </article>
+  )) : <p className="market-empty">Δεν υπάρχουν early/open signals με αυτά τα φίλτρα.</p>}</section>
+}
+
+function RefreshRunSummary({ refresh }: { refresh: MarketRefresh }) {
+  return <section className="refresh-summary"><div><RefreshCw size={16} /><strong>Refresh {refresh.status}</strong><span>{formatDateTime(refresh.finished_at ?? refresh.started_at)}</span></div><div>{refresh.source_results.map((item) => <span className={`refresh-source ${item.status}`} key={item.source}>{item.source}: {item.status} · {item.created} νέα</span>)}</div></section>
+}
+
+function MarketOrganizationDrawer({ detail, onClose, onChanged }: { detail: MarketOrganizationDetail | null; onClose: () => void; onChanged: () => Promise<void> }) {
+  const [state, setState] = useState<TrackingState>('watching')
+  const [notes, setNotes] = useState('')
+  const [nextAction, setNextAction] = useState('')
+  const [nextActionAt, setNextActionAt] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [watchUrl, setWatchUrl] = useState('')
+  const [watchLabel, setWatchLabel] = useState('')
+  const [watchType, setWatchType] = useState<'careers' | 'newsroom'>('careers')
+  const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!detail) return
+    // Reset the editable form whenever a different drawer entity is loaded.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState(detail.tracking?.state ?? 'watching')
+    setNotes(detail.tracking?.notes ?? '')
+    setNextAction(detail.tracking?.next_action ?? '')
+    setNextActionAt(detail.tracking?.next_action_at ?? '')
+    setMessage(null)
+  }, [detail])
+
+  if (!detail) return null
+  const organization = detail.organization
+  const awards = organization.role === 'supplier' ? detail.awards_as_supplier : detail.awards_as_buyer
+
+  const saveTracking = async (event: FormEvent) => {
+    event.preventDefault()
+    setSaving(true)
+    setMessage(null)
+    try {
+      const entityType = organization.role === 'supplier' ? 'supplier' : 'buyer'
+      const res = await fetch(`${API_BASE}/api/market/tracking`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_type: entityType, entity_id: organization.id, state, notes, next_action: nextAction || null, next_action_at: nextActionAt || null }),
+      })
+      if (!res.ok) throw new Error(`Tracking API returned ${res.status}`)
+      setMessage('Το tracking ενημερώθηκε.')
+      await onChanged()
+    } catch (exc) {
+      setMessage(exc instanceof Error ? exc.message : 'Tracking save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addWatchSource = async (event: FormEvent) => {
+    event.preventDefault()
+    setMessage(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/market/watch-sources`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organization.id, source_type: watchType, url: watchUrl, label: watchLabel, enabled: true }),
+      })
+      const payload = await res.json().catch(() => null) as { detail?: string } | null
+      if (!res.ok) throw new Error(payload?.detail ?? `Watch source returned ${res.status}`)
+      setWatchUrl(''); setWatchLabel(''); setMessage('Η επίσημη πηγή προστέθηκε.')
+      await onChanged()
+    } catch (exc) {
+      setMessage(exc instanceof Error ? exc.message : 'Watch source save failed')
+    }
+  }
+
+  return (
+    <div className="drawer-backdrop market-drawer-backdrop" role="presentation" onMouseDown={onClose}>
+      <aside className="details-drawer market-org-drawer" role="dialog" aria-modal="true" aria-label={`Market intelligence for ${organization.name}`} onMouseDown={(event) => event.stopPropagation()}>
+        <header className="drawer-header market-drawer-header">
+          <div><p className="eyebrow">{organization.role === 'supplier' ? 'Integrator / Supplier' : 'Buyer intelligence'}</p><h3>{organization.name}</h3><span>{organization.strongest_category ?? 'General Software'} · {organization.country}</span></div>
+          <NeedScore score={organization.strongest_signal_score} />
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </header>
+
+        <div className="drawer-content market-drawer-content">
+          <section className="drawer-section why-now-section">
+            <div className="panel-heading"><Sparkles size={18} /><h4>Why now?</h4></div>
+            {detail.signals.length ? <><strong>{detail.signals[0].why_now}</strong><p>{detail.signals[0].evidence.title}</p><div className="market-signal-reasons">{detail.signals[0].score_reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>{detail.signals[0].evidence.url ? <EvidencePreviewButton evidence={detail.signals[0].evidence} label="Άνοιγμα evidence" /> : null}</> : <p className="muted">Δεν υπάρχει ακόμη ενεργό need signal.</p>}
+          </section>
+
+          <section className="drawer-section">
+            <div className="panel-heading"><Activity size={18} /><h4>Signal timeline</h4></div>
+            <div className="market-timeline">{detail.signals.map((signal) => <div key={signal.id}><i className={signal.stage} /><span><strong>{signalKindLabel(signal.kind)} · {signal.category}</strong><small>{formatDate(signal.evidence.published_at)} · score {signal.need_score} · {signal.evidence.source}</small><p>{signal.evidence.title}</p></span></div>)}</div>
+          </section>
+
+          <section className="drawer-section">
+            <div className="panel-heading"><Handshake size={18} /><h4>{organization.role === 'supplier' ? 'Observed customers' : 'Incumbents & past purchases'}</h4></div>
+            <div className="market-award-list">{awards.length ? awards.map((award) => <article key={award.id}><div><strong>{organization.role === 'supplier' ? award.buyer_name : award.supplier_name}</strong><span>{formatCurrency(award.amount)} · {formatDate(award.awarded_at)}</span></div><p>{award.title}</p><small>{award.category}{award.software_brands.length ? ` · ${award.software_brands.join(', ')}` : ''}</small>{award.evidence.url ? <EvidencePreviewButton evidence={award.evidence} label="Preview evidence" compact /> : null}</article>) : <p className="muted">Δεν έχουν εντοπιστεί ακόμη τεκμηριωμένες αναθέσεις.</p>}</div>
+          </section>
+
+          <section className="drawer-section">
+            <div className="panel-heading"><Tags size={18} /><h4>Software brands</h4></div>
+            <div className="brand-mention-list">{detail.brand_mentions.length ? detail.brand_mentions.map((mention) => <span key={mention.id}><strong>{mention.brand_name}</strong><small>{mention.product_name ?? 'Brand mention'} · confidence {mention.confidence}%</small></span>) : <p className="muted">Δεν έχει εντοπιστεί brand με source evidence.</p>}</div>
+          </section>
+
+          <section className="drawer-section market-tracking-section">
+            <div className="panel-heading"><Save size={18} /><h4>Tracking & next action</h4></div>
+            <form onSubmit={saveTracking}>
+              <label><span>Status</span><select value={state} onChange={(event) => setState(event.target.value as TrackingState)}>{MARKET_TRACKING_OPTIONS.map((item) => <option value={item} key={item}>{trackingLabel(item)}</option>)}</select></label>
+              <label><span>Next action</span><input value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="π.χ. Discovery call με CIO" /></label>
+              <label><span>Ημερομηνία</span><input type="date" value={nextActionAt} onChange={(event) => setNextActionAt(event.target.value)} /></label>
+              <label className="tracking-notes"><span>Σημειώσεις</span><textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+              <button className="primary-action" type="submit" disabled={saving}>{saving ? <Loader2 className="spin" size={15} /> : <Save size={15} />} Αποθήκευση</button>
+            </form>
+          </section>
+
+          {organization.role !== 'supplier' ? <section className="drawer-section">
+            <div className="panel-heading"><Globe2 size={18} /><h4>Official private signals</h4></div>
+            <div className="watch-source-list">{detail.watch_sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}><strong>{source.label || source.source_type}</strong><small>{source.last_error ?? (source.last_checked_at ? `Checked ${formatDateTime(source.last_checked_at)}` : 'Not checked yet')}</small></a>)}</div>
+            <form className="watch-source-form" onSubmit={addWatchSource}>
+              <select value={watchType} onChange={(event) => setWatchType(event.target.value as 'careers' | 'newsroom')}><option value="careers">Careers</option><option value="newsroom">Newsroom</option></select>
+              <input value={watchLabel} onChange={(event) => setWatchLabel(event.target.value)} placeholder="Label" />
+              <input type="url" value={watchUrl} onChange={(event) => setWatchUrl(event.target.value)} placeholder="https://company.gr/careers" required />
+              <button className="secondary-action" type="submit"><Plus size={15} /> Add source</button>
+            </form>
+          </section> : null}
+          {message ? <p className="market-drawer-message">{message}</p> : null}
+        </div>
+      </aside>
+    </div>
+  )
+}
+
+function NeedScore({ score }: { score: number }) {
+  const tone = score >= 75 ? 'hot' : score >= 50 ? 'warm' : score >= 25 ? 'watch' : 'context'
+  return <span className={`need-score ${tone}`}><strong>{score}</strong><small>{tone === 'hot' ? 'HOT' : tone === 'warm' ? 'WARM' : tone === 'watch' ? 'WATCH' : 'CONTEXT'}</small></span>
+}
+
+const MARKET_TRACKING_OPTIONS: TrackingState[] = ['new', 'watching', 'researching', 'contact_planned', 'contacted', 'meeting', 'proposal', 'partner_target', 'won', 'lost', 'archived']
+
+function trackingLabel(state: TrackingState): string {
+  return ({ new: 'Νέο', watching: 'Παρακολούθηση', researching: 'Έρευνα', contact_planned: 'Προγραμματισμένη επαφή', contacted: 'Έγινε επαφή', meeting: 'Meeting', proposal: 'Πρόταση', partner_target: 'Partner target', won: 'Κερδήθηκε', lost: 'Χάθηκε', archived: 'Αρχείο' })[state]
+}
+
+function signalKindLabel(kind: string): string {
+  const labels: Record<string, string> = { procurement_request: 'Αίτημα προμήθειας', planning_notice: 'Planning notice', open_tender: 'Ανοιχτός διαγωνισμός', job_hiring: 'Σχετική πρόσληψη', expansion: 'Επέκταση', capital_change: 'Κεφαλαιακή μεταβολή', acquisition: 'Εξαγορά / συγχώνευση', transformation: 'Digital transformation', award: 'Ανάθεση', contract: 'Σύμβαση', payment: 'Πληρωμή' }
+  return labels[kind] ?? kind
+}
+
+function signalStageLabel(stage: MarketSignal['stage']): string {
+  return ({ early: 'Early signal', open: 'Open opportunity', awarded: 'Awarded', historical: 'Historical' })[stage]
 }
 
 function PatternsPanel({
@@ -1788,6 +2478,33 @@ type PdfPreview = {
   title: string
   url: string
   meta: string
+  mode?: 'document' | 'web'
+}
+
+function EvidencePreviewButton({ evidence, label, compact = false }: { evidence: EvidenceRef; label: string; compact?: boolean }) {
+  const [preview, setPreview] = useState<PdfPreview | null>(null)
+  if (!evidence.url) return null
+
+  return (
+    <>
+      <button
+        className={`evidence-preview-button ${compact ? 'compact' : ''}`}
+        type="button"
+        aria-label={`${label}: ${evidence.title}`}
+        title={evidence.title}
+        onClick={() => setPreview({
+          title: evidence.title,
+          url: evidence.url as string,
+          meta: [evidence.source, formatDate(evidence.published_at)].filter(Boolean).join(' · '),
+          mode: isOfficialDocumentEvidence(evidence) ? 'document' : 'web',
+        })}
+      >
+        {compact ? null : label}
+        <PanelRightOpen size={compact ? 14 : 13} aria-hidden="true" />
+      </button>
+      {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
+    </>
+  )
 }
 
 function DocumentsDetailItem({ documents }: { documents: DocumentLink[] }) {
@@ -1858,15 +2575,15 @@ function PdfPreviewModal({ preview, onClose }: { preview: PdfPreview; onClose: (
             {preview.meta ? <small>{preview.meta}</small> : null}
           </span>
           <div className="pdf-preview-actions">
-            <a className="icon-action" href={preview.url} target="_blank" rel="noreferrer" aria-label="Open PDF in new tab">
+            <a className="icon-action" href={preview.url} target="_blank" rel="noreferrer" aria-label="Open original in new tab">
               <ExternalLink size={17} aria-hidden="true" />
             </a>
-            <button className="icon-action" type="button" onClick={onClose} aria-label="Close PDF preview">
+            <button className="icon-action" type="button" onClick={onClose} aria-label="Close preview">
               <X size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
-        <iframe className="pdf-preview-frame" src={pdfViewerUrl(preview.url)} title={preview.title} />
+        <iframe className="pdf-preview-frame" src={preview.mode === 'web' ? preview.url : pdfViewerUrl(preview.url)} title={preview.title} />
       </section>
     </div>
   )
@@ -1887,6 +2604,10 @@ function isPreviewableFileUrl(url?: string | null): url is string {
   }
   const lowerUrl = url.toLowerCase()
   return lowerUrl.includes('/attachment/') || lowerUrl.includes('/document') || lowerUrl.endsWith('.pdf')
+}
+
+function isOfficialDocumentEvidence(evidence: EvidenceRef): boolean {
+  return ['khmdhs', 'diavgeia', 'ted'].includes(evidence.source) && isPreviewableFileUrl(evidence.url)
 }
 
 function previewFromUrl(title: string, url: string, meta: string): PdfPreview {
@@ -1971,6 +2692,7 @@ function DetailsDrawer({
   loading,
   error,
   brief,
+  briefOutdated,
   briefLoading,
   briefGenerating,
   briefError,
@@ -1985,6 +2707,7 @@ function DetailsDrawer({
   loading: boolean
   error: string | null
   brief: DocumentBrief | null
+  briefOutdated: boolean
   briefLoading: boolean
   briefGenerating: boolean
   briefError: string | null
@@ -2088,6 +2811,7 @@ function DetailsDrawer({
 
               <DocumentBriefPanel
                 brief={brief}
+                outdated={briefOutdated}
                 loading={briefLoading}
                 generating={briefGenerating}
                 error={briefError}
@@ -2588,6 +3312,7 @@ function DiavgeiaSignals({ intelligence, onPreview }: { intelligence: BuyerIntel
 
 function DocumentBriefPanel({
   brief,
+  outdated,
   loading,
   generating,
   error,
@@ -2595,6 +3320,7 @@ function DocumentBriefPanel({
   onGenerate,
 }: {
   brief: DocumentBrief | null
+  outdated: boolean
   loading: boolean
   generating: boolean
   error: string | null
@@ -2602,17 +3328,25 @@ function DocumentBriefPanel({
   onGenerate: () => void
 }) {
   const ActionIcon = generating ? Loader2 : Sparkles
+  const [preview, setPreview] = useState<PdfPreview | null>(null)
+  const evidenceMap = new Map((brief?.evidence ?? []).map((item) => [item.id, item]))
+  const openEvidence = (evidence: BriefEvidence) => setPreview({
+    title: evidence.document_label,
+    url: evidence.url,
+    meta: [evidence.page ? `Σελίδα ${evidence.page}` : null, evidence.reference].filter(Boolean).join(' · '),
+    mode: isPreviewableFileUrl(evidence.url) ? 'document' : 'web',
+  })
 
   return (
     <section className="drawer-section ai-brief-section">
       <div className="ai-brief-header">
         <div>
-          <h4>AI document brief</h4>
-          <p>Runs only when you press the pink button. Saved briefs load from the database.</p>
+          <h4>AI Bid Decision Brief</h4>
+          <p>Ενιαίο scorecard για CEO και Bid Manager, πάντα με τεκμηρίωση.</p>
         </div>
-        <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating || Boolean(brief)}>
+        <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
           <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
-          {brief ? 'Saved in DB' : generating ? 'Reading docs...' : 'Generate brief'}
+          {generating ? 'Reading documents…' : brief ? 'Regenerate' : 'Generate brief'}
         </button>
       </div>
 
@@ -2631,51 +3365,174 @@ function DocumentBriefPanel({
       ) : null}
 
       {!loading && !brief ? (
-        <p className="muted">No saved brief yet. Press the pink button when you want AI to read the available documents.</p>
+        <p className="muted">Δεν υπάρχει αποθηκευμένο brief. Πάτησε Generate για ανάλυση των επίσημων εγγράφων.</p>
       ) : null}
 
       {brief ? (
-        <div className="ai-brief-content">
-          <div className="brief-verdict-row">
-            <span className={`brief-verdict ${brief.actionable}`}>{brief.actionable}</span>
-            <strong>{brief.recommendation}</strong>
+        <div className="ai-brief-content bid-scorecard">
+          {outdated ? (
+            <div className="brief-outdated-banner">
+              <AlertTriangle size={16} aria-hidden="true" />
+              <span>Outdated brief — πάτησε Regenerate για το νέο scorecard και τα evidence citations.</span>
+            </div>
+          ) : null}
+
+          <div className={`brief-decision-hero ${briefVerdictClass(brief.verdict)}`}>
+            <div className="brief-score-ring" aria-label={`Bid score ${brief.score} out of 100`}>
+              <strong>{brief.score}</strong>
+              <span>/100</span>
+            </div>
+            <div>
+              <span className="brief-decision-label">Decision</span>
+              <h5>{brief.verdict}</h5>
+              <p>{brief.executive_recommendation}</p>
+            </div>
+            <span className={`brief-confidence ${brief.confidence}`}>{brief.confidence} confidence</span>
           </div>
+
           <p>{brief.project_summary}</p>
 
-          <div className="brief-grid">
-            <BriefBlock title="Deadline / submission" items={[brief.deadline_submission]} />
-            <BriefBlock title="Required documents" items={brief.required_documents} empty="Not identified in the readable text." />
-            <BriefBlock title="Technical requirements" items={brief.technical_requirements} empty="Not identified in the readable text." />
-            <BriefBlock title="Next steps" items={brief.next_steps} empty="Open the official source documents first." />
+          <BriefFindingList title="Γιατί αυτή η απόφαση" findings={brief.decision_reasons} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+
+          <div className="brief-decision-grid">
+            <article className={`brief-fact-card access-${brief.procurement_access.status}`}>
+              <span>Πρόσβαση στη διαδικασία</span>
+              <strong>{formatAccessStatus(brief.procurement_access.status)}</strong>
+              <p>{brief.procurement_access.reason}</p>
+              <BriefEvidenceChips ids={brief.procurement_access.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            </article>
+            <article className="brief-fact-card">
+              <span>Budget & direct award</span>
+              <strong>{brief.budget_assessment.amount_without_vat != null ? `${formatCurrency(brief.budget_assessment.amount_without_vat)} χωρίς ΦΠΑ` : 'Unknown net budget'}</strong>
+              <p>{brief.budget_assessment.determination}</p>
+              <BriefEvidenceChips ids={brief.budget_assessment.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              <a href={brief.budget_assessment.legal_basis_url} target="_blank" rel="noreferrer">Ν. 4412/2016 · {brief.rules_version}</a>
+            </article>
+            <article className={`brief-fact-card continuity-${brief.continuity.status}`}>
+              <span>Incumbent / συνέχεια</span>
+              <strong>{formatContinuityStatus(brief.continuity.status)}</strong>
+              <p>{brief.continuity.reason}</p>
+              {brief.continuity.incumbent_name ? <small>Incumbent: {brief.continuity.incumbent_name}</small> : null}
+              {brief.continuity.prior_reference ? <small>Previous ref: {brief.continuity.prior_reference}</small> : null}
+              <BriefEvidenceChips ids={brief.continuity.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            </article>
           </div>
+
+          <div className="brief-access-strip">
+            <span><strong>Deadline</strong>{brief.procurement_access.deadline ? `${formatDate(brief.procurement_access.deadline)}${brief.procurement_access.days_remaining != null ? ` · ${brief.procurement_access.days_remaining} ημέρες` : ''}` : 'Unknown'}</span>
+            <span><strong>Procedure</strong>{brief.procurement_access.procedure || 'Unknown'}</span>
+            <span><strong>Submission</strong>{brief.procurement_access.submission_method || 'Unknown'}</span>
+          </div>
+
+          <div className="brief-score-dimensions" aria-label="Bid score dimensions">
+            {brief.score_dimensions.map((dimension) => (
+              <div className="brief-score-dimension" key={dimension.key}>
+                <div><strong>{dimension.label}</strong><span>{dimension.score}/{dimension.max_score}</span></div>
+                <div className="brief-score-track"><span style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} /></div>
+                <p>{dimension.reason}</p>
+                <BriefEvidenceChips ids={dimension.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              </div>
+            ))}
+          </div>
+
+          <div className="brief-grid brief-v2-grid">
+            <BriefFindingList title="Commercial" findings={brief.commercial_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} empty="Δεν επιβεβαιώθηκαν εμπορικοί όροι." />
+            <BriefFindingList title="Eligibility & δικαιολογητικά" findings={brief.eligibility_requirements} fallback={brief.required_documents} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            <BriefFindingList title="Evaluation criteria" findings={brief.evaluation_criteria} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            <BriefFindingList title="Technical & deliverables" findings={brief.technical_findings} fallback={brief.technical_requirements} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            <BriefFindingList title="Contract, SLA & guarantees" findings={brief.contractual_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+            <BriefFindingList title="Red flags" findings={brief.red_flag_findings} fallback={brief.red_flags} evidenceMap={evidenceMap} onEvidence={openEvidence} tone="risk" />
+          </div>
+
+          <div className="brief-lists-row">
+            <BriefPlainList title="Unknown / χρειάζεται επιβεβαίωση" items={brief.unknowns} />
+            <BriefPlainList title="Next steps" items={brief.next_steps} />
+          </div>
+
+          {brief.history_12_months.length ? (
+            <div className="brief-history">
+              <div><h5>Σχετικό ιστορικό 12 μηνών</h5><span>Factual context — όχι απόδειξη κατάτμησης ή συνέχειας</span></div>
+              {brief.history_12_months.map((item) => (
+                <article key={`${item.reference}-${item.title}`}>
+                  <span><strong>{item.title}</strong><small>{[item.reference, item.supplier, item.published_at ? formatDate(item.published_at) : null].filter(Boolean).join(' · ')}</small></span>
+                  <span>{formatCurrency(item.amount)}</span>
+                  {item.url ? <button type="button" onClick={() => setPreview({ title: item.title, url: item.url as string, meta: item.reference ?? '', mode: isPreviewableFileUrl(item.url) ? 'document' : 'web' })}><PanelRightOpen size={14} aria-hidden="true" /> Evidence</button> : null}
+                </article>
+              ))}
+            </div>
+          ) : null}
 
           <div className="brief-meta">
             <span>{brief.cached ? 'Saved brief' : 'New brief'}</span>
+            <span>Schema v{brief.schema_version}</span>
             <span>{formatDateTime(brief.generated_at)}</span>
             {brief.model ? <span>{brief.model}</span> : null}
           </div>
         </div>
       ) : null}
+      {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
     </section>
   )
 }
 
-function BriefBlock({ title, items, empty }: { title: string; items: string[]; empty?: string }) {
-  const visibleItems = items.filter(Boolean)
+function BriefFindingList({
+  title,
+  findings,
+  fallback = [],
+  evidenceMap,
+  onEvidence,
+  empty = 'Δεν εντοπίστηκε στα αναγνώσιμα έγγραφα.',
+  tone = 'default',
+}: {
+  title: string
+  findings: BriefFinding[]
+  fallback?: string[]
+  evidenceMap: Map<string, BriefEvidence>
+  onEvidence: (evidence: BriefEvidence) => void
+  empty?: string
+  tone?: 'default' | 'risk'
+}) {
   return (
-    <div className="brief-block">
+    <div className={`brief-block brief-finding-block ${tone}`}>
       <h5>{title}</h5>
-      {visibleItems.length ? (
+      {findings.length ? (
         <ul>
-          {visibleItems.map((item) => (
-            <li key={item}>{item}</li>
+          {findings.map((item) => (
+            <li key={`${item.text}-${item.evidence_ids.join('-')}`}>
+              <span>{item.text}</span>
+              <BriefEvidenceChips ids={item.evidence_ids} evidenceMap={evidenceMap} onEvidence={onEvidence} />
+            </li>
           ))}
         </ul>
+      ) : fallback.filter(Boolean).length ? (
+        <ul>{fallback.filter(Boolean).map((item) => <li key={item}><span>{item}</span></li>)}</ul>
       ) : (
-        <p>{empty ?? 'Unknown'}</p>
+        <p>{empty}</p>
       )}
     </div>
   )
+}
+
+function BriefEvidenceChips({ ids = [], evidenceMap, onEvidence }: { ids?: string[]; evidenceMap: Map<string, BriefEvidence>; onEvidence: (evidence: BriefEvidence) => void }) {
+  const evidence = ids.map((id) => evidenceMap.get(id)).filter((item): item is BriefEvidence => Boolean(item))
+  if (!evidence.length) return null
+  return <span className="brief-evidence-chips">{evidence.map((item) => <button type="button" key={item.id} title={item.excerpt} onClick={() => onEvidence(item)}><FileText size={12} aria-hidden="true" />{item.page ? `p.${item.page}` : 'evidence'}</button>)}</span>
+}
+
+function BriefPlainList({ title, items }: { title: string; items: string[] }) {
+  return <div className="brief-plain-list"><h5>{title}</h5>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None identified.</p>}</div>
+}
+
+function briefVerdictClass(verdict: DocumentBrief['verdict']) {
+  return verdict.toLowerCase().replaceAll(' ', '-').replace('conditional-go', 'conditional')
+}
+
+function formatAccessStatus(status: DocumentBrief['procurement_access']['status']) {
+  return ({ open_competition: 'Open competition', named_invitation: 'Named invitation', awarded: 'Awarded', contracted: 'Contracted', paid: 'Paid', planning_only: 'Planning only', expired: 'Expired', unknown: 'Unknown' })[status]
+}
+
+function formatContinuityStatus(status: DocumentBrief['continuity']['status']) {
+  return ({ confirmed_continuation: 'Confirmed continuation', not_confirmed: 'Not confirmed', unknown: 'Unknown' })[status]
 }
 
 function SourceDataVisualization({ details }: { details: OpportunityDetails | null }) {

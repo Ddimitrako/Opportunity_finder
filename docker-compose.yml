@@ -9,9 +9,30 @@ services:
       KHMDHS_VERIFY_SSL: "false"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      GEMI_API_KEY: ${GEMI_API_KEY:-}
+      MARKET_REFRESH_ENABLED: ${MARKET_REFRESH_ENABLED:-true}
+      MARKET_REFRESH_HOUR: ${MARKET_REFRESH_HOUR:-7}
       BOOKMARK_DB_PATH: /app/data/opportunity_finder.sqlite3
     ports:
       - "8000:8000"
+    volumes:
+      - bookmark-data:/app/data
+    restart: unless-stopped
+
+  market-worker:
+    build:
+      context: ./backend
+    container_name: opportunity-finder-market-worker
+    command: ["python", "-m", "app.worker", "--interval"]
+    environment:
+      ENVIRONMENT: production
+      KHMDHS_VERIFY_SSL: "false"
+      GEMI_API_KEY: ${GEMI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      MARKET_REFRESH_ENABLED: ${MARKET_REFRESH_ENABLED:-true}
+      MARKET_REFRESH_HOUR: ${MARKET_REFRESH_HOUR:-7}
+      BOOKMARK_DB_PATH: /app/data/opportunity_finder.sqlite3
     volumes:
       - bookmark-data:/app/data
     restart: unless-stopped

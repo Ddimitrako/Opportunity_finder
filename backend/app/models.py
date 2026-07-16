@@ -299,19 +299,114 @@ class BookmarkUpsertRequest(BaseModel):
 
 
 DocumentBriefVerdict = Literal["yes", "no", "maybe", "unknown"]
+BidDecisionVerdict = Literal["GO", "CONDITIONAL GO", "NO-GO", "INSUFFICIENT DATA"]
+BidDecisionConfidence = Literal["high", "medium", "low"]
+ProcurementAccessStatus = Literal[
+    "open_competition",
+    "named_invitation",
+    "awarded",
+    "contracted",
+    "paid",
+    "planning_only",
+    "expired",
+    "unknown",
+]
+ContinuityStatus = Literal["confirmed_continuation", "not_confirmed", "unknown"]
+
+
+class BriefEvidence(BaseModel):
+    id: str
+    document_label: str
+    url: str
+    excerpt: str
+    page: int | None = None
+    reference: str | None = None
+
+
+class BriefFinding(BaseModel):
+    text: str
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
+class BriefScoreDimension(BaseModel):
+    key: str
+    label: str
+    score: int = 0
+    max_score: int
+    reason: str = "Unknown"
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
+class BriefBudgetAssessment(BaseModel):
+    amount_without_vat: float | None = None
+    amount_with_vat: float | None = None
+    currency: str = "EUR"
+    direct_award_eligible: bool | None = None
+    threshold_without_vat: float = 30_000
+    determination: str = "Unknown"
+    legal_basis_url: str = "https://eadhsy.gr/n4412/n4412fulltextlinks.html"
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
+class BriefProcurementAccess(BaseModel):
+    status: ProcurementAccessStatus = "unknown"
+    reason: str = "Unknown"
+    procedure: str | None = None
+    deadline: date | None = None
+    days_remaining: int | None = None
+    submission_method: str = "Unknown"
+    named_invitee: str | None = None
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
+class BriefContinuityAssessment(BaseModel):
+    status: ContinuityStatus = "unknown"
+    reason: str = "Unknown"
+    incumbent_name: str | None = None
+    prior_reference: str | None = None
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
+class BriefHistoryItem(BaseModel):
+    title: str
+    reference: str | None = None
+    amount: float | None = None
+    published_at: date | None = None
+    supplier: str | None = None
+    url: str | None = None
 
 
 class DocumentBrief(BaseModel):
     source: SourceName
     reference: str
+    schema_version: int = 1
+    rules_version: str = "legacy"
+    verdict: BidDecisionVerdict = "INSUFFICIENT DATA"
+    score: int = Field(default=0, ge=0, le=100)
+    confidence: BidDecisionConfidence = "low"
+    executive_recommendation: str = "Insufficient data"
+    decision_reasons: list[BriefFinding] = Field(default_factory=list)
     project_summary: str
     actionable: DocumentBriefVerdict = "unknown"
+    procurement_access: BriefProcurementAccess = Field(default_factory=BriefProcurementAccess)
+    continuity: BriefContinuityAssessment = Field(default_factory=BriefContinuityAssessment)
+    budget_assessment: BriefBudgetAssessment = Field(default_factory=BriefBudgetAssessment)
+    score_dimensions: list[BriefScoreDimension] = Field(default_factory=list)
     deadline_submission: str = "Unknown"
     required_documents: list[str] = Field(default_factory=list)
+    eligibility_requirements: list[BriefFinding] = Field(default_factory=list)
+    evaluation_criteria: list[BriefFinding] = Field(default_factory=list)
     technical_requirements: list[str] = Field(default_factory=list)
+    technical_findings: list[BriefFinding] = Field(default_factory=list)
+    commercial_findings: list[BriefFinding] = Field(default_factory=list)
+    contractual_findings: list[BriefFinding] = Field(default_factory=list)
     red_flags: list[str] = Field(default_factory=list)
+    red_flag_findings: list[BriefFinding] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
     recommendation: str = "Maybe"
     next_steps: list[str] = Field(default_factory=list)
+    history_12_months: list[BriefHistoryItem] = Field(default_factory=list)
+    evidence: list[BriefEvidence] = Field(default_factory=list)
     source_documents: list[DocumentLink] = Field(default_factory=list)
     generated_at: datetime
     model: str | None = None
@@ -321,6 +416,7 @@ class DocumentBrief(BaseModel):
 class DocumentBriefResponse(BaseModel):
     brief: DocumentBrief | None = None
     cached: bool = False
+    outdated: bool = False
     message: str | None = None
 
 
@@ -411,3 +507,300 @@ class ConfigResponse(BaseModel):
     default_keywords: list[str]
     packages: list[dict[str, Any]]
     sources: list[dict[str, str]]
+
+
+OrganizationRole = Literal["buyer", "supplier", "both"]
+SignalStage = Literal["early", "open", "awarded", "historical"]
+SignalKind = Literal[
+    "procurement_request",
+    "planning_notice",
+    "open_tender",
+    "job_hiring",
+    "expansion",
+    "capital_change",
+    "acquisition",
+    "transformation",
+    "award",
+    "contract",
+    "payment",
+]
+TrackingState = Literal[
+    "new",
+    "watching",
+    "researching",
+    "contact_planned",
+    "contacted",
+    "meeting",
+    "proposal",
+    "partner_target",
+    "won",
+    "lost",
+    "archived",
+]
+OriginRegion = Literal["Europe", "United States", "China", "Other"]
+SoftwareCategory = Literal[
+    "ERP/Finance",
+    "HR/HCM/Payroll",
+    "Project Management/DevOps",
+    "ITSM/IT Operations",
+    "Cloud/Infrastructure",
+    "BI/Analytics/AI",
+    "Cybersecurity",
+    "DMS/Workflow/Collaboration",
+    "Defence/Industrial",
+    "General Software",
+]
+
+
+class EvidenceRef(BaseModel):
+    source: str
+    external_id: str | None = None
+    url: str | None = None
+    title: str
+    published_at: date | None = None
+    excerpt: str = ""
+
+
+class MarketOrganization(BaseModel):
+    id: str
+    name: str
+    normalized_name: str
+    role: OrganizationRole
+    country: str = "GR"
+    gemi_number: str | None = None
+    tax_id: str | None = None
+    khmdhs_key: str | None = None
+    aliases: list[str] = Field(default_factory=list)
+    website: str | None = None
+    strongest_signal_score: int = 0
+    strongest_signal_kind: SignalKind | None = None
+    strongest_category: SoftwareCategory | None = None
+    last_signal_at: date | None = None
+    incumbent_suppliers: list[str] = Field(default_factory=list)
+    software_brands: list[str] = Field(default_factory=list)
+    tracking_state: TrackingState | None = None
+    next_action: str | None = None
+    updated_at: datetime
+
+
+class NeedSignal(BaseModel):
+    id: str
+    organization_id: str
+    organization_name: str
+    category: SoftwareCategory
+    kind: SignalKind
+    stage: SignalStage
+    need_score: int = Field(ge=0, le=100)
+    confidence: int = Field(ge=0, le=100)
+    why_now: str
+    score_reasons: list[str] = Field(default_factory=list)
+    evidence: EvidenceRef
+    is_new: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
+class SupplierAward(BaseModel):
+    id: str
+    buyer_id: str
+    buyer_name: str
+    supplier_id: str
+    supplier_name: str
+    title: str
+    category: SoftwareCategory
+    amount: float | None = None
+    currency: str = "EUR"
+    awarded_at: date | None = None
+    software_brands: list[str] = Field(default_factory=list)
+    evidence: EvidenceRef
+
+
+class SoftwareBrand(BaseModel):
+    id: str
+    name: str
+    origin_region: OriginRegion
+    aliases: list[str] = Field(default_factory=list)
+    mention_count: int = 0
+    observed_spend: float = 0
+    supplier_names: list[str] = Field(default_factory=list)
+    buyer_names: list[str] = Field(default_factory=list)
+    last_seen_at: date | None = None
+
+
+class SoftwareBrandMention(BaseModel):
+    id: str
+    brand_id: str
+    brand_name: str
+    product_name: str | None = None
+    buyer_id: str | None = None
+    supplier_id: str | None = None
+    confidence: int = Field(ge=0, le=100)
+    evidence: EvidenceRef
+
+
+class TrackingEntryCreate(BaseModel):
+    entity_type: Literal["buyer", "supplier", "brand", "opportunity"]
+    entity_id: str
+    state: TrackingState = "watching"
+    notes: str = Field(default="", max_length=4000)
+    next_action: str | None = Field(default=None, max_length=500)
+    next_action_at: date | None = None
+
+
+class TrackingEntryUpdate(BaseModel):
+    state: TrackingState | None = None
+    notes: str | None = Field(default=None, max_length=4000)
+    next_action: str | None = Field(default=None, max_length=500)
+    next_action_at: date | None = None
+
+
+class TrackingEntry(BaseModel):
+    id: str
+    entity_type: Literal["buyer", "supplier", "brand", "opportunity"]
+    entity_id: str
+    entity_name: str
+    state: TrackingState
+    notes: str = ""
+    next_action: str | None = None
+    next_action_at: date | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WatchSourceCreate(BaseModel):
+    organization_id: str
+    source_type: Literal["careers", "newsroom"]
+    url: str = Field(min_length=8, max_length=2000)
+    label: str = Field(default="", max_length=200)
+    enabled: bool = True
+
+
+class WatchSourceUpdate(BaseModel):
+    label: str | None = Field(default=None, max_length=200)
+    enabled: bool | None = None
+
+
+class WatchSource(BaseModel):
+    id: str
+    organization_id: str
+    organization_name: str
+    source_type: Literal["careers", "newsroom"]
+    url: str
+    label: str
+    enabled: bool
+    last_checked_at: datetime | None = None
+    last_changed_at: datetime | None = None
+    last_error: str | None = None
+
+
+class DiscoveryProfileCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    activities: list[str] = Field(default_factory=list)
+    prefectures: list[int] = Field(default_factory=list)
+    municipalities: list[str] = Field(default_factory=list)
+    is_active: bool = True
+    enabled: bool = True
+
+
+class DiscoveryProfile(BaseModel):
+    id: str
+    name: str
+    activities: list[str] = Field(default_factory=list)
+    prefectures: list[int] = Field(default_factory=list)
+    municipalities: list[str] = Field(default_factory=list)
+    is_active: bool
+    enabled: bool
+    last_run_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketCategoryTrend(BaseModel):
+    category: SoftwareCategory
+    current_count: int
+    previous_count: int
+    delta_percent: float | None = None
+    observed_spend: float = 0
+
+
+class MarketOverviewResponse(BaseModel):
+    generated_at: datetime
+    period_days: int
+    new_signals: int
+    hot_buyers: int
+    open_opportunities: int
+    observed_public_spend: float
+    tracked_entities: int
+    categories: list[MarketCategoryTrend] = Field(default_factory=list)
+    hot_organizations: list[MarketOrganization] = Field(default_factory=list)
+    recent_signals: list[NeedSignal] = Field(default_factory=list)
+    top_suppliers: list[MarketOrganization] = Field(default_factory=list)
+    top_brands: list[SoftwareBrand] = Field(default_factory=list)
+    coverage: dict[str, str] = Field(default_factory=dict)
+    last_refresh_at: datetime | None = None
+
+
+class MarketOrganizationListResponse(BaseModel):
+    items: list[MarketOrganization]
+    total: int
+    limit: int
+    offset: int
+
+
+class MarketOrganizationDetail(BaseModel):
+    organization: MarketOrganization
+    signals: list[NeedSignal] = Field(default_factory=list)
+    awards_as_buyer: list[SupplierAward] = Field(default_factory=list)
+    awards_as_supplier: list[SupplierAward] = Field(default_factory=list)
+    brand_mentions: list[SoftwareBrandMention] = Field(default_factory=list)
+    tracking: TrackingEntry | None = None
+    watch_sources: list[WatchSource] = Field(default_factory=list)
+
+
+class MarketSignalListResponse(BaseModel):
+    items: list[NeedSignal]
+    total: int
+    limit: int
+    offset: int
+
+
+class MarketBrandListResponse(BaseModel):
+    items: list[SoftwareBrand]
+    total: int
+
+
+class MarketBrandDetail(BaseModel):
+    brand: SoftwareBrand
+    mentions: list[SoftwareBrandMention] = Field(default_factory=list)
+    awards: list[SupplierAward] = Field(default_factory=list)
+    tracking: TrackingEntry | None = None
+
+
+class MarketRefreshRequest(BaseModel):
+    backfill_days: int | None = Field(default=None, ge=1, le=1800)
+
+
+class MarketRefreshSourceResult(BaseModel):
+    source: str
+    status: Literal["ok", "error", "skipped"]
+    fetched: int = 0
+    created: int = 0
+    updated: int = 0
+    error: str | None = None
+
+
+class MarketRefreshResponse(BaseModel):
+    run_id: str
+    status: Literal["running", "ok", "partial", "error", "skipped"]
+    started_at: datetime
+    finished_at: datetime | None = None
+    source_results: list[MarketRefreshSourceResult] = Field(default_factory=list)
+    message: str | None = None
+
+
+class MarketConfigResponse(BaseModel):
+    gemi_enabled: bool
+    refresh_enabled: bool
+    refresh_hour: int
+    categories: list[str]
+    tracking_states: list[str]

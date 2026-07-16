@@ -87,6 +87,47 @@ class TedClient:
             if opportunity.published_at is not None and date_from <= opportunity.published_at <= date_to
         ]
 
+    async def market_records(self, date_from: date, date_to: date, limit: int = 100) -> list[dict[str, Any]]:
+        """Return Greece software notices across planning, competition and result stages."""
+        cpv_terms = " OR ".join(f"classification-cpv={code.split('-')[0]}" for code in request_cpv_codes())
+        query = (
+            f"organisation-country-buyer=GRC AND publication-date>={date_from.strftime('%Y%m%d')} "
+            f"AND publication-date<={date_to.strftime('%Y%m%d')} AND ({cpv_terms})"
+        )
+        page_size = min(100, max(1, limit))
+        body: dict[str, Any] = {
+            "query": query,
+            "fields": [
+                "publication-number", "notice-title", "buyer-name", "organisation-country-buyer",
+                "publication-date", "notice-type", "form-type", "notice-subtype", "deadline",
+                "BT-131(d)-Lot", "deadline-receipt-tender-date-lot", "classification-cpv",
+                "winner-name", "winner-country", "total-value",
+            ],
+            "page": 1,
+            "limit": page_size,
+            "scope": "ALL",
+            "paginationMode": "PAGE_NUMBER",
+        }
+        url = f"{str(self.settings.ted_base_url).rstrip('/')}/v3/notices/search"
+        collected: list[dict[str, Any]] = []
+        async with httpx.AsyncClient(
+            timeout=self.settings.ted_timeout_seconds,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        ) as client:
+            for page in range(1, ((min(limit, 1000) - 1) // page_size) + 2):
+                body["page"] = page
+                response = await client.post(url, json=body)
+                response.raise_for_status()
+                records = extract_records(response.json())
+                collected.extend(records)
+                if len(records) < page_size or len(collected) >= min(limit, 1000):
+                    break
+        return [
+            record for record in collected[:limit]
+            if (published := parse_date(record.get("publication-date") or record.get("publicationDate")))
+            and date_from <= published <= date_to
+        ]
+
     def _to_opportunity(self, record: dict[str, Any]) -> Opportunity:
         title = first_text(
             record.get("notice-title")
@@ -127,3 +168,10 @@ class TedClient:
             raw_text=summary,
             source_payload={"publicationNumber": publication_number},
         )
+
+
+def request_cpv_codes() -> list[str]:
+    # Keep the market adapter independent from a UI request while sharing the same software focus.
+    from app.models import DEFAULT_CPV_CODES
+
+    return DEFAULT_CPV_CODES

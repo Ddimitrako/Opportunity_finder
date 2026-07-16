@@ -18,12 +18,29 @@ from app.models import (
     DEFAULT_KEYWORDS,
     DocumentBriefResponse,
     HealthResponse,
+    DiscoveryProfile,
+    DiscoveryProfileCreate,
+    MarketBrandDetail,
+    MarketBrandListResponse,
+    MarketConfigResponse,
+    MarketOrganizationDetail,
+    MarketOrganizationListResponse,
+    MarketOverviewResponse,
+    MarketRefreshRequest,
+    MarketRefreshResponse,
+    MarketSignalListResponse,
     NeedPatternRequest,
     NeedPatternResponse,
     OpportunityDetails,
     ProcurementSearchRequest,
     SearchResponse,
     SourceName,
+    TrackingEntry,
+    TrackingEntryCreate,
+    TrackingEntryUpdate,
+    WatchSource,
+    WatchSourceCreate,
+    WatchSourceUpdate,
 )
 from app.scoring import PACKAGES
 from app.services.bookmarks import BookmarkService
@@ -32,6 +49,7 @@ from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 from app.services.patterns import PatternDiscoveryService
+from app.services.market import MarketService
 
 app = FastAPI(title="Opportunity Finder API", version="0.1.0")
 
@@ -71,6 +89,10 @@ def get_buyer_intelligence_service(settings: Settings = Depends(get_settings)) -
 
 def get_pattern_service() -> PatternDiscoveryService:
     return PatternDiscoveryService()
+
+
+def get_market_service(settings: Settings = Depends(get_settings)) -> MarketService:
+    return MarketService(settings)
 
 
 def _allowed_document_hosts(settings: Settings) -> set[str]:
@@ -151,8 +173,11 @@ async def proxy_pdf_document(
 async def search_opportunities(
     request: ProcurementSearchRequest,
     service: OpportunityService = Depends(get_service),
+    market: MarketService = Depends(get_market_service),
 ) -> SearchResponse:
-    return await service.search(request)
+    response = await service.search(request)
+    market.ingest_opportunities(response.opportunities)
+    return response
 
 
 @app.post("/api/opportunities/activity", response_model=ActivityResponse)
@@ -207,6 +232,218 @@ async def delete_bookmark(
     return service.list_bookmarks()
 
 
+@app.get("/api/market/config", response_model=MarketConfigResponse)
+async def market_config(service: MarketService = Depends(get_market_service)) -> MarketConfigResponse:
+    return service.config()
+
+
+@app.get("/api/market/overview", response_model=MarketOverviewResponse)
+async def market_overview(
+    period_days: int = Query(default=30, ge=1, le=365),
+    service: MarketService = Depends(get_market_service),
+) -> MarketOverviewResponse:
+    return service.overview(period_days)
+
+
+@app.get("/api/market/signals", response_model=MarketSignalListResponse)
+async def market_signals(
+    category: str | None = None,
+    stage: str | None = None,
+    min_score: int = Query(default=0, ge=0, le=100),
+    source: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: MarketService = Depends(get_market_service),
+) -> MarketSignalListResponse:
+    return service.list_signals(category=category, stage=stage, min_score=min_score, source=source, limit=limit, offset=offset)
+
+
+@app.get("/api/market/buyers", response_model=MarketOrganizationListResponse)
+async def market_buyers(
+    search: str | None = None,
+    category: str | None = None,
+    min_score: int = Query(default=0, ge=0, le=100),
+    tracking_state: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: MarketService = Depends(get_market_service),
+) -> MarketOrganizationListResponse:
+    return service.list_organizations(
+        role="buyer", search=search, category=category, min_score=min_score,
+        tracking_state=tracking_state, limit=limit, offset=offset,
+    )
+
+
+@app.get("/api/market/buyers/{organization_id}", response_model=MarketOrganizationDetail)
+async def market_buyer_detail(
+    organization_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> MarketOrganizationDetail:
+    detail = service.organization_detail(organization_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Buyer not found.")
+    return detail
+
+
+@app.get("/api/market/suppliers", response_model=MarketOrganizationListResponse)
+async def market_suppliers(
+    search: str | None = None,
+    category: str | None = None,
+    tracking_state: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    service: MarketService = Depends(get_market_service),
+) -> MarketOrganizationListResponse:
+    return service.list_organizations(
+        role="supplier", search=search, category=category, tracking_state=tracking_state,
+        limit=limit, offset=offset,
+    )
+
+
+@app.get("/api/market/suppliers/{organization_id}", response_model=MarketOrganizationDetail)
+async def market_supplier_detail(
+    organization_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> MarketOrganizationDetail:
+    detail = service.organization_detail(organization_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Supplier not found.")
+    return detail
+
+
+@app.get("/api/market/brands", response_model=MarketBrandListResponse)
+async def market_brands(
+    region: str | None = None,
+    search: str | None = None,
+    limit: int = Query(default=100, ge=1, le=200),
+    service: MarketService = Depends(get_market_service),
+) -> MarketBrandListResponse:
+    return service.list_brands(region=region, search=search, limit=limit)
+
+
+@app.get("/api/market/brands/{brand_id}", response_model=MarketBrandDetail)
+async def market_brand_detail(
+    brand_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> MarketBrandDetail:
+    detail = service.brand_detail(brand_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Software brand not found.")
+    return detail
+
+
+@app.get("/api/market/tracking", response_model=list[TrackingEntry])
+async def market_tracking(service: MarketService = Depends(get_market_service)) -> list[TrackingEntry]:
+    return service.list_tracking()
+
+
+@app.post("/api/market/tracking", response_model=TrackingEntry)
+async def create_market_tracking(
+    payload: TrackingEntryCreate,
+    service: MarketService = Depends(get_market_service),
+) -> TrackingEntry:
+    return service.upsert_tracking(payload)
+
+
+@app.patch("/api/market/tracking/{tracking_id}", response_model=TrackingEntry)
+async def update_market_tracking(
+    tracking_id: str,
+    payload: TrackingEntryUpdate,
+    service: MarketService = Depends(get_market_service),
+) -> TrackingEntry:
+    item = service.update_tracking(tracking_id, payload)
+    if not item:
+        raise HTTPException(status_code=404, detail="Tracking entry not found.")
+    return item
+
+
+@app.delete("/api/market/tracking/{tracking_id}", status_code=204)
+async def delete_market_tracking(
+    tracking_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> Response:
+    if not service.delete_tracking(tracking_id):
+        raise HTTPException(status_code=404, detail="Tracking entry not found.")
+    return Response(status_code=204)
+
+
+@app.get("/api/market/watch-sources", response_model=list[WatchSource])
+async def market_watch_sources(service: MarketService = Depends(get_market_service)) -> list[WatchSource]:
+    return service.list_watch_sources()
+
+
+@app.post("/api/market/watch-sources", response_model=WatchSource)
+async def create_market_watch_source(
+    payload: WatchSourceCreate,
+    service: MarketService = Depends(get_market_service),
+) -> WatchSource:
+    try:
+        return service.create_watch_source(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/market/watch-sources/{watch_id}", response_model=WatchSource)
+async def update_market_watch_source(
+    watch_id: str,
+    payload: WatchSourceUpdate,
+    service: MarketService = Depends(get_market_service),
+) -> WatchSource:
+    item = service.update_watch_source(watch_id, payload)
+    if not item:
+        raise HTTPException(status_code=404, detail="Watch source not found.")
+    return item
+
+
+@app.delete("/api/market/watch-sources/{watch_id}", status_code=204)
+async def delete_market_watch_source(
+    watch_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> Response:
+    if not service.delete_watch_source(watch_id):
+        raise HTTPException(status_code=404, detail="Watch source not found.")
+    return Response(status_code=204)
+
+
+@app.get("/api/market/discovery-profiles", response_model=list[DiscoveryProfile])
+async def market_discovery_profiles(service: MarketService = Depends(get_market_service)) -> list[DiscoveryProfile]:
+    return service.list_discovery_profiles()
+
+
+@app.post("/api/market/discovery-profiles", response_model=DiscoveryProfile)
+async def create_market_discovery_profile(
+    payload: DiscoveryProfileCreate,
+    service: MarketService = Depends(get_market_service),
+) -> DiscoveryProfile:
+    try:
+        return service.create_discovery_profile(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/api/market/discovery-profiles/{profile_id}", status_code=204)
+async def delete_market_discovery_profile(
+    profile_id: str,
+    service: MarketService = Depends(get_market_service),
+) -> Response:
+    if not service.delete_discovery_profile(profile_id):
+        raise HTTPException(status_code=404, detail="Discovery profile not found.")
+    return Response(status_code=204)
+
+
+@app.post("/api/market/refresh", response_model=MarketRefreshResponse)
+async def refresh_market(
+    payload: MarketRefreshRequest,
+    service: MarketService = Depends(get_market_service),
+) -> MarketRefreshResponse:
+    return await service.refresh(payload.backfill_days)
+
+
+@app.get("/api/market/refresh/status", response_model=MarketRefreshResponse | None)
+async def market_refresh_status(service: MarketService = Depends(get_market_service)) -> MarketRefreshResponse | None:
+    return service.refresh_status()
+
+
 @app.get("/api/opportunities/{source}/{reference}/details", response_model=OpportunityDetails)
 async def opportunity_details(
     source: SourceName,
@@ -229,6 +466,7 @@ async def cached_document_brief(
 async def generate_document_brief(
     source: SourceName,
     reference: str,
+    regenerate: bool = False,
     service: DocumentBriefService = Depends(get_brief_service),
 ) -> DocumentBriefResponse:
-    return await service.generate_brief(source, reference)
+    return await service.generate_brief(source, reference, regenerate=regenerate)
