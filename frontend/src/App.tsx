@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Award,
   BarChart3,
+  Bot,
   BookmarkCheck,
   BookmarkPlus,
   Building2,
@@ -22,11 +23,13 @@ import {
   Info,
   Layers3,
   Loader2,
+  MessageSquare,
   PanelRightOpen,
   Radar,
   RefreshCw,
   Save,
   Search,
+  Send,
   ShieldCheck,
   Sparkles,
   Target,
@@ -34,6 +37,8 @@ import {
   Users,
   Handshake,
   Tags,
+  Trash2,
+  UserRound,
   Plus,
   X,
   type LucideIcon,
@@ -226,6 +231,47 @@ type DocumentBriefResponse = {
   cached: boolean
   outdated: boolean
   message?: string | null
+}
+
+type OpportunityChatContextStatus = {
+  ready: boolean
+  prepared_at?: string | null
+  available_document_count: number
+  analyzed_document_count: number
+  readable_document_count: number
+  unreadable_document_labels: string[]
+}
+
+type OpportunityChatCitation = {
+  id: string
+  kind: 'evidence' | 'history'
+  label: string
+  url?: string | null
+  page?: number | null
+  reference?: string | null
+  excerpt?: string | null
+}
+
+type OpportunityChatMessage = {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  strategic_advice?: string | null
+  citations: OpportunityChatCitation[]
+  suggested_questions: string[]
+  created_at: string
+}
+
+type OpportunityChatThreadResponse = {
+  messages: OpportunityChatMessage[]
+  context: OpportunityChatContextStatus
+  suggested_questions: string[]
+}
+
+type OpportunityChatTurnResponse = {
+  user_message: OpportunityChatMessage
+  assistant_message: OpportunityChatMessage
+  context: OpportunityChatContextStatus
 }
 
 type BudgetProfile = {
@@ -2812,6 +2858,10 @@ function DetailsDrawer({
               <BuyerIntelligencePanel intelligence={buyerIntelligence} loading={buyerIntelligenceLoading} error={buyerIntelligenceError} />
 
               <DocumentBriefPanel
+                key={`${opportunity.source}:${opportunity.source_reference ?? details?.reference ?? ''}`}
+                source={opportunity.source}
+                reference={opportunity.source_reference ?? details?.reference ?? ''}
+                availableDocumentCount={documents.length}
                 brief={brief}
                 outdated={briefOutdated}
                 loading={briefLoading}
@@ -2901,6 +2951,11 @@ function BuyerIntelligencePanel({
           ) : null}
 
           <BuyerIntelligenceGraph intelligence={intelligence} onPreview={setPreview} />
+
+          <div className="buyer-ai-context-note">
+            <DatabaseZap size={15} aria-hidden="true" />
+            <span><strong>Shared AI context</strong> Το σχετικό subset των τελευταίων 12 μηνών χρησιμοποιείται από Decision Brief και Ask AI. Εμφανίζεται μόνο εδώ για να μην διπλασιάζεται.</span>
+          </div>
 
           <div className="buyer-intel-grid">
             <BuyerSampleList title="Recent visible opportunities" items={intelligence.recent_opportunities} onPreview={setPreview} />
@@ -3386,7 +3441,10 @@ function DiavgeiaSignals({ intelligence, onPreview }: { intelligence: BuyerIntel
   )
 }
 
-function DocumentBriefPanel({
+export function DocumentBriefPanel({
+  source,
+  reference,
+  availableDocumentCount,
   brief,
   outdated,
   loading,
@@ -3395,6 +3453,9 @@ function DocumentBriefPanel({
   canGenerate,
   onGenerate,
 }: {
+  source: SourceName
+  reference: string
+  availableDocumentCount: number
   brief: DocumentBrief | null
   outdated: boolean
   loading: boolean
@@ -3404,6 +3465,7 @@ function DocumentBriefPanel({
   onGenerate: () => void
 }) {
   const ActionIcon = generating ? Loader2 : Sparkles
+  const [activeTab, setActiveTab] = useState<'brief' | 'chat'>('brief')
   const [preview, setPreview] = useState<PdfPreview | null>(null)
   const evidenceMap = new Map((brief?.evidence ?? []).map((item) => [item.id, item]))
   const openEvidence = (evidence: BriefEvidence) => setPreview({
@@ -3420,35 +3482,46 @@ function DocumentBriefPanel({
           <span className="ai-brief-title-icon"><Sparkles size={18} aria-hidden="true" /></span>
           <div>
             <span className="section-kicker">Decision intelligence</span>
-            <h4>AI Bid Decision Brief</h4>
-            <p>Ενιαίο scorecard για CEO και Bid Manager, πάντα με τεκμηρίωση.</p>
+            <h4>Opportunity AI</h4>
+            <p>Decision brief και τεκμηριωμένες ερωτήσεις στο ίδιο context.</p>
           </div>
         </div>
-        <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
-          <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
-          {generating ? 'Reading documents…' : brief ? 'Regenerate' : 'Generate brief'}
+        {activeTab === 'brief' ? (
+          <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
+            <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
+            {generating ? 'Reading documents…' : brief ? 'Regenerate' : 'Generate brief'}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="ai-workspace-tabs" role="tablist" aria-label="Opportunity AI views">
+        <button type="button" role="tab" aria-selected={activeTab === 'brief'} className={activeTab === 'brief' ? 'active' : undefined} onClick={() => setActiveTab('brief')}>
+          <Sparkles size={15} aria-hidden="true" /> Decision Brief
+        </button>
+        <button type="button" role="tab" aria-selected={activeTab === 'chat'} className={activeTab === 'chat' ? 'active' : undefined} onClick={() => setActiveTab('chat')}>
+          <MessageSquare size={15} aria-hidden="true" /> Ask AI
         </button>
       </div>
 
-      {loading ? (
+      {activeTab === 'brief' && loading ? (
         <div className="ai-brief-state">
           <Loader2 className="spin" size={16} aria-hidden="true" />
           <span>Checking saved brief...</span>
         </div>
       ) : null}
 
-      {error ? (
+      {activeTab === 'brief' && error ? (
         <div className="ai-brief-error">
           <AlertTriangle size={16} aria-hidden="true" />
           <span>{error}</span>
         </div>
       ) : null}
 
-      {!loading && !brief ? (
+      {activeTab === 'brief' && !loading && !brief ? (
         <p className="muted">Δεν υπάρχει αποθηκευμένο brief. Πάτησε Generate για ανάλυση των επίσημων εγγράφων.</p>
       ) : null}
 
-      {brief ? (
+      {activeTab === 'brief' && brief ? (
         <div className="ai-brief-content bid-scorecard">
           {outdated ? (
             <div className="brief-outdated-banner">
@@ -3475,6 +3548,23 @@ function DocumentBriefPanel({
           </div>
 
           <p>{brief.project_summary}</p>
+
+          <details className="brief-source-coverage">
+            <summary>
+              <span><FileText size={15} aria-hidden="true" /> Αναλύθηκαν {brief.source_documents.length} από {availableDocumentCount} διαθέσιμα documents</span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </summary>
+            <div>
+              {brief.source_documents.length ? brief.source_documents.map((document, index) => (
+                <a href={document.url} target="_blank" rel="noreferrer" key={`${document.url}-${index}`}>
+                  <span>{index + 1}</span>
+                  <b>{document.label}</b>
+                  <small>{[document.document_type, document.reference].filter(Boolean).join(' · ')}</small>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              )) : <p>Δεν αναλύθηκε αναγνώσιμο source document.</p>}
+            </div>
+          </details>
 
           <BriefFindingList title="Γιατί αυτή η απόφαση" findings={brief.decision_reasons} evidenceMap={evidenceMap} onEvidence={openEvidence} />
 
@@ -3509,45 +3599,57 @@ function DocumentBriefPanel({
             <span><i><FileText size={16} aria-hidden="true" /></i><b><strong>Submission</strong>{brief.procurement_access.submission_method || 'Unknown'}</b></span>
           </div>
 
-          <div className="brief-section-heading"><span>Bid score breakdown</span><small>Weighted factors behind the recommendation</small></div>
-          <div className="brief-score-dimensions" aria-label="Bid score dimensions">
-            {brief.score_dimensions.map((dimension) => (
-              <div className="brief-score-dimension" key={dimension.key}>
-                <div><strong>{dimension.label}</strong><span className="brief-dimension-score">{dimension.score}<small>/{dimension.max_score}</small></span></div>
-                <div className="brief-score-track" role="progressbar" aria-label={dimension.label} aria-valuenow={dimension.score} aria-valuemin={0} aria-valuemax={dimension.max_score}><span style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} /></div>
-                <p>{dimension.reason}</p>
-                <BriefEvidenceChips ids={dimension.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
-              </div>
-            ))}
-          </div>
-
-          <div className="brief-section-heading"><span>Document review</span><small>What is confirmed, missing or risky</small></div>
-          <div className="brief-grid brief-v2-grid">
-            <BriefFindingList title="Commercial" findings={brief.commercial_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} empty="Δεν επιβεβαιώθηκαν εμπορικοί όροι." />
-            <BriefFindingList title="Eligibility & δικαιολογητικά" findings={brief.eligibility_requirements} fallback={brief.required_documents} evidenceMap={evidenceMap} onEvidence={openEvidence} />
-            <BriefFindingList title="Evaluation criteria" findings={brief.evaluation_criteria} evidenceMap={evidenceMap} onEvidence={openEvidence} />
-            <BriefFindingList title="Technical & deliverables" findings={brief.technical_findings} fallback={brief.technical_requirements} evidenceMap={evidenceMap} onEvidence={openEvidence} />
-            <BriefFindingList title="Contract, SLA & guarantees" findings={brief.contractual_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} />
-            <BriefFindingList title="Red flags" findings={brief.red_flag_findings} fallback={brief.red_flags} evidenceMap={evidenceMap} onEvidence={openEvidence} tone="risk" />
-          </div>
-
-          <div className="brief-lists-row">
-            <BriefPlainList title="Unknown / χρειάζεται επιβεβαίωση" items={brief.unknowns} />
-            <BriefPlainList title="Next steps" items={brief.next_steps} />
-          </div>
-
-          {brief.history_12_months.length ? (
-            <div className="brief-history">
-              <div><h5>Σχετικό ιστορικό 12 μηνών</h5><span>Factual context — όχι απόδειξη κατάτμησης ή συνέχειας</span></div>
-              {brief.history_12_months.map((item) => (
-                <article key={`${item.reference}-${item.title}`}>
-                  <span><strong>{item.title}</strong><small>{[item.reference, item.supplier, item.published_at ? formatDate(item.published_at) : null].filter(Boolean).join(' · ')}</small></span>
-                  <span className="brief-history-amount">{formatCurrency(item.amount)}</span>
-                  {item.url ? <button type="button" onClick={() => setPreview({ title: item.title, url: item.url as string, meta: item.reference ?? '', mode: isPreviewableFileUrl(item.url) ? 'document' : 'web' })}><PanelRightOpen size={14} aria-hidden="true" /> Evidence</button> : null}
-                </article>
+          <details className="brief-compact-disclosure brief-score-disclosure">
+            <summary>
+              <span className="brief-disclosure-copy"><strong>Bid score breakdown</strong><small>6 weighted factors · click για λεπτομέρειες</small></span>
+              <span className="brief-mini-score" aria-label="Compact bid score dimensions">
+                {brief.score_dimensions.map((dimension) => (
+                  <i key={dimension.key} title={`${dimension.label}: ${dimension.score}/${dimension.max_score}`}>
+                    <b style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} />
+                  </i>
+                ))}
+              </span>
+              <b className="brief-summary-total">{brief.score}<small>/100</small></b>
+              <ChevronDown size={17} aria-hidden="true" />
+            </summary>
+            <div className="brief-score-dimensions" aria-label="Bid score dimensions">
+              {brief.score_dimensions.map((dimension) => (
+                <div className="brief-score-dimension" key={dimension.key}>
+                  <div><strong>{dimension.label}</strong><span className="brief-dimension-score">{dimension.score}<small>/{dimension.max_score}</small></span></div>
+                  <div className="brief-score-track" role="progressbar" aria-label={dimension.label} aria-valuenow={dimension.score} aria-valuemin={0} aria-valuemax={dimension.max_score}><span style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} /></div>
+                  <p>{dimension.reason}</p>
+                  <BriefEvidenceChips ids={dimension.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+                </div>
               ))}
             </div>
-          ) : null}
+          </details>
+
+          <details className="brief-compact-disclosure">
+            <summary>
+              <span className="brief-disclosure-copy"><strong>Findings by topic</strong><small>Επιβεβαιωμένα, ελλείψεις και κίνδυνοι — όχι ξεχωριστά documents</small></span>
+              <span className="brief-topic-count">6 topics</span>
+              <ChevronDown size={17} aria-hidden="true" />
+            </summary>
+            <div className="brief-grid brief-v2-grid">
+              <BriefFindingList title="Commercial" findings={brief.commercial_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} empty="Δεν επιβεβαιώθηκαν εμπορικοί όροι." />
+              <BriefFindingList title="Eligibility & δικαιολογητικά" findings={brief.eligibility_requirements} fallback={brief.required_documents} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              <BriefFindingList title="Evaluation criteria" findings={brief.evaluation_criteria} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              <BriefFindingList title="Technical & deliverables" findings={brief.technical_findings} fallback={brief.technical_requirements} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              <BriefFindingList title="Contract, SLA & guarantees" findings={brief.contractual_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} />
+              <BriefFindingList title="Red flags" findings={brief.red_flag_findings} fallback={brief.red_flags} evidenceMap={evidenceMap} onEvidence={openEvidence} tone="risk" />
+            </div>
+          </details>
+
+          <details className="brief-compact-disclosure">
+            <summary>
+              <span className="brief-disclosure-copy"><strong>Open questions & next steps</strong><small>{brief.unknowns.length} unknowns · {brief.next_steps.length} actions</small></span>
+              <ChevronDown size={17} aria-hidden="true" />
+            </summary>
+            <div className="brief-lists-row">
+              <BriefPlainList title="Unknown / χρειάζεται επιβεβαίωση" items={brief.unknowns} />
+              <BriefPlainList title="Next steps" items={brief.next_steps} />
+            </div>
+          </details>
 
           <div className="brief-meta">
             <span>{brief.cached ? 'Saved brief' : 'New brief'}</span>
@@ -3557,9 +3659,211 @@ function DocumentBriefPanel({
           </div>
         </div>
       ) : null}
+      {activeTab === 'chat' ? <OpportunityChatPanel source={source} reference={reference} /> : null}
       {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
     </section>
   )
+}
+
+export function OpportunityChatPanel({ source, reference }: { source: SourceName; reference: string }) {
+  const [thread, setThread] = useState<OpportunityChatThreadResponse | null>(null)
+  const [draft, setDraft] = useState('')
+  const [loading, setLoading] = useState(Boolean(reference))
+  const [sending, setSending] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [error, setError] = useState<string | null>(reference ? null : 'Δεν υπάρχει source reference για αυτό το opportunity.')
+  const [failedMessage, setFailedMessage] = useState<string | null>(null)
+  const [preview, setPreview] = useState<PdfPreview | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!reference) {
+      return () => { cancelled = true }
+    }
+    void fetch(`${API_BASE}/api/opportunities/${source}/${encodeURIComponent(reference)}/chat`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await opportunityChatApiError(response))
+        return response.json() as Promise<OpportunityChatThreadResponse>
+      })
+      .then((data) => { if (!cancelled) setThread(data) })
+      .catch((exc) => { if (!cancelled) setError(exc instanceof Error ? exc.message : 'Chat history could not be loaded.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [source, reference])
+
+  const sendQuestion = async (question: string) => {
+    const nextMessage = question.trim()
+    if (!nextMessage || !reference || sending) return
+    setSending(true)
+    setError(null)
+    setFailedMessage(null)
+    try {
+      const response = await fetch(`${API_BASE}/api/opportunities/${source}/${encodeURIComponent(reference)}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: nextMessage }),
+      })
+      if (!response.ok) throw new Error(await opportunityChatApiError(response))
+      const data = (await response.json()) as OpportunityChatTurnResponse
+      setThread((current) => ({
+        messages: [...(current?.messages ?? []), data.user_message, data.assistant_message].slice(-100),
+        context: data.context,
+        suggested_questions: data.assistant_message.suggested_questions,
+      }))
+      setDraft('')
+    } catch (exc) {
+      setFailedMessage(nextMessage)
+      setError(exc instanceof Error ? exc.message : 'Η απάντηση δεν ολοκληρώθηκε. Το μήνυμα διατηρήθηκε για retry.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const refreshContext = async () => {
+    if (!reference || refreshing) return
+    setRefreshing(true)
+    setError(null)
+    try {
+      const response = await fetch(`${API_BASE}/api/opportunities/${source}/${encodeURIComponent(reference)}/chat/context/refresh`, { method: 'POST' })
+      if (!response.ok) throw new Error(await opportunityChatApiError(response))
+      const context = (await response.json()) as OpportunityChatContextStatus
+      setThread((current) => ({ messages: current?.messages ?? [], context, suggested_questions: current?.suggested_questions ?? [] }))
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Το context δεν ανανεώθηκε.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const clearChat = async () => {
+    if (!reference || clearing || !window.confirm('Να διαγραφεί ολόκληρη η αποθηκευμένη συνομιλία για αυτό το opportunity;')) return
+    setClearing(true)
+    setError(null)
+    try {
+      const response = await fetch(`${API_BASE}/api/opportunities/${source}/${encodeURIComponent(reference)}/chat`, { method: 'DELETE' })
+      if (!response.ok) throw new Error(await opportunityChatApiError(response))
+      setThread((current) => ({
+        messages: [],
+        context: current?.context ?? emptyChatContext(),
+        suggested_questions: initialOpportunityQuestions,
+      }))
+      setDraft('')
+      setFailedMessage(null)
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Η συνομιλία δεν διαγράφηκε.')
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  const openCitation = (citation: OpportunityChatCitation) => {
+    if (!citation.url) return
+    setPreview({
+      title: citation.label,
+      url: citation.url,
+      meta: [citation.kind === 'history' ? '12μηνο buyer history' : citation.page ? `Σελίδα ${citation.page}` : 'Evidence', citation.reference].filter(Boolean).join(' · '),
+      mode: isPreviewableFileUrl(citation.url) ? 'document' : 'web',
+    })
+  }
+
+  const messages = thread?.messages ?? []
+  const suggestions = (messages.length ? messages[messages.length - 1]?.suggested_questions : thread?.suggested_questions)?.slice(0, 3) ?? initialOpportunityQuestions
+  const context = thread?.context ?? emptyChatContext()
+
+  return (
+    <div className="opportunity-chat">
+      <div className="chat-context-bar">
+        <span className={context.ready ? 'ready' : undefined}><DatabaseZap size={15} aria-hidden="true" />
+          {context.ready ? `${context.readable_document_count} readable · ${context.analyzed_document_count}/${context.available_document_count} analyzed` : 'Το context θα δημιουργηθεί με την πρώτη ερώτηση'}
+        </span>
+        {context.unreadable_document_labels.length ? <span className="chat-context-warning" title={context.unreadable_document_labels.join('\n')}><AlertTriangle size={14} aria-hidden="true" /> {context.unreadable_document_labels.length} unreadable / scanned</span> : null}
+        <div>
+          <button type="button" onClick={() => void refreshContext()} disabled={refreshing || sending} title="Refresh source context"><RefreshCw className={refreshing ? 'spin' : undefined} size={15} aria-hidden="true" /> Refresh context</button>
+          <button type="button" onClick={() => void clearChat()} disabled={clearing || !messages.length} title="Clear saved chat"><Trash2 size={15} aria-hidden="true" /> Clear</button>
+        </div>
+      </div>
+
+      {loading ? <div className="chat-loading"><Loader2 className="spin" size={18} aria-hidden="true" /> Loading saved conversation…</div> : null}
+      {!loading && !messages.length ? (
+        <div className="chat-empty-state">
+          <span><Bot size={22} aria-hidden="true" /></span>
+          <div><h5>Ρώτησε για αυτό το opportunity</h5><p>Δεν χρειάζεται να δημιουργήσεις πρώτα Decision Brief. Οι απαντήσεις χρησιμοποιούν τα επίσημα documents και το σχετικό 12μηνο buyer history.</p></div>
+        </div>
+      ) : null}
+
+      <div className="chat-messages" aria-live="polite">
+        {messages.map((message) => (
+          <article className={`chat-message ${message.role}`} key={message.id}>
+            <span className="chat-avatar">{message.role === 'assistant' ? <Bot size={16} aria-hidden="true" /> : <UserRound size={16} aria-hidden="true" />}</span>
+            <div className="chat-bubble">
+              <p>{message.content}</p>
+              {message.citations.length ? (
+                <div className="chat-citations">
+                  {message.citations.map((citation) => citation.url ? (
+                    <button type="button" key={citation.id} onClick={() => openCitation(citation)} title={citation.excerpt ?? citation.label}>
+                      {citation.kind === 'history' ? <DatabaseZap size={12} aria-hidden="true" /> : <FileText size={12} aria-hidden="true" />}
+                      {citation.kind === 'history' ? 'History' : citation.page ? `p.${citation.page}` : 'Evidence'} · {citation.label}
+                    </button>
+                  ) : (
+                    <span key={citation.id}>{citation.kind === 'history' ? 'History' : 'Evidence'} · {citation.label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {message.strategic_advice ? (
+                <aside className="chat-strategic-take"><Sparkles size={15} aria-hidden="true" /><span><strong>Strategic take</strong>{message.strategic_advice}</span></aside>
+              ) : null}
+              <time>{formatDateTime(message.created_at)}</time>
+            </div>
+          </article>
+        ))}
+        {sending ? <article className="chat-message assistant"><span className="chat-avatar"><Bot size={16} /></span><div className="chat-bubble chat-thinking"><Loader2 className="spin" size={15} /> Reading evidence and preparing a cited answer…</div></article> : null}
+      </div>
+
+      {error ? <div className="chat-error"><AlertTriangle size={15} aria-hidden="true" /><span>{error}</span>{failedMessage ? <button type="button" onClick={() => void sendQuestion(failedMessage)}>Retry</button> : null}</div> : null}
+
+      {suggestions.length ? <div className="chat-suggestions">{suggestions.map((question) => <button type="button" key={question} onClick={() => void sendQuestion(question)} disabled={sending}>{question}</button>)}</div> : null}
+
+      <form className="chat-composer" onSubmit={(event: FormEvent) => { event.preventDefault(); void sendQuestion(draft) }}>
+        <textarea
+          value={draft}
+          onChange={(event) => setDraft(event.target.value.slice(0, 4000))}
+          onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }}
+          placeholder="Ρώτησε για προθεσμία, τεχνικές απαιτήσεις, budget ή bid strategy…"
+          rows={3}
+          maxLength={4000}
+          disabled={sending || !reference}
+        />
+        <div><span>{draft.length}/4000 · Enter για αποστολή, Shift+Enter για νέα γραμμή</span><button type="submit" disabled={sending || !draft.trim()}><Send size={16} aria-hidden="true" /> Send</button></div>
+      </form>
+      {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
+    </div>
+  )
+}
+
+const initialOpportunityQuestions = [
+  'Μπορούμε πραγματικά να συμμετάσχουμε και ποια είναι η προθεσμία;',
+  'Ποιες τεχνικές απαιτήσεις και παραδοτέα έχουν επιβεβαιωθεί;',
+  'Ποιοι είναι οι βασικοί εμπορικοί κίνδυνοι πριν αποφασίσουμε;',
+]
+
+function emptyChatContext(): OpportunityChatContextStatus {
+  return {
+    ready: false,
+    available_document_count: 0,
+    analyzed_document_count: 0,
+    readable_document_count: 0,
+    unreadable_document_labels: [],
+  }
+}
+
+async function opportunityChatApiError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: string }
+    return body.detail || `Opportunity chat API returned ${response.status}`
+  } catch {
+    return `Opportunity chat API returned ${response.status}`
+  }
 }
 
 function BriefFindingList({

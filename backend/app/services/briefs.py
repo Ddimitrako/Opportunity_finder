@@ -5,7 +5,7 @@ import json
 import re
 import sqlite3
 from contextlib import closing
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -24,6 +24,7 @@ from app.models import (
     DocumentBrief,
     DocumentBriefResponse,
     DocumentLink,
+    OpportunityAIContext,
     OpportunityDetails,
     SourceName,
 )
@@ -45,6 +46,8 @@ MAX_PAGE_CHARS = 12_000
 MAX_MODEL_EVIDENCE_CHARS = 120_000
 CHUNK_CHARS = 3_000
 EXCERPT_CHARS = 700
+AI_CONTEXT_SCHEMA_VERSION = 1
+AI_CONTEXT_TTL = timedelta(hours=24)
 
 DIMENSIONS = (
     ("access_timing", "Πρόσβαση & χρόνος", 25),
@@ -76,10 +79,128 @@ NAMED_INVITATION_TERMS = (
 )
 
 
-class DocumentBriefService:
+class OpportunityAIContextService:
+    """Build and persist the shared, citation-ready context used by brief and chat."""
+
     def __init__(self, settings: Settings, details_service: OpportunityDetailsService | None = None):
         self.settings = settings
         self.details_service = details_service or OpportunityDetailsService(settings)
+        self.db_path = _resolve_db_path(Path(settings.bookmark_db_path))
+        self._init_db()
+
+    async def prepare(
+        self,
+        source: SourceName,
+        reference: str,
+        *,
+        force_refresh: bool = False,
+    ) -> OpportunityAIContext:
+        cached = self.get_cached_context(source, reference)
+        if cached and not force_refresh and datetime.now(timezone.utc) - cached.prepared_at <= AI_CONTEXT_TTL:
+            return cached
+
+        details = await self.details_service.get_details(source, reference)
+        documents = await _fetch_document_texts(details.documents, reference)
+        source_documents = _analyzed_document_links(details.documents, documents)
+        evidence = _build_evidence_catalog(documents)
+        access, continuity, budget, evidence = _analyze_procurement(details, documents, evidence)
+        history = await _fetch_12_month_history(details, self.settings)
+        context = OpportunityAIContext(
+            source=source,
+            reference=reference,
+            details=details,
+            evidence=evidence,
+            source_documents=source_documents,
+            available_document_count=len(details.documents),
+            analyzed_document_count=len(source_documents),
+            readable_document_count=sum(1 for item in documents if item.get("readable")),
+            unreadable_document_labels=[
+                str(item.get("label") or "Unknown document")
+                for item in documents
+                if not item.get("readable")
+            ],
+            procurement_access=access,
+            continuity=continuity,
+            budget_assessment=budget,
+            history_12_months=history,
+            prepared_at=datetime.now(timezone.utc),
+        )
+        self._save_context(context)
+        return context
+
+    def get_cached_context(self, source: SourceName, reference: str) -> OpportunityAIContext | None:
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                "SELECT context_json FROM opportunity_ai_contexts WHERE source = ? AND reference = ?",
+                (source, reference),
+            ).fetchone()
+        if not row:
+            return None
+        try:
+            return OpportunityAIContext.model_validate(json.loads(row["context_json"]))
+        except (ValueError, TypeError, json.JSONDecodeError):
+            return None
+
+    def _save_context(self, context: OpportunityAIContext) -> None:
+        payload = json.dumps(context.model_dump(mode="json"), ensure_ascii=False)
+        now = datetime.now(timezone.utc).isoformat()
+        with closing(self._connect()) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    INSERT INTO opportunity_ai_contexts
+                        (source, reference, context_json, schema_version, prepared_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(source, reference) DO UPDATE SET
+                        context_json = excluded.context_json,
+                        schema_version = excluded.schema_version,
+                        prepared_at = excluded.prepared_at,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        context.source,
+                        context.reference,
+                        payload,
+                        AI_CONTEXT_SCHEMA_VERSION,
+                        context.prepared_at.isoformat(),
+                        now,
+                    ),
+                )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.db_path)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    def _init_db(self) -> None:
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(self._connect()) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS opportunity_ai_contexts (
+                        source TEXT NOT NULL,
+                        reference TEXT NOT NULL,
+                        context_json TEXT NOT NULL,
+                        schema_version INTEGER NOT NULL DEFAULT 1,
+                        prepared_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        PRIMARY KEY (source, reference)
+                    )
+                    """
+                )
+
+
+class DocumentBriefService:
+    def __init__(
+        self,
+        settings: Settings,
+        details_service: OpportunityDetailsService | None = None,
+        context_service: OpportunityAIContextService | None = None,
+    ):
+        self.settings = settings
+        self.details_service = details_service or OpportunityDetailsService(settings)
+        self.context_service = context_service or OpportunityAIContextService(settings, self.details_service)
         self.db_path = _resolve_db_path(Path(settings.bookmark_db_path))
         self._init_db()
 
@@ -109,13 +230,16 @@ class DocumentBriefService:
                 message="OPENAI_API_KEY is not configured. Add it to .env.local and try again.",
             )
 
-        details = await self.details_service.get_details(source, reference)
-        documents = await _fetch_document_texts(details.documents, reference)
-        evidence = _build_evidence_catalog(documents)
-        access, continuity, budget, evidence = _analyze_procurement(details, documents, evidence)
-        history = await _fetch_12_month_history(details, self.settings)
+        context = await self.context_service.prepare(source, reference, force_refresh=regenerate)
+        details = context.details
+        evidence = context.evidence
+        access = context.procurement_access.model_copy(deep=True)
+        continuity = context.continuity.model_copy(deep=True)
+        budget = context.budget_assessment.model_copy(deep=True)
+        history = context.history_12_months
+        source_documents = context.source_documents
 
-        if not any(document.get("readable") for document in documents):
+        if context.readable_document_count == 0:
             brief = _fallback_brief(
                 details,
                 access,
@@ -123,13 +247,14 @@ class DocumentBriefService:
                 budget,
                 history,
                 evidence,
+                source_documents,
                 "Τα διαθέσιμα έγγραφα δεν περιέχουν αναγνώσιμο κείμενο. Απαιτείται χειροκίνητος έλεγχος.",
             )
             self._save_brief(brief)
             return DocumentBriefResponse(brief=brief, cached=False, outdated=False)
 
         try:
-            brief = await self._call_openai(details, evidence, access, continuity, budget, history)
+            brief = await self._call_openai(details, evidence, access, continuity, budget, history, source_documents)
         except Exception as exc:
             brief = _fallback_brief(
                 details,
@@ -138,6 +263,7 @@ class DocumentBriefService:
                 budget,
                 history,
                 evidence,
+                source_documents,
                 f"Η AI ανάλυση δεν ολοκληρώθηκε ({exc.__class__.__name__}). Ελέγξτε τα έγγραφα χειροκίνητα.",
             )
             return DocumentBriefResponse(
@@ -158,6 +284,7 @@ class DocumentBriefService:
         continuity: BriefContinuityAssessment,
         budget: BriefBudgetAssessment,
         history: list[BriefHistoryItem],
+        source_documents: list[DocumentLink],
     ) -> DocumentBrief:
         evidence_payload = [item.model_dump(mode="json") for item in evidence]
         prompt = {
@@ -185,6 +312,7 @@ class DocumentBriefService:
             "model": self.settings.openai_model,
             "input": json.dumps(prompt, ensure_ascii=False),
             "temperature": 0.1,
+            "store": False,
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -206,7 +334,17 @@ class DocumentBriefService:
         parsed = json.loads(output_text)
         if not isinstance(parsed, dict):
             raise ValueError("OpenAI output was not an object")
-        return _build_brief(details, parsed, access, continuity, budget, history, evidence, self.settings.openai_model)
+        return _build_brief(
+            details,
+            parsed,
+            access,
+            continuity,
+            budget,
+            history,
+            evidence,
+            source_documents,
+            self.settings.openai_model,
+        )
 
     def _get_row(self, source: SourceName, reference: str) -> sqlite3.Row | None:
         with closing(self._connect()) as connection:
@@ -275,6 +413,7 @@ async def _fetch_document_texts(documents: list[DocumentLink], current_reference
                 error = f"Could not read document automatically: {exc.__class__.__name__}"
             results.append(
                 {
+                    "document": document.model_dump(mode="json"),
                     "label": document.label,
                     "type": document.document_type,
                     "reference": document.reference,
@@ -283,6 +422,50 @@ async def _fetch_document_texts(documents: list[DocumentLink], current_reference
                     "readable": any(str(page.get("text") or "").strip() for page in pages),
                     "error": error,
                 }
+            )
+    return results
+
+
+def _analyzed_document_links(
+    available_documents: list[DocumentLink],
+    analyzed_documents: list[dict[str, Any]],
+) -> list[DocumentLink]:
+    """Return the exact readable source links, in the order extraction analyzed them."""
+    results: list[DocumentLink] = []
+    used_indexes: set[int] = set()
+    for analyzed in analyzed_documents:
+        if not analyzed.get("readable"):
+            continue
+        embedded = analyzed.get("document")
+        if isinstance(embedded, dict):
+            try:
+                results.append(DocumentLink.model_validate(embedded))
+                continue
+            except ValueError:
+                pass
+        match_index = next(
+            (
+                index
+                for index, item in enumerate(available_documents)
+                if index not in used_indexes
+                and item.url == str(analyzed.get("url") or "")
+                and item.reference == analyzed.get("reference")
+            ),
+            None,
+        )
+        if match_index is not None:
+            used_indexes.add(match_index)
+            results.append(available_documents[match_index].model_copy(deep=True))
+            continue
+        url = str(analyzed.get("url") or "").strip()
+        if url:
+            results.append(
+                DocumentLink(
+                    label=str(analyzed.get("label") or "Source document"),
+                    url=url,
+                    document_type=str(analyzed.get("type") or "document"),
+                    reference=analyzed.get("reference"),
+                )
             )
     return results
 
@@ -480,6 +663,7 @@ def _build_brief(
     budget: BriefBudgetAssessment,
     history: list[BriefHistoryItem],
     evidence: list[BriefEvidence],
+    source_documents: list[DocumentLink],
     model: str,
 ) -> DocumentBrief:
     evidence_map = {item.id: item for item in evidence}
@@ -559,7 +743,7 @@ def _build_brief(
         next_steps=next_steps,
         history_12_months=history,
         evidence=[_excerpted(item) for item in evidence],
-        source_documents=details.documents[:MAX_DOCUMENTS],
+        source_documents=source_documents,
         generated_at=datetime.now(timezone.utc),
         model=model,
         cached=False,
@@ -573,6 +757,7 @@ def _fallback_brief(
     budget: BriefBudgetAssessment,
     history: list[BriefHistoryItem],
     evidence: list[BriefEvidence],
+    source_documents: list[DocumentLink],
     reason: str,
 ) -> DocumentBrief:
     forced_verdict = _decide_verdict(access, continuity, 0)
@@ -600,7 +785,7 @@ def _fallback_brief(
         next_steps=["Ανοίξτε τα επίσημα έγγραφα και επιβεβαιώστε πρόσβαση, προθεσμία και βασικούς όρους."],
         history_12_months=history,
         evidence=[_excerpted(item) for item in evidence],
-        source_documents=details.documents[:MAX_DOCUMENTS],
+        source_documents=source_documents,
         generated_at=datetime.now(timezone.utc),
         model=None,
         cached=False,

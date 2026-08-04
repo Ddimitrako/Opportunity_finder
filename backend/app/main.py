@@ -32,6 +32,10 @@ from app.models import (
     NeedPatternRequest,
     NeedPatternResponse,
     OpportunityDetails,
+    OpportunityChatContextStatus,
+    OpportunityChatRequest,
+    OpportunityChatThreadResponse,
+    OpportunityChatTurnResponse,
     ProcurementSearchRequest,
     SearchResponse,
     SourceName,
@@ -45,6 +49,7 @@ from app.models import (
 from app.scoring import PACKAGES
 from app.services.bookmarks import BookmarkService
 from app.services.briefs import DocumentBriefService
+from app.services.chat import ChatGenerationError, ChatUnavailableError, OpportunityChatService
 from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
@@ -81,6 +86,10 @@ def get_bookmark_service(settings: Settings = Depends(get_settings)) -> Bookmark
 
 def get_brief_service(settings: Settings = Depends(get_settings)) -> DocumentBriefService:
     return DocumentBriefService(settings)
+
+
+def get_chat_service(settings: Settings = Depends(get_settings)) -> OpportunityChatService:
+    return OpportunityChatService(settings)
 
 
 def get_buyer_intelligence_service(settings: Settings = Depends(get_settings)) -> BuyerIntelligenceService:
@@ -470,3 +479,54 @@ async def generate_document_brief(
     service: DocumentBriefService = Depends(get_brief_service),
 ) -> DocumentBriefResponse:
     return await service.generate_brief(source, reference, regenerate=regenerate)
+
+
+@app.get("/api/opportunities/{source}/{reference}/chat", response_model=OpportunityChatThreadResponse)
+async def opportunity_chat_thread(
+    source: SourceName,
+    reference: str,
+    service: OpportunityChatService = Depends(get_chat_service),
+) -> OpportunityChatThreadResponse:
+    return service.get_thread(source, reference)
+
+
+@app.post("/api/opportunities/{source}/{reference}/chat", response_model=OpportunityChatTurnResponse)
+async def ask_about_opportunity(
+    source: SourceName,
+    reference: str,
+    request: OpportunityChatRequest,
+    service: OpportunityChatService = Depends(get_chat_service),
+) -> OpportunityChatTurnResponse:
+    try:
+        return await service.ask(source, reference, request.message)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ChatUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ChatGenerationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/opportunities/{source}/{reference}/chat/context/refresh",
+    response_model=OpportunityChatContextStatus,
+)
+async def refresh_opportunity_chat_context(
+    source: SourceName,
+    reference: str,
+    service: OpportunityChatService = Depends(get_chat_service),
+) -> OpportunityChatContextStatus:
+    try:
+        return await service.refresh_context(source, reference)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Context refresh failed ({exc.__class__.__name__}).") from exc
+
+
+@app.delete("/api/opportunities/{source}/{reference}/chat", status_code=204)
+async def clear_opportunity_chat(
+    source: SourceName,
+    reference: str,
+    service: OpportunityChatService = Depends(get_chat_service),
+) -> Response:
+    service.clear_thread(source, reference)
+    return Response(status_code=204)

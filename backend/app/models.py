@@ -420,6 +420,68 @@ class DocumentBriefResponse(BaseModel):
     message: str | None = None
 
 
+class OpportunityAIContext(BaseModel):
+    source: SourceName
+    reference: str
+    details: OpportunityDetails
+    evidence: list[BriefEvidence] = Field(default_factory=list)
+    source_documents: list[DocumentLink] = Field(default_factory=list)
+    available_document_count: int = 0
+    analyzed_document_count: int = 0
+    readable_document_count: int = 0
+    unreadable_document_labels: list[str] = Field(default_factory=list)
+    procurement_access: BriefProcurementAccess = Field(default_factory=BriefProcurementAccess)
+    continuity: BriefContinuityAssessment = Field(default_factory=BriefContinuityAssessment)
+    budget_assessment: BriefBudgetAssessment = Field(default_factory=BriefBudgetAssessment)
+    history_12_months: list[BriefHistoryItem] = Field(default_factory=list)
+    prepared_at: datetime
+
+
+class OpportunityChatContextStatus(BaseModel):
+    ready: bool = False
+    prepared_at: datetime | None = None
+    available_document_count: int = 0
+    analyzed_document_count: int = 0
+    readable_document_count: int = 0
+    unreadable_document_labels: list[str] = Field(default_factory=list)
+
+
+class OpportunityChatCitation(BaseModel):
+    id: str
+    kind: Literal["evidence", "history"]
+    label: str
+    url: str | None = None
+    page: int | None = None
+    reference: str | None = None
+    excerpt: str | None = None
+
+
+class OpportunityChatMessage(BaseModel):
+    id: int
+    role: Literal["user", "assistant"]
+    content: str
+    strategic_advice: str | None = None
+    citations: list[OpportunityChatCitation] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
+class OpportunityChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4_000)
+
+
+class OpportunityChatThreadResponse(BaseModel):
+    messages: list[OpportunityChatMessage] = Field(default_factory=list)
+    context: OpportunityChatContextStatus = Field(default_factory=OpportunityChatContextStatus)
+    suggested_questions: list[str] = Field(default_factory=list)
+
+
+class OpportunityChatTurnResponse(BaseModel):
+    user_message: OpportunityChatMessage
+    assistant_message: OpportunityChatMessage
+    context: OpportunityChatContextStatus
+
+
 class BudgetProfile(BaseModel):
     count: int = 0
     min: float | None = None
