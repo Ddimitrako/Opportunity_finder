@@ -1,6 +1,8 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowUpRight,
+  Award,
   BarChart3,
   BookmarkCheck,
   BookmarkPlus,
@@ -2927,7 +2929,11 @@ function BuyerIntelligencePanel({
 type BuyerGraphNode = {
   id: string
   label: string
-  meta: string
+  kindLabel: string
+  amount?: string | null
+  source?: string | null
+  date?: string | null
+  detail?: string | null
   tooltip: string
   url?: string | null
   tone: 'buyer' | 'recent' | 'similar' | 'signal'
@@ -2936,21 +2942,61 @@ type BuyerGraphNode = {
 
 function BuyerIntelligenceGraph({ intelligence, onPreview }: { intelligence: BuyerIntelligenceResponse; onPreview: (preview: PdfPreview) => void }) {
   const nodes = buildBuyerGraphNodes(intelligence)
+  const rootNode = nodes.find((node) => node.tone === 'buyer')
+  const procurementNodes = nodes.filter((node) => node.tone === 'recent' || node.tone === 'similar')
+  const signalNodes = nodes.filter((node) => node.tone === 'signal')
+  const linkedCount = procurementNodes.length + signalNodes.length
 
-  if (!nodes.length) {
+  if (!rootNode) {
     return null
   }
 
   return (
     <div className="buyer-graph-block">
       <div className="buyer-graph-header">
-        <h5><Target size={15} aria-hidden="true" /> Buyer graph</h5>
-        <span>{nodes.filter((node) => Boolean(node.url)).length} clickable nodes</span>
+        <div>
+          <h5><Target size={15} aria-hidden="true" /> Buyer relationship map</h5>
+          <p>Only verified procurement relationships — keywords and company names are shown as context, not as signals.</p>
+        </div>
+        <span className="buyer-graph-count">{linkedCount} linked {linkedCount === 1 ? 'record' : 'records'}</span>
+      </div>
+      <div className="buyer-graph-legend" aria-label="Relationship map legend">
+        <span><i className="buyer" /> Buyer</span>
+        <span><i className="similar" /> Similar procurement</span>
+        <span><i className="signal" /> Award evidence</span>
       </div>
       <div className="buyer-graph-canvas" aria-label="Buyer intelligence graph">
-        {nodes.map((node) => (
-          <BuyerGraphNodeView node={node} onPreview={onPreview} key={node.id} />
-        ))}
+        <div className="buyer-graph-origin">
+          <span className="buyer-graph-origin-label">Buyer profile</span>
+          <BuyerGraphNodeView node={rootNode} onPreview={onPreview} />
+        </div>
+        <div className="buyer-graph-relations">
+          <BuyerGraphLane label="Similar procurements" tone="similar" nodes={procurementNodes} onPreview={onPreview} />
+          <BuyerGraphLane label="Award & winner evidence" tone="signal" nodes={signalNodes} onPreview={onPreview} />
+          {!linkedCount ? <p className="buyer-graph-empty">No category-matched relationships were found for this buyer.</p> : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BuyerGraphLane({
+  label,
+  tone,
+  nodes,
+  onPreview,
+}: {
+  label: string
+  tone: 'similar' | 'signal'
+  nodes: BuyerGraphNode[]
+  onPreview: (preview: PdfPreview) => void
+}) {
+  if (!nodes.length) return null
+  return (
+    <div className={`buyer-graph-lane ${tone}`}>
+      <div className="buyer-graph-lane-header"><span><i />{label}</span><b>{nodes.length}</b></div>
+      <div className="buyer-graph-lane-list">
+        {nodes.map((node) => <BuyerGraphNodeView node={node} onPreview={onPreview} key={node.id} />)}
       </div>
     </div>
   )
@@ -2958,14 +3004,22 @@ function BuyerIntelligenceGraph({ intelligence, onPreview }: { intelligence: Buy
 
 function BuyerGraphNodeView({ node, onPreview }: { node: BuyerGraphNode; onPreview: (preview: PdfPreview) => void }) {
   const Icon = node.icon
+  const previewMeta = [node.source, node.amount, node.date, node.detail].filter(Boolean).join(' · ')
   const content = (
     <>
       <span className="buyer-graph-node-icon">
         <Icon size={16} aria-hidden="true" />
       </span>
-      <span>
+      <span className="buyer-graph-node-content">
+        <span className="buyer-graph-node-topline">
+          <span className="buyer-graph-node-kind">{node.kindLabel}</span>
+          {node.url ? <ArrowUpRight size={14} aria-hidden="true" /> : null}
+        </span>
         <strong>{node.label}</strong>
-        <small>{node.meta}</small>
+        <span className="buyer-graph-node-facts">
+          {node.amount ? <b>{node.amount}</b> : null}
+          {[node.source, node.date, node.detail].filter(Boolean).map((item) => <small key={item}>{item}</small>)}
+        </span>
       </span>
     </>
   )
@@ -2979,7 +3033,7 @@ function BuyerGraphNodeView({ node, onPreview }: { node: BuyerGraphNode; onPrevi
         aria-label={`Open ${node.label}`}
         data-tooltip={node.tooltip}
         title={node.tooltip}
-        onClick={() => onPreview(previewFromUrl(node.label, previewableNodeUrl, node.meta))}
+        onClick={() => onPreview(previewFromUrl(node.label, previewableNodeUrl, previewMeta))}
       >
         {content}
       </button>
@@ -3022,7 +3076,9 @@ function buildBuyerGraphNodes(intelligence: BuyerIntelligenceResponse): BuyerGra
     {
       id: 'buyer-root',
       label: intelligence.buyer,
-      meta: `${intelligence.buyer_opportunity_count} opportunities · ${intelligence.budget_profile.typical_range}`,
+      kindLabel: 'Buyer',
+      amount: intelligence.budget_profile.typical_range,
+      detail: `${intelligence.buyer_opportunity_count} opportunities`,
       tooltip: [
         `Buyer: ${intelligence.buyer}`,
         `Buyer opportunities: ${intelligence.buyer_opportunity_count}`,
@@ -3040,11 +3096,14 @@ function buildBuyerGraphNodes(intelligence: BuyerIntelligenceResponse): BuyerGra
 }
 
 function buyerDecisionGraphNode(decision: DiavgeiaDecisionSignal, index: number): BuyerGraphNode {
-  const meta = [decision.source_label, decision.winner_name, decision.published_at ? formatDate(decision.published_at) : null].filter(Boolean).join(' · ') || 'Award signal'
   return {
     id: `signal-${decision.ada ?? decision.url ?? decision.document_url ?? index}`,
     label: decision.subject,
-    meta,
+    kindLabel: 'Award evidence',
+    amount: decision.amount ? formatCurrency(decision.amount) : null,
+    source: decision.source_label,
+    date: decision.published_at ? formatDate(decision.published_at) : null,
+    detail: decision.winner_name ? `Awarded supplier · ${decision.winner_name}` : decision.decision_type ?? 'Winner signal',
     tooltip: [
       `Title: ${decision.subject}`,
       `Source: ${decision.source_label}`,
@@ -3064,11 +3123,14 @@ function buyerDecisionGraphNode(decision: DiavgeiaDecisionSignal, index: number)
 
 function buyerOpportunityGraphNode(item: BuyerOpportunitySample, tone: 'recent' | 'similar'): BuyerGraphNode {
   const category = buyerOpportunityTag(item)
-  const meta = [item.source_label, formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, category].filter(Boolean).join(' · ')
   return {
     id: `opportunity-${item.id}`,
     label: item.title,
-    meta,
+    kindLabel: tone === 'similar' ? 'Similar procurement' : 'Recent procurement',
+    amount: item.budget != null ? formatCurrency(item.budget) : null,
+    source: item.source_label,
+    date: item.published_at ? formatDate(item.published_at) : null,
+    detail: category,
     tooltip: [
       `Title: ${item.title}`,
       `Source: ${item.source_label}`,
@@ -3214,16 +3276,23 @@ function BuyerSampleList({
 }) {
   return (
     <div className="buyer-list-block">
-      <h5>{title}</h5>
+      <div className="buyer-list-heading"><h5>{title}</h5><span>{items.length}</span></div>
       {items.length ? (
         <div className="buyer-sample-list">
           {items.map((item) => {
             const meta = [item.source_label, formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, buyerOpportunityTag(item)].filter(Boolean).join(' · ')
             const content = (
               <>
-                <span>{item.source_label}</span>
+                <span className="buyer-sample-topline">
+                  <span className="buyer-sample-source">{item.source_label}</span>
+                  {item.published_at ? <time>{formatDate(item.published_at)}</time> : null}
+                </span>
                 <strong>{item.title}</strong>
-                <small>{[formatCurrency(item.budget), item.published_at ? formatDate(item.published_at) : null, buyerOpportunityTag(item)].filter(Boolean).join(' · ')}</small>
+                <span className="buyer-sample-footer">
+                  <span className="buyer-sample-category">{buyerOpportunityTag(item)}</span>
+                  {item.budget != null ? <b className="money-badge"><CircleDollarSign size={13} aria-hidden="true" />{formatCurrency(item.budget)}</b> : <small>Budget unavailable</small>}
+                  {item.url ? <ArrowUpRight className="buyer-sample-arrow" size={15} aria-hidden="true" /> : null}
+                </span>
               </>
             )
             const previewableItemUrl = isPreviewableFileUrl(item.url) ? item.url : null
@@ -3259,7 +3328,7 @@ function DiavgeiaSignals({ intelligence, onPreview }: { intelligence: BuyerIntel
   const signals = intelligence.winner_signals.length ? intelligence.winner_signals : intelligence.diavgeia_decisions.slice(0, 3)
   return (
     <div className="diavgeia-block">
-      <h5>Award / winner signals</h5>
+      <div className="buyer-list-heading"><h5>Awards & awarded suppliers</h5><span>{signals.length}</span></div>
       {intelligence.khmdhs_history_message ? <p className="muted">{intelligence.khmdhs_history_message}</p> : null}
       {intelligence.diavgeia_message ? <p className="muted">{intelligence.diavgeia_message}</p> : null}
       {signals.length ? (
@@ -3272,13 +3341,20 @@ function DiavgeiaSignals({ intelligence, onPreview }: { intelligence: BuyerIntel
             const content = (
               <>
                 <div className="diavgeia-company-block">
-                  <span>Company</span>
+                  <span><Award size={13} aria-hidden="true" /> Awarded supplier</span>
                   <strong>{decision.winner_name || 'Unknown winner'}</strong>
                 </div>
                 <div className="diavgeia-project-block">
-                  <span>{[decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision'].filter(Boolean).join(' · ')}</span>
+                  <span className="diavgeia-project-topline">
+                    <span>{[decision.source_label, decision.ada ?? decision.decision_type ?? 'Decision'].filter(Boolean).join(' · ')}</span>
+                    {decision.published_at ? <time>{formatDate(decision.published_at)}</time> : null}
+                  </span>
                   <strong>{decision.subject}</strong>
-                  {projectMeta.length ? <small>{projectMeta.join(' · ')}</small> : null}
+                  <span className="diavgeia-project-footer">
+                    {amountLabel ? <b className="money-badge"><CircleDollarSign size={13} aria-hidden="true" />{amountLabel}</b> : <small>Amount unavailable</small>}
+                    {decision.similar_to_software ? <em>Software-like</em> : null}
+                    {href ? <ArrowUpRight size={15} aria-hidden="true" /> : null}
+                  </span>
                 </div>
               </>
             )
@@ -3340,9 +3416,13 @@ function DocumentBriefPanel({
   return (
     <section className="drawer-section ai-brief-section">
       <div className="ai-brief-header">
-        <div>
-          <h4>AI Bid Decision Brief</h4>
-          <p>Ενιαίο scorecard για CEO και Bid Manager, πάντα με τεκμηρίωση.</p>
+        <div className="ai-brief-title">
+          <span className="ai-brief-title-icon"><Sparkles size={18} aria-hidden="true" /></span>
+          <div>
+            <span className="section-kicker">Decision intelligence</span>
+            <h4>AI Bid Decision Brief</h4>
+            <p>Ενιαίο scorecard για CEO και Bid Manager, πάντα με τεκμηρίωση.</p>
+          </div>
         </div>
         <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
           <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
@@ -3378,7 +3458,11 @@ function DocumentBriefPanel({
           ) : null}
 
           <div className={`brief-decision-hero ${briefVerdictClass(brief.verdict)}`}>
-            <div className="brief-score-ring" aria-label={`Bid score ${brief.score} out of 100`}>
+            <div
+              className="brief-score-ring"
+              aria-label={`Bid score ${brief.score} out of 100`}
+              style={{ '--brief-score': `${brief.score * 3.6}deg` } as CSSProperties}
+            >
               <strong>{brief.score}</strong>
               <span>/100</span>
             </div>
@@ -3396,20 +3480,21 @@ function DocumentBriefPanel({
 
           <div className="brief-decision-grid">
             <article className={`brief-fact-card access-${brief.procurement_access.status}`}>
-              <span>Πρόσβαση στη διαδικασία</span>
+              <div className="brief-fact-heading"><span><Target size={16} aria-hidden="true" /></span><small>Πρόσβαση στη διαδικασία</small></div>
               <strong>{formatAccessStatus(brief.procurement_access.status)}</strong>
               <p>{brief.procurement_access.reason}</p>
               <BriefEvidenceChips ids={brief.procurement_access.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
             </article>
             <article className="brief-fact-card">
-              <span>Budget & direct award</span>
-              <strong>{brief.budget_assessment.amount_without_vat != null ? `${formatCurrency(brief.budget_assessment.amount_without_vat)} χωρίς ΦΠΑ` : 'Unknown net budget'}</strong>
+              <div className="brief-fact-heading"><span><CircleDollarSign size={16} aria-hidden="true" /></span><small>Budget & direct award</small></div>
+              <strong className="brief-money">{brief.budget_assessment.amount_without_vat != null ? formatCurrency(brief.budget_assessment.amount_without_vat) : 'Unknown net budget'}</strong>
+              {brief.budget_assessment.amount_without_vat != null ? <small className="brief-money-note">Καθαρή αξία · χωρίς ΦΠΑ</small> : null}
               <p>{brief.budget_assessment.determination}</p>
               <BriefEvidenceChips ids={brief.budget_assessment.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
               <a href={brief.budget_assessment.legal_basis_url} target="_blank" rel="noreferrer">Ν. 4412/2016 · {brief.rules_version}</a>
             </article>
             <article className={`brief-fact-card continuity-${brief.continuity.status}`}>
-              <span>Incumbent / συνέχεια</span>
+              <div className="brief-fact-heading"><span><Handshake size={16} aria-hidden="true" /></span><small>Incumbent / συνέχεια</small></div>
               <strong>{formatContinuityStatus(brief.continuity.status)}</strong>
               <p>{brief.continuity.reason}</p>
               {brief.continuity.incumbent_name ? <small>Incumbent: {brief.continuity.incumbent_name}</small> : null}
@@ -3419,22 +3504,24 @@ function DocumentBriefPanel({
           </div>
 
           <div className="brief-access-strip">
-            <span><strong>Deadline</strong>{brief.procurement_access.deadline ? `${formatDate(brief.procurement_access.deadline)}${brief.procurement_access.days_remaining != null ? ` · ${brief.procurement_access.days_remaining} ημέρες` : ''}` : 'Unknown'}</span>
-            <span><strong>Procedure</strong>{brief.procurement_access.procedure || 'Unknown'}</span>
-            <span><strong>Submission</strong>{brief.procurement_access.submission_method || 'Unknown'}</span>
+            <span><i><CalendarClock size={16} aria-hidden="true" /></i><b><strong>Deadline</strong>{brief.procurement_access.deadline ? `${formatDate(brief.procurement_access.deadline)}${brief.procurement_access.days_remaining != null ? ` · ${brief.procurement_access.days_remaining} ημέρες` : ''}` : 'Unknown'}</b></span>
+            <span><i><Layers3 size={16} aria-hidden="true" /></i><b><strong>Procedure</strong>{brief.procurement_access.procedure || 'Unknown'}</b></span>
+            <span><i><FileText size={16} aria-hidden="true" /></i><b><strong>Submission</strong>{brief.procurement_access.submission_method || 'Unknown'}</b></span>
           </div>
 
+          <div className="brief-section-heading"><span>Bid score breakdown</span><small>Weighted factors behind the recommendation</small></div>
           <div className="brief-score-dimensions" aria-label="Bid score dimensions">
             {brief.score_dimensions.map((dimension) => (
               <div className="brief-score-dimension" key={dimension.key}>
-                <div><strong>{dimension.label}</strong><span>{dimension.score}/{dimension.max_score}</span></div>
-                <div className="brief-score-track"><span style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} /></div>
+                <div><strong>{dimension.label}</strong><span className="brief-dimension-score">{dimension.score}<small>/{dimension.max_score}</small></span></div>
+                <div className="brief-score-track" role="progressbar" aria-label={dimension.label} aria-valuenow={dimension.score} aria-valuemin={0} aria-valuemax={dimension.max_score}><span style={{ width: `${dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0}%` }} /></div>
                 <p>{dimension.reason}</p>
                 <BriefEvidenceChips ids={dimension.evidence_ids} evidenceMap={evidenceMap} onEvidence={openEvidence} />
               </div>
             ))}
           </div>
 
+          <div className="brief-section-heading"><span>Document review</span><small>What is confirmed, missing or risky</small></div>
           <div className="brief-grid brief-v2-grid">
             <BriefFindingList title="Commercial" findings={brief.commercial_findings} evidenceMap={evidenceMap} onEvidence={openEvidence} empty="Δεν επιβεβαιώθηκαν εμπορικοί όροι." />
             <BriefFindingList title="Eligibility & δικαιολογητικά" findings={brief.eligibility_requirements} fallback={brief.required_documents} evidenceMap={evidenceMap} onEvidence={openEvidence} />
@@ -3455,7 +3542,7 @@ function DocumentBriefPanel({
               {brief.history_12_months.map((item) => (
                 <article key={`${item.reference}-${item.title}`}>
                   <span><strong>{item.title}</strong><small>{[item.reference, item.supplier, item.published_at ? formatDate(item.published_at) : null].filter(Boolean).join(' · ')}</small></span>
-                  <span>{formatCurrency(item.amount)}</span>
+                  <span className="brief-history-amount">{formatCurrency(item.amount)}</span>
                   {item.url ? <button type="button" onClick={() => setPreview({ title: item.title, url: item.url as string, meta: item.reference ?? '', mode: isPreviewableFileUrl(item.url) ? 'document' : 'web' })}><PanelRightOpen size={14} aria-hidden="true" /> Evidence</button> : null}
                 </article>
               ))}
@@ -3494,7 +3581,7 @@ function BriefFindingList({
 }) {
   return (
     <div className={`brief-block brief-finding-block ${tone}`}>
-      <h5>{title}</h5>
+      <div className="brief-block-header"><h5>{title}</h5><span>{findings.length || fallback.filter(Boolean).length}</span></div>
       {findings.length ? (
         <ul>
           {findings.map((item) => (
@@ -3520,7 +3607,7 @@ function BriefEvidenceChips({ ids = [], evidenceMap, onEvidence }: { ids?: strin
 }
 
 function BriefPlainList({ title, items }: { title: string; items: string[] }) {
-  return <div className="brief-plain-list"><h5>{title}</h5>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None identified.</p>}</div>
+  return <div className="brief-plain-list"><div className="brief-block-header"><h5>{title}</h5><span>{items.length}</span></div>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None identified.</p>}</div>
 }
 
 function briefVerdictClass(verdict: DocumentBrief['verdict']) {
