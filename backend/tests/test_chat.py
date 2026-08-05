@@ -98,9 +98,11 @@ class OpportunityChatTests(unittest.IsolatedAsyncioTestCase):
                 "suggested_questions": ["Ποια είναι τα παραδοτέα;"],
             })
 
-            result = await service.ask("demo", "chat-1", "Ποια είναι η προθεσμία;")
+            result = await service.ask("demo", "chat-1", "Ποια είναι η προθεσμία;", model="gpt-5.6")
 
             self.assertEqual(result.assistant_message.content, "Η προθεσμία επιβεβαιώνεται στο notice.")
+            self.assertEqual(result.assistant_message.model, "gpt-5.6")
+            self.assertEqual(service._call_openai.await_args.args[-1], "gpt-5.6")  # type: ignore[union-attr]
             self.assertEqual([item.id for item in result.assistant_message.citations], ["d1-p2-c1", history_id])
             self.assertEqual(result.assistant_message.citations[1].kind, "history")
             restored = service.get_thread("demo", "chat-1")

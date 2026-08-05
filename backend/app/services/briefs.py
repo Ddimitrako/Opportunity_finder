@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from app.ai_models import model_request_options, resolve_ai_model
 from app.config import Settings
 from app.models import (
     BriefBudgetAssessment,
@@ -218,9 +219,17 @@ class DocumentBriefService:
             message="This brief uses the previous format. Regenerate it for the v2 scorecard." if outdated else None,
         )
 
-    async def generate_brief(self, source: SourceName, reference: str, *, regenerate: bool = False) -> DocumentBriefResponse:
+    async def generate_brief(
+        self,
+        source: SourceName,
+        reference: str,
+        *,
+        regenerate: bool = False,
+        model: str | None = None,
+    ) -> DocumentBriefResponse:
+        selected_model = resolve_ai_model(self.settings, model)
         cached = self.get_cached_brief(source, reference)
-        if cached.brief and not regenerate:
+        if cached.brief and not regenerate and (model is None or cached.brief.model == selected_model):
             return cached
         if not self.settings.openai_api_key:
             return DocumentBriefResponse(
@@ -254,7 +263,16 @@ class DocumentBriefService:
             return DocumentBriefResponse(brief=brief, cached=False, outdated=False)
 
         try:
-            brief = await self._call_openai(details, evidence, access, continuity, budget, history, source_documents)
+            brief = await self._call_openai(
+                details,
+                evidence,
+                access,
+                continuity,
+                budget,
+                history,
+                source_documents,
+                selected_model,
+            )
         except Exception as exc:
             brief = _fallback_brief(
                 details,
@@ -285,6 +303,7 @@ class DocumentBriefService:
         budget: BriefBudgetAssessment,
         history: list[BriefHistoryItem],
         source_documents: list[DocumentLink],
+        model: str,
     ) -> DocumentBrief:
         evidence_payload = [item.model_dump(mode="json") for item in evidence]
         prompt = {
@@ -309,10 +328,10 @@ class DocumentBriefService:
             "score_weights": {key: maximum for key, _, maximum in DIMENSIONS},
         }
         payload = {
-            "model": self.settings.openai_model,
+            "model": model,
             "input": json.dumps(prompt, ensure_ascii=False),
-            "temperature": 0.1,
             "store": False,
+            **model_request_options(model, temperature=0.1),
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -343,7 +362,7 @@ class DocumentBriefService:
             history,
             evidence,
             source_documents,
-            self.settings.openai_model,
+            model,
         )
 
     def _get_row(self, source: SourceName, reference: str) -> sqlite3.Row | None:

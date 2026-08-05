@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 
+from app.ai_models import model_request_options, resolve_ai_model
 from app.config import Settings
 from app.models import (
     BriefEvidence,
@@ -73,7 +74,14 @@ class OpportunityChatService:
             suggested_questions=suggestions[:3],
         )
 
-    async def ask(self, source: SourceName, reference: str, message: str) -> OpportunityChatTurnResponse:
+    async def ask(
+        self,
+        source: SourceName,
+        reference: str,
+        message: str,
+        *,
+        model: str | None = None,
+    ) -> OpportunityChatTurnResponse:
         question = message.strip()
         if not question:
             raise ValueError("Message cannot be empty.")
@@ -81,13 +89,21 @@ class OpportunityChatService:
             raise ValueError("Message cannot exceed 4,000 characters.")
         if not self.settings.openai_api_key:
             raise ChatUnavailableError("OPENAI_API_KEY is not configured.")
+        selected_model = resolve_ai_model(self.settings, model)
 
         context = await self.context_service.prepare(source, reference)
         transcript = self._load_messages(source, reference, MAX_MODEL_TURNS * 2)
         evidence = select_relevant_evidence(context, question)
         history_catalog = _history_catalog(context.history_12_months)
         try:
-            parsed = await self._call_openai(context, question, transcript[-MAX_MODEL_TURNS * 2 :], evidence, history_catalog)
+            parsed = await self._call_openai(
+                context,
+                question,
+                transcript[-MAX_MODEL_TURNS * 2 :],
+                evidence,
+                history_catalog,
+                selected_model,
+            )
         except Exception as exc:
             if isinstance(exc, ChatGenerationError):
                 raise
@@ -110,6 +126,7 @@ class OpportunityChatService:
             citations,
             suggested_questions,
             context,
+            selected_model,
         )
 
     async def refresh_context(self, source: SourceName, reference: str) -> OpportunityChatContextStatus:
@@ -136,6 +153,7 @@ class OpportunityChatService:
         transcript: list[OpportunityChatMessage],
         evidence: list[BriefEvidence],
         history_catalog: dict[str, BriefHistoryItem],
+        model: str,
     ) -> dict[str, Any]:
         prompt = {
             "role": "You are a cautious Greek public-procurement bid adviser answering questions about one opportunity.",
@@ -176,10 +194,10 @@ class OpportunityChatService:
             "user_question": question,
         }
         payload = {
-            "model": self.settings.openai_model,
+            "model": model,
             "input": json.dumps(prompt, ensure_ascii=False),
-            "temperature": 0.2,
             "store": False,
+            **model_request_options(model, temperature=0.2),
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -215,6 +233,7 @@ class OpportunityChatService:
         citations: list[OpportunityChatCitation],
         suggested_questions: list[str],
         context: OpportunityAIContext,
+        model: str,
     ) -> OpportunityChatTurnResponse:
         now = datetime.now(timezone.utc)
         citations_json = json.dumps([item.model_dump(mode="json") for item in citations], ensure_ascii=False)
@@ -235,16 +254,16 @@ class OpportunityChatService:
                 user_cursor = connection.execute(
                     """
                     INSERT INTO opportunity_chat_messages
-                        (source, reference, role, content, strategic_advice, citations_json, suggested_questions_json, created_at)
-                    VALUES (?, ?, 'user', ?, NULL, '[]', '[]', ?)
+                        (source, reference, role, content, strategic_advice, citations_json, suggested_questions_json, model, created_at)
+                    VALUES (?, ?, 'user', ?, NULL, '[]', '[]', NULL, ?)
                     """,
                     (source, reference, question, now.isoformat()),
                 )
                 assistant_cursor = connection.execute(
                     """
                     INSERT INTO opportunity_chat_messages
-                        (source, reference, role, content, strategic_advice, citations_json, suggested_questions_json, created_at)
-                    VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?)
+                        (source, reference, role, content, strategic_advice, citations_json, suggested_questions_json, model, created_at)
+                    VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         source,
@@ -253,6 +272,7 @@ class OpportunityChatService:
                         strategic_advice,
                         citations_json,
                         suggestions_json,
+                        model,
                         now.isoformat(),
                     ),
                 )
@@ -270,6 +290,7 @@ class OpportunityChatService:
                 strategic_advice=strategic_advice,
                 citations=citations,
                 suggested_questions=suggested_questions,
+                model=model,
                 created_at=now,
             ),
             context=_context_status(context),
@@ -280,7 +301,7 @@ class OpportunityChatService:
             rows = connection.execute(
                 """
                 SELECT * FROM (
-                    SELECT id, role, content, strategic_advice, citations_json, suggested_questions_json, created_at
+                    SELECT id, role, content, strategic_advice, citations_json, suggested_questions_json, model, created_at
                     FROM opportunity_chat_messages
                     WHERE source = ? AND reference = ?
                     ORDER BY id DESC
@@ -339,6 +360,7 @@ class OpportunityChatService:
                         strategic_advice TEXT,
                         citations_json TEXT NOT NULL DEFAULT '[]',
                         suggested_questions_json TEXT NOT NULL DEFAULT '[]',
+                        model TEXT,
                         created_at TEXT NOT NULL,
                         FOREIGN KEY (source, reference)
                             REFERENCES opportunity_chat_threads(source, reference)
@@ -352,6 +374,9 @@ class OpportunityChatService:
                     ON opportunity_chat_messages(source, reference, id)
                     """
                 )
+                columns = {row[1] for row in connection.execute("PRAGMA table_info(opportunity_chat_messages)")}
+                if "model" not in columns:
+                    connection.execute("ALTER TABLE opportunity_chat_messages ADD COLUMN model TEXT")
 
 
 def select_relevant_evidence(
@@ -496,6 +521,7 @@ def _row_to_message(row: sqlite3.Row) -> OpportunityChatMessage:
         strategic_advice=row["strategic_advice"],
         citations=citations if isinstance(citations, list) else [],
         suggested_questions=suggestions if isinstance(suggestions, list) else [],
+        model=row["model"],
         created_at=row["created_at"],
     )
 

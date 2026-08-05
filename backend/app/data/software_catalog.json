@@ -1,0 +1,5580 @@
+{
+  "schema_version": 1,
+  "catalog_version": "v1-077890c94745adb9",
+  "source": {
+    "name": "opensource-for-business",
+    "snapshot_date": "2026-08-02",
+    "ownership": "Opportunity Finder"
+  },
+  "departments": [
+    {
+      "id": "finance",
+      "name": "Finance & Accounting",
+      "short_name": "Finance",
+      "description": "Run the books, control cash flow, invoice customers, and support recurring revenue models.",
+      "icon": "landmark"
+    },
+    {
+      "id": "hr",
+      "name": "HR & People",
+      "short_name": "HR",
+      "description": "Hire, onboard, develop, and support employees with auditable people operations.",
+      "icon": "users"
+    },
+    {
+      "id": "sales-support",
+      "name": "Sales & Customer Service",
+      "short_name": "Sales & Support",
+      "description": "Manage the revenue pipeline and deliver responsive, contextual customer support.",
+      "icon": "handshake"
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing & Growth",
+      "short_name": "Marketing",
+      "description": "Publish content, automate campaigns, reach audiences, and understand growth.",
+      "icon": "megaphone"
+    },
+    {
+      "id": "data",
+      "name": "Data & Analytics",
+      "short_name": "Data",
+      "description": "Build trusted data flows and turn operational data into decisions.",
+      "icon": "chart"
+    },
+    {
+      "id": "operations",
+      "name": "Procurement & Operations",
+      "short_name": "Operations",
+      "description": "Control purchasing, inventory, assets, documents, and operational infrastructure.",
+      "icon": "package"
+    },
+    {
+      "id": "it-security",
+      "name": "IT & Security",
+      "short_name": "IT & Security",
+      "description": "Secure identities, operate infrastructure, and give engineering teams dependable platforms.",
+      "icon": "shield"
+    },
+    {
+      "id": "management",
+      "name": "Management & Collaboration",
+      "short_name": "Management",
+      "description": "Coordinate teams, projects, decisions, knowledge, and secure communication.",
+      "icon": "briefcase"
+    }
+  ],
+  "categories": [
+    {
+      "id": "erp-accounting",
+      "department_id": "finance",
+      "name": "ERP & General Accounting",
+      "description": "Company-wide ledgers, purchasing, sales, inventory, and financial reporting.",
+      "cpv_prefixes": [
+        "484",
+        "72212440"
+      ],
+      "keywords_en": [
+        "erp",
+        "accounting",
+        "general ledger",
+        "financial management",
+        "purchase orders",
+        "invoicing",
+        "inventory"
+      ],
+      "keywords_el": [
+        "λογιστική",
+        "λογιστήριο",
+        "γενική λογιστική",
+        "οικονομική διαχείριση",
+        "τιμολόγηση",
+        "προμήθειες",
+        "αποθήκη"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "sme-accounting",
+      "department_id": "finance",
+      "name": "SME Accounting & Invoicing",
+      "description": "Practical bookkeeping and invoicing for smaller finance teams.",
+      "cpv_prefixes": [
+        "4844",
+        "72212440"
+      ],
+      "keywords_en": [
+        "bookkeeping",
+        "small business accounting",
+        "invoicing",
+        "expenses",
+        "billing"
+      ],
+      "keywords_el": [
+        "βιβλία",
+        "λογιστική μικρών επιχειρήσεων",
+        "τιμολόγηση",
+        "δαπάνες",
+        "έσοδα έξοδα"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "subscription-billing",
+      "department_id": "finance",
+      "name": "Subscription & Usage Billing",
+      "description": "Metering, subscriptions, invoices, entitlements, and payment orchestration.",
+      "cpv_prefixes": [
+        "48444",
+        "72212440"
+      ],
+      "keywords_en": [
+        "subscription billing",
+        "usage billing",
+        "metering",
+        "recurring invoices",
+        "entitlements"
+      ],
+      "keywords_el": [
+        "συνδρομές",
+        "επαναλαμβανόμενη χρέωση",
+        "τιμολόγηση χρήσης",
+        "μετρήσεις κατανάλωσης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "hris-payroll",
+      "department_id": "hr",
+      "name": "HRIS, Payroll & Leave",
+      "description": "Employee records, payroll, attendance, leave, and performance.",
+      "cpv_prefixes": [
+        "4845",
+        "72212450"
+      ],
+      "keywords_en": [
+        "hris",
+        "human resources",
+        "payroll",
+        "employee records",
+        "leave management",
+        "attendance"
+      ],
+      "keywords_el": [
+        "ανθρώπινο δυναμικό",
+        "μισθοδοσία",
+        "μητρώο εργαζομένων",
+        "άδειες προσωπικού",
+        "παρουσίες"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "recruiting-ats",
+      "department_id": "hr",
+      "name": "Recruiting & ATS",
+      "description": "Job openings, applicants, interviews, and hiring pipelines.",
+      "cpv_prefixes": [
+        "4845",
+        "72212450"
+      ],
+      "keywords_en": [
+        "applicant tracking",
+        "ats",
+        "recruiting",
+        "hiring pipeline",
+        "job applications",
+        "interviews"
+      ],
+      "keywords_el": [
+        "προσλήψεις",
+        "υποψήφιοι",
+        "αιτήσεις εργασίας",
+        "συνεντεύξεις",
+        "διαχείριση υποψηφίων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "time-tracking",
+      "department_id": "hr",
+      "name": "Time Tracking",
+      "description": "Timesheets, project time, approvals, and utilization reporting.",
+      "cpv_prefixes": [
+        "4845",
+        "72212450"
+      ],
+      "keywords_en": [
+        "time tracking",
+        "timesheets",
+        "billable hours",
+        "attendance",
+        "utilization"
+      ],
+      "keywords_el": [
+        "χρονοχρέωση",
+        "φύλλα χρόνου",
+        "ώρες εργασίας",
+        "παρουσιολόγιο",
+        "καταγραφή χρόνου"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "esignatures",
+      "department_id": "hr",
+      "name": "E-signatures",
+      "description": "Prepare, send, sign, and audit employment documents.",
+      "cpv_prefixes": [
+        "48311",
+        "72212311"
+      ],
+      "keywords_en": [
+        "electronic signature",
+        "e-signature",
+        "digital signature",
+        "sign documents",
+        "audit trail"
+      ],
+      "keywords_el": [
+        "ηλεκτρονική υπογραφή",
+        "ψηφιακή υπογραφή",
+        "υπογραφή εγγράφων",
+        "ίχνος ελέγχου"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "learning",
+      "department_id": "hr",
+      "name": "LMS & Training",
+      "description": "Deliver structured employee learning and certification programs.",
+      "cpv_prefixes": [
+        "4819",
+        "8042",
+        "805331"
+      ],
+      "keywords_en": [
+        "learning management system",
+        "lms",
+        "online training",
+        "courses",
+        "certification",
+        "e-learning"
+      ],
+      "keywords_el": [
+        "σύστημα διαχείρισης μάθησης",
+        "τηλεκπαίδευση",
+        "ηλεκτρονικά μαθήματα",
+        "κατάρτιση",
+        "πιστοποίηση"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "crm-pipeline",
+      "department_id": "sales-support",
+      "name": "CRM & Pipeline",
+      "description": "Accounts, contacts, opportunities, activity, and revenue forecasting.",
+      "cpv_prefixes": [
+        "48445",
+        "72212440"
+      ],
+      "keywords_en": [
+        "crm",
+        "customer relationship management",
+        "sales pipeline",
+        "leads",
+        "contacts",
+        "opportunities"
+      ],
+      "keywords_el": [
+        "διαχείριση πελατών",
+        "πελατολόγιο",
+        "πωλήσεις",
+        "δυνητικοί πελάτες",
+        "επαφές"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "appointment-scheduling",
+      "department_id": "sales-support",
+      "name": "Appointment Scheduling",
+      "description": "Self-service booking and calendar coordination.",
+      "cpv_prefixes": [
+        "72212",
+        "7242"
+      ],
+      "keywords_en": [
+        "appointment scheduling",
+        "online booking",
+        "calendar booking",
+        "reservations",
+        "time slots"
+      ],
+      "keywords_el": [
+        "ραντεβού",
+        "ηλεκτρονικές κρατήσεις",
+        "προγραμματισμός ραντεβού",
+        "διαθεσιμότητα",
+        "ημερολόγιο"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "proposals-signatures",
+      "department_id": "sales-support",
+      "name": "Proposals & Signatures",
+      "description": "Close deals and collect verifiable signatures.",
+      "cpv_prefixes": [
+        "48311",
+        "72212311"
+      ],
+      "keywords_en": [
+        "proposal management",
+        "sales proposals",
+        "contracts",
+        "electronic signature",
+        "document signing"
+      ],
+      "keywords_el": [
+        "προσφορές",
+        "εμπορικές προτάσεις",
+        "συμβάσεις",
+        "ηλεκτρονική υπογραφή"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "customer-support",
+      "department_id": "sales-support",
+      "name": "Omnichannel Support",
+      "description": "Shared inboxes, chat, tickets, automation, and service levels.",
+      "cpv_prefixes": [
+        "7225",
+        "7251"
+      ],
+      "keywords_en": [
+        "helpdesk",
+        "service desk",
+        "ticketing",
+        "customer support",
+        "shared inbox",
+        "sla"
+      ],
+      "keywords_el": [
+        "τεχνική υποστήριξη",
+        "γραφείο υποστήριξης",
+        "αιτήματα υποστήριξης",
+        "δελτία βλαβών",
+        "εξυπηρέτηση πελατών"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "knowledge-base",
+      "department_id": "sales-support",
+      "name": "Knowledge Base",
+      "description": "Customer and internal support documentation.",
+      "cpv_prefixes": [
+        "48311",
+        "72212311"
+      ],
+      "keywords_en": [
+        "knowledge base",
+        "help center",
+        "support documentation",
+        "faq",
+        "self service"
+      ],
+      "keywords_el": [
+        "βάση γνώσης",
+        "κέντρο βοήθειας",
+        "τεκμηρίωση υποστήριξης",
+        "συχνές ερωτήσεις"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "customer-feedback",
+      "department_id": "sales-support",
+      "name": "Customer Feedback",
+      "description": "Collect, prioritize, and communicate product feedback.",
+      "cpv_prefixes": [
+        "72212",
+        "7934"
+      ],
+      "keywords_en": [
+        "customer feedback",
+        "feature requests",
+        "ideas portal",
+        "product feedback",
+        "voting"
+      ],
+      "keywords_el": [
+        "ανατροφοδότηση πελατών",
+        "προτάσεις χρηστών",
+        "αιτήματα λειτουργιών",
+        "ψηφοφορία ιδεών"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "marketing-automation",
+      "department_id": "marketing",
+      "name": "Marketing Automation",
+      "description": "Campaign journeys, segmentation, lead nurturing, and scoring.",
+      "cpv_prefixes": [
+        "7934",
+        "72212440"
+      ],
+      "keywords_en": [
+        "marketing automation",
+        "campaigns",
+        "lead nurturing",
+        "segmentation",
+        "email journeys",
+        "lead scoring"
+      ],
+      "keywords_el": [
+        "αυτοματισμός μάρκετινγκ",
+        "καμπάνιες",
+        "τμηματοποίηση κοινού",
+        "βαθμολόγηση leads"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "email-newsletters",
+      "department_id": "marketing",
+      "name": "Email & Newsletters",
+      "description": "High-volume newsletters and subscriber management.",
+      "cpv_prefixes": [
+        "7241",
+        "72212"
+      ],
+      "keywords_en": [
+        "newsletter",
+        "mailing list",
+        "email campaigns",
+        "bulk email",
+        "subscribers"
+      ],
+      "keywords_el": [
+        "ενημερωτικό δελτίο",
+        "λίστα αλληλογραφίας",
+        "μαζικά email",
+        "συνδρομητές",
+        "καμπάνια email"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "cms-content",
+      "department_id": "marketing",
+      "name": "CMS & Content",
+      "description": "Create and distribute web content through modern publishing stacks.",
+      "cpv_prefixes": [
+        "72413",
+        "7242",
+        "72212224"
+      ],
+      "keywords_en": [
+        "cms",
+        "content management",
+        "website",
+        "web publishing",
+        "headless cms",
+        "web portal"
+      ],
+      "keywords_el": [
+        "σύστημα διαχείρισης περιεχομένου",
+        "ιστοσελίδα",
+        "ιστότοπος",
+        "διαδικτυακή πύλη",
+        "δημοσίευση περιεχομένου"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "social-scheduling",
+      "department_id": "marketing",
+      "name": "Social Scheduling",
+      "description": "Plan, approve, and publish social media content.",
+      "cpv_prefixes": [
+        "7934",
+        "72212"
+      ],
+      "keywords_en": [
+        "social media scheduling",
+        "social publishing",
+        "content calendar",
+        "post scheduling"
+      ],
+      "keywords_el": [
+        "προγραμματισμός κοινωνικών δικτύων",
+        "δημοσιεύσεις social media",
+        "ημερολόγιο περιεχομένου"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "web-product-analytics",
+      "department_id": "marketing",
+      "name": "Web & Product Analytics",
+      "description": "Privacy-aware traffic, conversion, and product behavior analytics.",
+      "cpv_prefixes": [
+        "72316",
+        "7232",
+        "72212482"
+      ],
+      "keywords_en": [
+        "web analytics",
+        "product analytics",
+        "funnels",
+        "conversion",
+        "session replay",
+        "traffic analytics"
+      ],
+      "keywords_el": [
+        "αναλυτικά ιστοσελίδας",
+        "ανάλυση επισκεψιμότητας",
+        "μετατροπές",
+        "συμπεριφορά χρηστών",
+        "στατιστικά χρήσης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "bi-dashboards",
+      "department_id": "data",
+      "name": "BI & Dashboards",
+      "description": "Self-service analysis, semantic metrics, and executive dashboards.",
+      "cpv_prefixes": [
+        "72212482",
+        "72316",
+        "7232"
+      ],
+      "keywords_en": [
+        "business intelligence",
+        "bi",
+        "dashboard",
+        "reporting",
+        "kpi",
+        "analytics",
+        "data visualization"
+      ],
+      "keywords_el": [
+        "επιχειρηματική ευφυΐα",
+        "πίνακας ελέγχου",
+        "αναφορές",
+        "δείκτες απόδοσης",
+        "στατιστικά",
+        "οπτικοποίηση δεδομένων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "elt-orchestration",
+      "department_id": "data",
+      "name": "ELT & Orchestration",
+      "description": "Extract, load, transform, schedule, and observe data workflows.",
+      "cpv_prefixes": [
+        "7232",
+        "72212",
+        "72212482"
+      ],
+      "keywords_en": [
+        "data pipeline",
+        "etl",
+        "elt",
+        "workflow orchestration",
+        "data integration",
+        "scheduled jobs"
+      ],
+      "keywords_el": [
+        "ροές δεδομένων",
+        "ενοποίηση δεδομένων",
+        "μετασχηματισμός δεδομένων",
+        "χρονοπρογραμματισμός εργασιών"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "data-governance",
+      "department_id": "data",
+      "name": "Data Catalog & Governance",
+      "description": "Discovery, lineage, ownership, quality, and shared data context.",
+      "cpv_prefixes": [
+        "7232",
+        "72316"
+      ],
+      "keywords_en": [
+        "data catalog",
+        "data governance",
+        "data lineage",
+        "data quality",
+        "metadata management",
+        "data ownership"
+      ],
+      "keywords_el": [
+        "κατάλογος δεδομένων",
+        "διακυβέρνηση δεδομένων",
+        "ποιότητα δεδομένων",
+        "ιχνηλασιμότητα δεδομένων",
+        "μεταδεδομένα"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "analytical-database",
+      "department_id": "data",
+      "name": "Analytical Database",
+      "description": "High-performance storage and queries for analytical workloads.",
+      "cpv_prefixes": [
+        "486",
+        "7232"
+      ],
+      "keywords_en": [
+        "analytical database",
+        "data warehouse",
+        "olap",
+        "columnar database",
+        "real time analytics",
+        "large datasets"
+      ],
+      "keywords_el": [
+        "αναλυτική βάση δεδομένων",
+        "αποθήκη δεδομένων",
+        "μεγάλα σύνολα δεδομένων",
+        "αναλυτικά ερωτήματα"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "procurement-p2p",
+      "department_id": "operations",
+      "name": "Procurement / P2P",
+      "description": "Suppliers, requests, purchase orders, receipts, and payables.",
+      "cpv_prefixes": [
+        "4844",
+        "72212440"
+      ],
+      "keywords_en": [
+        "procurement",
+        "purchase to pay",
+        "supplier management",
+        "purchase requests",
+        "purchase orders",
+        "payables"
+      ],
+      "keywords_el": [
+        "προμήθειες",
+        "διαχείριση προμηθευτών",
+        "αιτήματα αγοράς",
+        "εντολές αγοράς",
+        "παραλαβές"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "inventory-wms",
+      "department_id": "operations",
+      "name": "Inventory & WMS",
+      "description": "Stock, parts, warehouses, movements, and replenishment.",
+      "cpv_prefixes": [
+        "4843",
+        "72212440"
+      ],
+      "keywords_en": [
+        "inventory",
+        "warehouse management",
+        "wms",
+        "stock",
+        "replenishment",
+        "warehouse movements"
+      ],
+      "keywords_el": [
+        "αποθήκη",
+        "διαχείριση αποθεμάτων",
+        "απόθεμα",
+        "αναπλήρωση",
+        "κινήσεις αποθήκης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "asset-management",
+      "department_id": "operations",
+      "name": "Asset Management",
+      "description": "Track physical and IT assets across their lifecycle.",
+      "cpv_prefixes": [
+        "72212440",
+        "7251"
+      ],
+      "keywords_en": [
+        "asset management",
+        "asset tracking",
+        "equipment inventory",
+        "lifecycle",
+        "maintenance records"
+      ],
+      "keywords_el": [
+        "διαχείριση παγίων",
+        "μητρώο εξοπλισμού",
+        "παρακολούθηση εξοπλισμού",
+        "κύκλος ζωής παγίων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "document-management",
+      "department_id": "operations",
+      "name": "Document Management",
+      "description": "Capture, classify, search, retain, and retrieve documents.",
+      "cpv_prefixes": [
+        "483111",
+        "72212311",
+        "799991"
+      ],
+      "keywords_en": [
+        "document management",
+        "dms",
+        "document archive",
+        "ocr",
+        "records management",
+        "document workflow"
+      ],
+      "keywords_el": [
+        "διαχείριση εγγράφων",
+        "ηλεκτρονικό αρχείο",
+        "ψηφιοποίηση εγγράφων",
+        "πρωτόκολλο",
+        "αρχειοθέτηση",
+        "ροή εγγράφων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "infrastructure-inventory",
+      "department_id": "operations",
+      "name": "Infrastructure Inventory",
+      "description": "Model network and infrastructure assets as a source of truth.",
+      "cpv_prefixes": [
+        "7251",
+        "4882",
+        "324"
+      ],
+      "keywords_en": [
+        "infrastructure inventory",
+        "source of truth",
+        "devices",
+        "racks",
+        "circuits",
+        "network inventory"
+      ],
+      "keywords_el": [
+        "μητρώο υποδομών",
+        "δικτυακός εξοπλισμός",
+        "συσκευές δικτύου",
+        "κυκλώματα",
+        "ικριώματα"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "iam-sso",
+      "department_id": "it-security",
+      "name": "IAM & SSO",
+      "description": "Identity federation, authentication, authorization, and access policy.",
+      "cpv_prefixes": [
+        "48732",
+        "72212730"
+      ],
+      "keywords_en": [
+        "identity management",
+        "iam",
+        "single sign on",
+        "sso",
+        "authentication",
+        "authorization",
+        "access control"
+      ],
+      "keywords_el": [
+        "διαχείριση ταυτοτήτων",
+        "ενιαία σύνδεση",
+        "αυθεντικοποίηση",
+        "εξουσιοδότηση",
+        "έλεγχος πρόσβασης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "observability",
+      "department_id": "it-security",
+      "name": "Observability",
+      "description": "Metrics, logs, traces, dashboards, and alerting.",
+      "cpv_prefixes": [
+        "7225",
+        "7281"
+      ],
+      "keywords_en": [
+        "observability",
+        "monitoring",
+        "metrics",
+        "logs",
+        "traces",
+        "alerting",
+        "application performance"
+      ],
+      "keywords_el": [
+        "παρακολούθηση συστημάτων",
+        "μετρικές",
+        "αρχεία καταγραφής",
+        "ειδοποιήσεις",
+        "απόδοση εφαρμογών"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "siem-xdr",
+      "department_id": "it-security",
+      "name": "SIEM / XDR",
+      "description": "Threat detection, endpoint telemetry, compliance, and response.",
+      "cpv_prefixes": [
+        "4873",
+        "48732",
+        "72212730",
+        "7281"
+      ],
+      "keywords_en": [
+        "siem",
+        "xdr",
+        "security monitoring",
+        "threat detection",
+        "endpoint detection",
+        "incident response"
+      ],
+      "keywords_el": [
+        "παρακολούθηση ασφάλειας",
+        "ανίχνευση απειλών",
+        "ανίχνευση συμβάντων",
+        "απόκριση περιστατικών",
+        "κυβερνοασφάλεια"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "itsm-assets",
+      "department_id": "it-security",
+      "name": "ITSM & Assets",
+      "description": "Service desk, CMDB, inventory, and asset workflows.",
+      "cpv_prefixes": [
+        "7225",
+        "7251"
+      ],
+      "keywords_en": [
+        "itsm",
+        "it service management",
+        "service desk",
+        "cmdb",
+        "asset inventory",
+        "incident management"
+      ],
+      "keywords_el": [
+        "διαχείριση υπηρεσιών πληροφορικής",
+        "γραφείο υποστήριξης",
+        "μητρώο παγίων πληροφορικής",
+        "διαχείριση συμβάντων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "network-ipam",
+      "department_id": "it-security",
+      "name": "Network / IPAM",
+      "description": "Network source of truth, IP addresses, racks, devices, and circuits.",
+      "cpv_prefixes": [
+        "324",
+        "7251"
+      ],
+      "keywords_en": [
+        "ipam",
+        "ip address management",
+        "network source of truth",
+        "network devices",
+        "racks",
+        "circuits"
+      ],
+      "keywords_el": [
+        "διαχείριση διευθύνσεων ip",
+        "μητρώο δικτύου",
+        "δικτυακές συσκευές",
+        "κυκλώματα δικτύου"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "source-control-ci",
+      "department_id": "it-security",
+      "name": "Source Control & CI",
+      "description": "Host code and automate reliable software delivery.",
+      "cpv_prefixes": [
+        "72212",
+        "7226"
+      ],
+      "keywords_en": [
+        "source control",
+        "git hosting",
+        "continuous integration",
+        "ci cd",
+        "build automation",
+        "software delivery"
+      ],
+      "keywords_el": [
+        "διαχείριση πηγαίου κώδικα",
+        "αποθετήριο κώδικα",
+        "συνεχής ολοκλήρωση",
+        "αυτοματισμός ανάπτυξης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "team-messaging",
+      "department_id": "management",
+      "name": "Team Messaging",
+      "description": "Secure channels, direct messages, integrations, and incident collaboration.",
+      "cpv_prefixes": [
+        "72212",
+        "7242"
+      ],
+      "keywords_en": [
+        "team messaging",
+        "internal chat",
+        "channels",
+        "direct messages",
+        "collaboration chat",
+        "incident collaboration"
+      ],
+      "keywords_el": [
+        "εσωτερική επικοινωνία",
+        "ομαδικά μηνύματα",
+        "κανάλια συνομιλίας",
+        "εταιρικό chat",
+        "συνεργασία ομάδων"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "project-management",
+      "department_id": "management",
+      "name": "Project Management",
+      "description": "Plan work, track delivery, manage roadmaps, and report progress.",
+      "cpv_prefixes": [
+        "72212440",
+        "72212"
+      ],
+      "keywords_en": [
+        "project management",
+        "task management",
+        "roadmap",
+        "work planning",
+        "agile",
+        "kanban",
+        "portfolio"
+      ],
+      "keywords_el": [
+        "διαχείριση έργων",
+        "διαχείριση εργασιών",
+        "χρονοδιάγραμμα",
+        "οδικός χάρτης",
+        "προγραμματισμός έργου",
+        "κανμπάν"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "file-collaboration",
+      "department_id": "management",
+      "name": "File Collaboration",
+      "description": "Private file sync, sharing, calendars, and collaborative workspaces.",
+      "cpv_prefixes": [
+        "72212311",
+        "72415"
+      ],
+      "keywords_en": [
+        "file sharing",
+        "file sync",
+        "cloud storage",
+        "collaborative files",
+        "private cloud",
+        "calendars"
+      ],
+      "keywords_el": [
+        "διαμοιρασμός αρχείων",
+        "συγχρονισμός αρχείων",
+        "αποθήκευση νέφους",
+        "συνεργασία εγγράφων",
+        "ιδιωτικό cloud"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "knowledge-management",
+      "department_id": "management",
+      "name": "Knowledge Management",
+      "description": "Create durable, searchable team knowledge.",
+      "cpv_prefixes": [
+        "483111",
+        "72212311"
+      ],
+      "keywords_en": [
+        "knowledge management",
+        "wiki",
+        "team documentation",
+        "internal knowledge",
+        "documentation portal"
+      ],
+      "keywords_el": [
+        "διαχείριση γνώσης",
+        "εσωτερική τεκμηρίωση",
+        "εταιρικό wiki",
+        "πύλη γνώσης"
+      ],
+      "negative_keywords": []
+    },
+    {
+      "id": "video-meetings",
+      "department_id": "management",
+      "name": "Video Meetings",
+      "description": "Self-hosted video conferencing and virtual meetings.",
+      "cpv_prefixes": [
+        "32232",
+        "7242"
+      ],
+      "keywords_en": [
+        "video conferencing",
+        "video meetings",
+        "web conference",
+        "online meetings",
+        "virtual meetings"
+      ],
+      "keywords_el": [
+        "τηλεδιάσκεψη",
+        "βιντεοδιάσκεψη",
+        "διαδικτυακές συναντήσεις",
+        "εικονικές συναντήσεις"
+      ],
+      "negative_keywords": []
+    }
+  ],
+  "licenses": [
+    {
+      "id": "mit",
+      "spdx": "MIT",
+      "name": "MIT License",
+      "family": "permissive",
+      "osi_approved": true,
+      "summary": "Commercial use, modification, distribution, and private use are allowed with copyright and license notices retained.",
+      "obligations": [
+        "Keep the copyright notice",
+        "Include the license text in distributed copies"
+      ],
+      "evidence": "https://opensource.org/license/mit"
+    },
+    {
+      "id": "apache-2",
+      "spdx": "Apache-2.0",
+      "name": "Apache License 2.0",
+      "family": "permissive",
+      "osi_approved": true,
+      "summary": "A permissive license with explicit patent rights and notice requirements.",
+      "obligations": [
+        "Include the license and NOTICE when applicable",
+        "State significant modifications",
+        "Preserve attribution notices"
+      ],
+      "evidence": "https://opensource.org/license/apache-2-0"
+    },
+    {
+      "id": "bsd-2",
+      "spdx": "BSD-2-Clause",
+      "name": "BSD 2-Clause",
+      "family": "permissive",
+      "osi_approved": true,
+      "summary": "A compact permissive license requiring preservation of copyright and disclaimer notices.",
+      "obligations": [
+        "Keep copyright and license notices",
+        "Retain the warranty disclaimer"
+      ],
+      "evidence": "https://opensource.org/license/bsd-2-clause"
+    },
+    {
+      "id": "lgpl-2.1",
+      "spdx": "LGPL-2.1-only",
+      "name": "GNU LGPL 2.1",
+      "family": "weak-copyleft",
+      "osi_approved": true,
+      "summary": "Allows proprietary surrounding software while modifications to the covered components remain under the LGPL.",
+      "obligations": [
+        "Provide source for modified covered components when distributed",
+        "Preserve notices and relinking rights"
+      ],
+      "evidence": "https://opensource.org/license/lgpl-2-1"
+    },
+    {
+      "id": "lgpl-3",
+      "spdx": "LGPL-3.0-only",
+      "name": "GNU LGPL 3.0",
+      "family": "weak-copyleft",
+      "osi_approved": true,
+      "summary": "Weak copyleft focused on changes to the licensed components rather than independent surrounding systems.",
+      "obligations": [
+        "Provide source for modified covered components when distributed",
+        "Allow replacement or relinking of the LGPL component"
+      ],
+      "evidence": "https://opensource.org/license/lgpl-3-0"
+    },
+    {
+      "id": "mpl-2",
+      "spdx": "MPL-2.0",
+      "name": "Mozilla Public License 2.0",
+      "family": "weak-copyleft",
+      "osi_approved": true,
+      "summary": "File-level copyleft: modified MPL-covered files remain open while separate files may use other licenses.",
+      "obligations": [
+        "Make modified MPL-covered files available when distributed",
+        "Preserve license notices"
+      ],
+      "evidence": "https://opensource.org/license/mpl-2-0"
+    },
+    {
+      "id": "epl-1",
+      "spdx": "EPL-1.0",
+      "name": "Eclipse Public License 1.0",
+      "family": "weak-copyleft",
+      "osi_approved": true,
+      "summary": "A business-friendly weak-copyleft license with source obligations for distributed modifications.",
+      "obligations": [
+        "Disclose source for distributed modifications",
+        "Preserve notices and identify changes"
+      ],
+      "evidence": "https://opensource.org/license/epl-1-0"
+    },
+    {
+      "id": "gpl-2",
+      "spdx": "GPL-2.0-only",
+      "name": "GNU GPL 2.0",
+      "family": "copyleft",
+      "osi_approved": true,
+      "summary": "Distribution of the program or derivatives requires corresponding source under the GPL.",
+      "obligations": [
+        "Provide corresponding source when distributing",
+        "License derivatives under the GPL",
+        "Preserve notices"
+      ],
+      "evidence": "https://opensource.org/license/gpl-2-0"
+    },
+    {
+      "id": "gpl-3",
+      "spdx": "GPL-3.0-only",
+      "name": "GNU GPL 3.0",
+      "family": "copyleft",
+      "osi_approved": true,
+      "summary": "Strong copyleft for distributed software, with patent and anti-tivoization provisions.",
+      "obligations": [
+        "Provide corresponding source when distributing",
+        "License derivatives under GPL 3.0",
+        "Document modifications and preserve notices"
+      ],
+      "evidence": "https://opensource.org/license/gpl-3-0"
+    },
+    {
+      "id": "gpl-3-plus",
+      "spdx": "GPL-3.0-or-later",
+      "name": "GNU GPL 3.0 or later",
+      "family": "copyleft",
+      "osi_approved": true,
+      "summary": "GPL 3.0 obligations apply, with the option to follow a later published GPL version.",
+      "obligations": [
+        "Provide corresponding source when distributing",
+        "License derivatives under a compatible GPL version",
+        "Document modifications and preserve notices"
+      ],
+      "evidence": "https://opensource.org/license/gpl-3-0"
+    },
+    {
+      "id": "agpl-3",
+      "spdx": "AGPL-3.0-only",
+      "name": "GNU AGPL 3.0",
+      "family": "network-copyleft",
+      "osi_approved": true,
+      "summary": "Adds a network-use source offer to GPL-style copyleft, especially relevant to modified hosted services.",
+      "obligations": [
+        "Offer corresponding source to remote users of modified versions",
+        "License covered derivatives under AGPL 3.0",
+        "Preserve notices and document changes"
+      ],
+      "evidence": "https://opensource.org/license/agpl-v3"
+    }
+  ],
+  "repository_health": [
+    {
+      "slug": "grafana",
+      "repo": "grafana/grafana",
+      "stars": 75919,
+      "latest_release": null,
+      "last_activity": "2026-08-01T23:35:02",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:50.953000",
+      "status": "verified"
+    },
+    {
+      "slug": "prometheus",
+      "repo": "prometheus/prometheus",
+      "stars": 65413,
+      "latest_release": null,
+      "last_activity": "2026-08-02T08:48:54",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:51.449000",
+      "status": "verified"
+    },
+    {
+      "slug": "odoo-community",
+      "repo": "odoo/odoo",
+      "stars": 53423,
+      "latest_release": null,
+      "last_activity": "2026-08-02T06:51:20",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:51.698000",
+      "status": "verified"
+    },
+    {
+      "slug": "apache-airflow",
+      "repo": "apache/airflow",
+      "stars": 46352,
+      "latest_release": null,
+      "last_activity": "2026-08-02T07:30:39",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:51.955000",
+      "status": "verified"
+    },
+    {
+      "slug": "clickhouse",
+      "repo": "ClickHouse/ClickHouse",
+      "stars": 48991,
+      "latest_release": null,
+      "last_activity": "2026-08-02T09:06:28",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:52.235000",
+      "status": "verified"
+    },
+    {
+      "slug": "keycloak",
+      "repo": "keycloak/keycloak",
+      "stars": 35945,
+      "latest_release": null,
+      "last_activity": "2026-08-02T03:09:06",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:52.493000",
+      "status": "verified"
+    },
+    {
+      "slug": "erpnext",
+      "repo": "frappe/erpnext",
+      "stars": 37505,
+      "latest_release": null,
+      "last_activity": "2026-08-02T08:30:18",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:52.762000",
+      "status": "verified"
+    },
+    {
+      "slug": "strapi",
+      "repo": "strapi/strapi",
+      "stars": 72766,
+      "latest_release": null,
+      "last_activity": "2026-08-01T07:30:22",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:53.011000",
+      "status": "verified"
+    },
+    {
+      "slug": "metabase",
+      "repo": "metabase/metabase",
+      "stars": 48488,
+      "latest_release": null,
+      "last_activity": "2026-08-02T07:02:41",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:53.257000",
+      "status": "verified"
+    },
+    {
+      "slug": "apache-superset",
+      "repo": "apache/superset",
+      "stars": 74095,
+      "latest_release": null,
+      "last_activity": "2026-08-01T22:26:31",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:53.573000",
+      "status": "verified"
+    },
+    {
+      "slug": "nextcloud",
+      "repo": "nextcloud/server",
+      "stars": 36315,
+      "latest_release": null,
+      "last_activity": "2026-08-02T08:54:05",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:53.815000",
+      "status": "verified"
+    },
+    {
+      "slug": "ghost",
+      "repo": "TryGhost/Ghost",
+      "stars": 54619,
+      "latest_release": null,
+      "last_activity": "2026-08-02T09:05:38",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:54.076000",
+      "status": "verified"
+    },
+    {
+      "slug": "posthog-foss",
+      "repo": "PostHog/posthog-foss",
+      "stars": 687,
+      "latest_release": null,
+      "last_activity": "2026-08-02T06:05:30",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:54.329000",
+      "status": "verified"
+    },
+    {
+      "slug": "jenkins",
+      "repo": "jenkinsci/jenkins",
+      "stars": 26387,
+      "latest_release": null,
+      "last_activity": "2026-08-02T04:06:32",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:54.670000",
+      "status": "verified"
+    },
+    {
+      "slug": "plane",
+      "repo": "makeplane/plane",
+      "stars": 55351,
+      "latest_release": null,
+      "last_activity": "2026-08-01T21:47:25",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:54.947000",
+      "status": "verified"
+    },
+    {
+      "slug": "moodle",
+      "repo": "moodle/moodle",
+      "stars": 7302,
+      "latest_release": null,
+      "last_activity": "2026-07-28T12:00:00",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": true,
+      "verified_at": "2026-08-02T09:06:55.215000",
+      "status": "verified"
+    },
+    {
+      "slug": "twenty",
+      "repo": "twentyhq/twenty",
+      "stars": 54060,
+      "latest_release": null,
+      "last_activity": "2026-08-02T01:46:42",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:55.475000",
+      "status": "verified"
+    },
+    {
+      "slug": "chatwoot",
+      "repo": "chatwoot/chatwoot",
+      "stars": 35342,
+      "latest_release": null,
+      "last_activity": "2026-08-01T11:23:10",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:55.730000",
+      "status": "verified"
+    },
+    {
+      "slug": "netbox",
+      "repo": "netbox-community/netbox",
+      "stars": 21239,
+      "latest_release": null,
+      "last_activity": "2026-08-01T18:03:27",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:55.990000",
+      "status": "verified"
+    },
+    {
+      "slug": "gitea",
+      "repo": "go-gitea/gitea",
+      "stars": 57163,
+      "latest_release": null,
+      "last_activity": "2026-08-02T06:51:10",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:56.252000",
+      "status": "verified"
+    },
+    {
+      "slug": "paperless-ngx",
+      "repo": "paperless-ngx/paperless-ngx",
+      "stars": 43839,
+      "latest_release": null,
+      "last_activity": "2026-08-02T04:19:26",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:56.510000",
+      "status": "verified"
+    },
+    {
+      "slug": "rocket-chat",
+      "repo": "RocketChat/Rocket.Chat",
+      "stars": 45918,
+      "latest_release": null,
+      "last_activity": "2026-08-02T00:52:51",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:56.791000",
+      "status": "verified"
+    },
+    {
+      "slug": "jitsi-meet",
+      "repo": "jitsi/jitsi-meet",
+      "stars": 29685,
+      "latest_release": null,
+      "last_activity": "2026-08-02T02:19:58",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:57.071000",
+      "status": "verified"
+    },
+    {
+      "slug": "matomo",
+      "repo": "matomo-org/matomo",
+      "stars": 21733,
+      "latest_release": null,
+      "last_activity": "2026-08-02T05:04:30",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": true,
+      "verified_at": "2026-08-02T09:06:57.312000",
+      "status": "verified"
+    },
+    {
+      "slug": "mattermost",
+      "repo": "mattermost/mattermost",
+      "stars": 38636,
+      "latest_release": null,
+      "last_activity": "2026-08-02T05:13:26",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:57.597000",
+      "status": "verified"
+    },
+    {
+      "slug": "postiz",
+      "repo": "gitroomhq/postiz-app",
+      "stars": 34113,
+      "latest_release": null,
+      "last_activity": "2026-08-02T06:47:10",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:57.896000",
+      "status": "verified"
+    },
+    {
+      "slug": "signoz",
+      "repo": "SigNoz/signoz",
+      "stars": 31756,
+      "latest_release": null,
+      "last_activity": "2026-08-02T09:05:07",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:58.145000",
+      "status": "verified"
+    },
+    {
+      "slug": "wikijs",
+      "repo": "requarks/wiki",
+      "stars": 28693,
+      "latest_release": null,
+      "last_activity": "2026-08-02T05:48:47",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:58.384000",
+      "status": "verified"
+    },
+    {
+      "slug": "datahub",
+      "repo": "datahub-project/datahub",
+      "stars": 12427,
+      "latest_release": null,
+      "last_activity": "2026-08-02T03:03:31",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:58.641000",
+      "status": "verified"
+    },
+    {
+      "slug": "wazuh",
+      "repo": "wazuh/wazuh",
+      "stars": 16376,
+      "latest_release": null,
+      "last_activity": "2026-08-01T06:31:30",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:58.914000",
+      "status": "verified"
+    },
+    {
+      "slug": "openmetadata",
+      "repo": "open-metadata/OpenMetadata",
+      "stars": 14625,
+      "latest_release": null,
+      "last_activity": "2026-08-02T09:03:47",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:59.167000",
+      "status": "verified"
+    },
+    {
+      "slug": "snipe-it",
+      "repo": "grokability/snipe-it",
+      "stars": 14671,
+      "latest_release": null,
+      "last_activity": "2026-07-31T15:08:47",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:59.418000",
+      "status": "verified"
+    },
+    {
+      "slug": "openproject",
+      "repo": "opf/openproject",
+      "stars": 15738,
+      "latest_release": null,
+      "last_activity": "2026-08-01T17:23:29",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:06:59.675000",
+      "status": "verified"
+    },
+    {
+      "slug": "dolibarr",
+      "repo": "Dolibarr/dolibarr",
+      "stars": 7466,
+      "latest_release": null,
+      "last_activity": "2026-08-01T22:11:28",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": true,
+      "verified_at": "2026-08-02T09:06:59.938000",
+      "status": "verified"
+    },
+    {
+      "slug": "documenso",
+      "repo": "documenso/documenso",
+      "stars": 14218,
+      "latest_release": null,
+      "last_activity": "2026-08-02T08:48:07",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:00.350000",
+      "status": "verified"
+    },
+    {
+      "slug": "bookstack",
+      "repo": "BookStackApp/BookStack",
+      "stars": 18950,
+      "latest_release": null,
+      "last_activity": "2026-08-02T04:30:32",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:00.604000",
+      "status": "verified"
+    },
+    {
+      "slug": "plausible",
+      "repo": "plausible/analytics",
+      "stars": 28293,
+      "latest_release": null,
+      "last_activity": "2026-07-31T08:53:35",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:00.845000",
+      "status": "verified"
+    },
+    {
+      "slug": "redash",
+      "repo": "getredash/redash",
+      "stars": 28720,
+      "latest_release": null,
+      "last_activity": "2026-08-01T00:53:20",
+      "archived": false,
+      "observed_license": "BSD-2-Clause",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:01.098000",
+      "status": "verified"
+    },
+    {
+      "slug": "authentik",
+      "repo": "goauthentik/authentik",
+      "stars": 22576,
+      "latest_release": null,
+      "last_activity": "2026-08-02T00:29:18",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:01.369000",
+      "status": "verified"
+    },
+    {
+      "slug": "listmonk",
+      "repo": "knadh/listmonk",
+      "stars": 22585,
+      "latest_release": null,
+      "last_activity": "2026-08-02T01:55:50",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:01.622000",
+      "status": "verified"
+    },
+    {
+      "slug": "frappe-hr",
+      "repo": "frappe/hrms",
+      "stars": 8318,
+      "latest_release": null,
+      "last_activity": "2026-07-30T10:16:04",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:01.876000",
+      "status": "verified"
+    },
+    {
+      "slug": "mautic",
+      "repo": "mautic/mautic",
+      "stars": 10278,
+      "latest_release": null,
+      "last_activity": "2026-08-01T18:13:22",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:02.171000",
+      "status": "verified"
+    },
+    {
+      "slug": "zammad",
+      "repo": "zammad/zammad",
+      "stars": 5819,
+      "latest_release": null,
+      "last_activity": "2026-07-31T11:20:15",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:02.427000",
+      "status": "verified"
+    },
+    {
+      "slug": "lago",
+      "repo": "getlago/lago",
+      "stars": 10280,
+      "latest_release": null,
+      "last_activity": "2026-07-27T11:39:04",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:02.678000",
+      "status": "verified"
+    },
+    {
+      "slug": "suitecrm",
+      "repo": "SuiteCRM/SuiteCRM",
+      "stars": 5610,
+      "latest_release": null,
+      "last_activity": "2026-07-31T13:37:50",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:02.952000",
+      "status": "verified"
+    },
+    {
+      "slug": "glpi",
+      "repo": "glpi-project/glpi",
+      "stars": 6187,
+      "latest_release": null,
+      "last_activity": "2026-07-30T15:36:57",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:03.262000",
+      "status": "verified"
+    },
+    {
+      "slug": "leantime",
+      "repo": "Leantime/leantime",
+      "stars": 11184,
+      "latest_release": null,
+      "last_activity": "2026-08-01T15:52:41",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:03.540000",
+      "status": "verified"
+    },
+    {
+      "slug": "lightdash",
+      "repo": "lightdash/lightdash",
+      "stars": 6006,
+      "latest_release": null,
+      "last_activity": "2026-08-02T00:07:34",
+      "archived": false,
+      "observed_license": "NOASSERTION",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:03.792000",
+      "status": "verified"
+    },
+    {
+      "slug": "kill-bill",
+      "repo": "killbill/killbill",
+      "stars": 5645,
+      "latest_release": null,
+      "last_activity": "2026-07-31T18:21:53",
+      "archived": false,
+      "observed_license": "Apache-2.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:04.034000",
+      "status": "verified"
+    },
+    {
+      "slug": "inventree",
+      "repo": "inventree/InvenTree",
+      "stars": 7333,
+      "latest_release": null,
+      "last_activity": "2026-08-01T10:39:18",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:04.359000",
+      "status": "verified"
+    },
+    {
+      "slug": "orangehrm",
+      "repo": "orangehrm/orangehrm",
+      "stars": 1105,
+      "latest_release": null,
+      "last_activity": "2026-06-28T23:52:36",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:04.639000",
+      "status": "verified"
+    },
+    {
+      "slug": "kimai",
+      "repo": "kimai/kimai",
+      "stars": 4854,
+      "latest_release": null,
+      "last_activity": "2026-08-02T04:25:39",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:04.939000",
+      "status": "verified"
+    },
+    {
+      "slug": "espocrm",
+      "repo": "espocrm/espocrm",
+      "stars": 3183,
+      "latest_release": null,
+      "last_activity": "2026-07-30T07:31:19",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:05.189000",
+      "status": "verified"
+    },
+    {
+      "slug": "bigcapital",
+      "repo": "bigcapitalhq/bigcapital",
+      "stars": 3813,
+      "latest_release": null,
+      "last_activity": "2026-08-02T01:08:53",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:05.431000",
+      "status": "verified"
+    },
+    {
+      "slug": "frappe-books",
+      "repo": "frappe/books",
+      "stars": 4852,
+      "latest_release": null,
+      "last_activity": "2026-05-28T22:17:26",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:05.715000",
+      "status": "verified"
+    },
+    {
+      "slug": "easyappointments",
+      "repo": "alextselegidis/easyappointments",
+      "stars": 4290,
+      "latest_release": null,
+      "last_activity": "2026-07-29T08:36:28",
+      "archived": false,
+      "observed_license": "GPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:05.954000",
+      "status": "verified"
+    },
+    {
+      "slug": "freescout",
+      "repo": "freescout-help-desk/freescout",
+      "stars": 4452,
+      "latest_release": null,
+      "last_activity": "2026-08-02T08:55:08",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:06.212000",
+      "status": "verified"
+    },
+    {
+      "slug": "frappe-crm",
+      "repo": "frappe/crm",
+      "stars": 3052,
+      "latest_release": null,
+      "last_activity": "2026-07-31T07:18:07",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:06.461000",
+      "status": "verified"
+    },
+    {
+      "slug": "meltano",
+      "repo": "meltano/meltano",
+      "stars": 2577,
+      "latest_release": null,
+      "last_activity": "2026-08-01T01:19:28",
+      "archived": false,
+      "observed_license": "MIT",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:06.706000",
+      "status": "verified"
+    },
+    {
+      "slug": "fider",
+      "repo": "getfider/fider",
+      "stars": 4445,
+      "latest_release": null,
+      "last_activity": "2026-08-01T09:54:07",
+      "archived": false,
+      "observed_license": "AGPL-3.0",
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:06.992000",
+      "status": "verified"
+    },
+    {
+      "slug": "horilla",
+      "repo": "horilla/horilla-hr",
+      "stars": null,
+      "latest_release": null,
+      "last_activity": null,
+      "archived": false,
+      "observed_license": null,
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:07.284000",
+      "status": "error"
+    },
+    {
+      "slug": "openboxes",
+      "repo": "openboxes/openboxes",
+      "stars": null,
+      "latest_release": null,
+      "last_activity": null,
+      "archived": false,
+      "observed_license": null,
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:07.337000",
+      "status": "error"
+    },
+    {
+      "slug": "opencats",
+      "repo": "opencats/OpenCATS",
+      "stars": null,
+      "latest_release": null,
+      "last_activity": null,
+      "archived": false,
+      "observed_license": null,
+      "license_drift": false,
+      "verified_at": "2026-08-02T09:07:07.525000",
+      "status": "error"
+    }
+  ],
+  "products": [
+    {
+      "slug": "odoo-community",
+      "name": "Odoo Community",
+      "edition": "Community Edition",
+      "repository": "https://github.com/odoo/odoo",
+      "website": "https://www.odoo.com/page/community",
+      "summary": "A broad modular business suite spanning finance, sales, inventory, purchasing, manufacturing, and more.",
+      "problem": "Replaces disconnected back-office tools with a configurable suite and shared operational data.",
+      "ideal_for": "Organizations that want a modular ERP platform and have an implementation partner or internal technical team.",
+      "department_ids": [
+        "finance",
+        "operations"
+      ],
+      "category_ids": [
+        "erp-accounting",
+        "procurement-p2p"
+      ],
+      "buyer_roles": [
+        "CFO",
+        "COO",
+        "ERP lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "lgpl-3",
+      "maturity": "anchor",
+      "editorial_score": 98,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://translate.odoo.com/",
+      "edition_boundary": "Community modules are LGPL; Odoo Enterprise modules use a separate proprietary license.",
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Odoo Community",
+        "Community Edition",
+        "odoo",
+        "community"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "erpnext",
+      "name": "ERPNext",
+      "edition": "Open Source",
+      "repository": "https://github.com/frappe/erpnext",
+      "website": "https://frappe.io/erpnext",
+      "summary": "A full ERP for accounting, procurement, stock, manufacturing, projects, CRM, and service operations.",
+      "problem": "Gives growing companies one auditable system for finance and operational workflows without per-module licensing.",
+      "ideal_for": "SMBs and mid-market organizations that value flexible workflows and a strong services ecosystem.",
+      "department_ids": [
+        "finance",
+        "operations"
+      ],
+      "category_ids": [
+        "erp-accounting",
+        "procurement-p2p"
+      ],
+      "buyer_roles": [
+        "CFO",
+        "Finance lead",
+        "Operations lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "anchor",
+      "editorial_score": 97,
+      "english_support": "verified",
+      "greek_support": "partial",
+      "greek_evidence": "https://translate.erpnext.com/",
+      "edition_boundary": null,
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "ERPNext",
+        "Open Source",
+        "erpnext"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "dolibarr",
+      "name": "Dolibarr",
+      "edition": "Open Source",
+      "repository": "https://github.com/Dolibarr/dolibarr",
+      "website": "https://www.dolibarr.org/",
+      "summary": "A long-running ERP and CRM for invoicing, accounting, orders, suppliers, inventory, and projects.",
+      "problem": "Provides approachable business administration for companies that need useful modules without a heavyweight ERP program.",
+      "ideal_for": "Small and mid-sized companies, associations, and regional service businesses.",
+      "department_ids": [
+        "finance",
+        "operations"
+      ],
+      "category_ids": [
+        "erp-accounting",
+        "sme-accounting",
+        "procurement-p2p"
+      ],
+      "buyer_roles": [
+        "Finance lead",
+        "Business owner",
+        "Operations manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3-plus",
+      "maturity": "established",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://explore.transifex.com/dolibarr-association/dolibarr/",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Dolibarr",
+        "Open Source",
+        "dolibarr"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "bigcapital",
+      "name": "Bigcapital",
+      "edition": "Open Source",
+      "repository": "https://github.com/bigcapitalhq/bigcapital",
+      "website": "https://bigcapital.app/",
+      "summary": "Modern double-entry accounting and inventory for small and medium businesses.",
+      "problem": "Centralizes invoices, bills, expenses, inventory, and financial statements in a modern web application.",
+      "ideal_for": "SMBs seeking an extensible QuickBooks or Xero-style accounting system.",
+      "department_ids": [
+        "finance"
+      ],
+      "category_ids": [
+        "erp-accounting",
+        "sme-accounting"
+      ],
+      "buyer_roles": [
+        "CFO",
+        "Accountant",
+        "Business owner"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 74,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Bigcapital",
+        "Open Source",
+        "bigcapital"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "frappe-books",
+      "name": "Frappe Books",
+      "edition": "Open Source",
+      "repository": "https://github.com/frappe/books",
+      "website": "https://frappe.io/books",
+      "summary": "Offline-friendly desktop accounting with invoicing, double-entry books, and financial reports.",
+      "problem": "Gives small businesses a focused accounting application that can operate locally without a complex server estate.",
+      "ideal_for": "Small companies and finance teams that prefer desktop-first, offline-capable bookkeeping.",
+      "department_ids": [
+        "finance"
+      ],
+      "category_ids": [
+        "sme-accounting"
+      ],
+      "buyer_roles": [
+        "Accountant",
+        "Bookkeeper",
+        "Business owner"
+      ],
+      "company_sizes": [
+        "Small business"
+      ],
+      "deployment_modes": [
+        "Desktop"
+      ],
+      "service_types": [
+        "Migration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 72,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Frappe Books",
+        "Open Source",
+        "frappe",
+        "books"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "lago",
+      "name": "Lago",
+      "edition": "Open Source",
+      "repository": "https://github.com/getlago/lago",
+      "website": "https://www.getlago.com/",
+      "summary": "API-first metering and usage-based billing for complex subscription pricing.",
+      "problem": "Separates billing logic from product code and supports subscriptions, usage, credits, and invoicing.",
+      "ideal_for": "SaaS and platform businesses with evolving or consumption-based pricing.",
+      "department_ids": [
+        "finance"
+      ],
+      "category_ids": [
+        "subscription-billing"
+      ],
+      "buyer_roles": [
+        "CFO",
+        "Billing lead",
+        "VP Engineering"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 82,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Lago",
+        "Open Source",
+        "lago"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "kill-bill",
+      "name": "Kill Bill",
+      "edition": "Open Source",
+      "repository": "https://github.com/killbill/killbill",
+      "website": "https://killbill.io/",
+      "summary": "Mature subscription billing and payments infrastructure designed for extensibility and scale.",
+      "problem": "Handles complex catalogs, subscriptions, invoices, payments, entitlements, and billing plugins.",
+      "ideal_for": "Mid-market and enterprise subscription businesses with demanding billing requirements.",
+      "department_ids": [
+        "finance"
+      ],
+      "category_ids": [
+        "subscription-billing"
+      ],
+      "buyer_roles": [
+        "CFO",
+        "Payments lead",
+        "Platform architect"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "apache-2",
+      "maturity": "established",
+      "editorial_score": 78,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Kill Bill",
+        "Open Source",
+        "kill",
+        "bill"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "frappe-hr",
+      "name": "Frappe HR",
+      "edition": "Open Source",
+      "repository": "https://github.com/frappe/hrms",
+      "website": "https://frappe.io/hr",
+      "summary": "HR and payroll covering employee records, recruitment, attendance, leave, performance, and payroll.",
+      "problem": "Connects the employee lifecycle to structured approvals and operational HR workflows.",
+      "ideal_for": "Growing companies that want an extensible HRIS and can localize payroll rules.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "hris-payroll",
+        "recruiting-ats",
+        "time-tracking"
+      ],
+      "buyer_roles": [
+        "CHRO",
+        "HR operations",
+        "Payroll lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "established",
+      "editorial_score": 86,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Frappe HR",
+        "Open Source",
+        "frappe",
+        "hr"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "orangehrm",
+      "name": "OrangeHRM",
+      "edition": "Starter",
+      "repository": "https://github.com/orangehrm/orangehrm",
+      "website": "https://www.orangehrm.com/open-source",
+      "summary": "A long-established HR management system for employee data, leave, time, and core HR processes.",
+      "problem": "Standardizes essential people operations for organizations moving away from spreadsheets.",
+      "ideal_for": "SMBs wanting a recognizable HRIS with an established implementation market.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "hris-payroll"
+      ],
+      "buyer_roles": [
+        "HR director",
+        "HR operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "established",
+      "editorial_score": 77,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The Starter application is GPL; advanced paid modules and services are separate.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "OrangeHRM",
+        "Starter",
+        "orangehrm"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "horilla",
+      "name": "Horilla",
+      "edition": "Open Source",
+      "repository": "https://github.com/horilla/horilla-hr",
+      "website": "https://www.horilla.com/",
+      "summary": "A modern Django HRMS with recruitment, onboarding, attendance, payroll, performance, and assets.",
+      "problem": "Brings broad HR workflows into one customizable web platform.",
+      "ideal_for": "SMBs seeking a modern interface and Python-based customization path.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "hris-payroll",
+        "recruiting-ats"
+      ],
+      "buyer_roles": [
+        "HR manager",
+        "People operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "lgpl-2.1",
+      "maturity": "established",
+      "editorial_score": 63,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Horilla",
+        "Open Source",
+        "horilla"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "opencats",
+      "name": "OpenCATS",
+      "edition": "Community",
+      "repository": "https://github.com/opencats/OpenCATS",
+      "website": "https://www.opencats.org/",
+      "summary": "A focused applicant tracking system and recruitment CRM for internal and agency hiring teams.",
+      "problem": "Replaces inbox-and-spreadsheet recruiting with candidate records, job pipelines, and search.",
+      "ideal_for": "Budget-conscious recruiting teams that need a focused, established ATS.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "recruiting-ats"
+      ],
+      "buyer_roles": [
+        "Head of Talent",
+        "Recruiter"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "mpl-2",
+      "maturity": "niche-leader",
+      "editorial_score": 52,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "Modern OpenCATS code is MPL 2.0; inherited legacy CATS Project code carries its historical license and should be reviewed before redistribution.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "OpenCATS",
+        "Community",
+        "opencats"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "kimai",
+      "name": "Kimai",
+      "edition": "Open Source",
+      "repository": "https://github.com/kimai/kimai",
+      "website": "https://www.kimai.org/",
+      "summary": "Multi-user time tracking with teams, projects, approvals, reporting, exports, and invoicing.",
+      "problem": "Creates reliable timesheet and utilization data for payroll, billing, and project control.",
+      "ideal_for": "Professional services, agencies, consultancies, and internal project teams.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "time-tracking"
+      ],
+      "buyer_roles": [
+        "HR operations",
+        "Professional services lead",
+        "Finance lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 75,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Kimai",
+        "Open Source",
+        "kimai"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "documenso",
+      "name": "Documenso",
+      "edition": "Community Edition",
+      "repository": "https://github.com/documenso/documenso",
+      "website": "https://documenso.com/",
+      "summary": "A modern self-hostable platform for preparing, sending, and signing digital documents.",
+      "problem": "Keeps document-signing workflows and audit data under organizational control.",
+      "ideal_for": "HR, legal, sales, and operations teams replacing proprietary e-signature subscriptions.",
+      "department_ids": [
+        "hr",
+        "sales-support"
+      ],
+      "category_ids": [
+        "esignatures",
+        "proposals-signatures"
+      ],
+      "buyer_roles": [
+        "HR director",
+        "Sales operations",
+        "Legal operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "Community code is AGPL; commercial plans and enterprise services are offered separately.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Documenso",
+        "Community Edition",
+        "documenso"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "moodle",
+      "name": "Moodle",
+      "edition": "Open Source",
+      "repository": "https://github.com/moodle/moodle",
+      "website": "https://moodle.org/",
+      "summary": "The established learning management platform for courses, assessment, credentials, and learning ecosystems.",
+      "problem": "Delivers structured training at scale while retaining control of learning data and integrations.",
+      "ideal_for": "Enterprises, education providers, public bodies, and regulated training programs.",
+      "department_ids": [
+        "hr"
+      ],
+      "category_ids": [
+        "learning"
+      ],
+      "buyer_roles": [
+        "Learning and development",
+        "HR director",
+        "Training manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3-plus",
+      "maturity": "anchor",
+      "editorial_score": 95,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://lang.moodle.org/",
+      "edition_boundary": null,
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Moodle",
+        "Open Source",
+        "moodle"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "twenty",
+      "name": "Twenty",
+      "edition": "Open Source",
+      "repository": "https://github.com/twentyhq/twenty",
+      "website": "https://twenty.com/",
+      "summary": "A modern, extensible CRM designed as an open alternative to Salesforce.",
+      "problem": "Gives technical revenue teams a flexible data model, workflows, and clean pipeline experience.",
+      "ideal_for": "Product-led and technical organizations that want to tailor CRM objects and automation.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "crm-pipeline"
+      ],
+      "buyer_roles": [
+        "VP Sales",
+        "Revenue operations",
+        "CRO"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 95,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Twenty",
+        "Open Source",
+        "twenty"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "suitecrm",
+      "name": "SuiteCRM",
+      "edition": "Community",
+      "repository": "https://github.com/SuiteCRM/SuiteCRM",
+      "website": "https://suitecrm.com/",
+      "summary": "A mature CRM covering accounts, leads, opportunities, quotes, campaigns, workflows, and service cases.",
+      "problem": "Provides deep traditional CRM functionality without enterprise seat licensing.",
+      "ideal_for": "Mid-market sales organizations needing rich CRM modules and partner-led customization.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "crm-pipeline"
+      ],
+      "buyer_roles": [
+        "Sales director",
+        "Revenue operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 82,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "SuiteCRM",
+        "Community",
+        "suitecrm"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "espocrm",
+      "name": "EspoCRM",
+      "edition": "Open Source",
+      "repository": "https://github.com/espocrm/espocrm",
+      "website": "https://www.espocrm.com/",
+      "summary": "A fast, customizable CRM with sales automation, email, calendars, workflows, and a REST API.",
+      "problem": "Creates a practical 360-degree customer view without a complex enterprise CRM rollout.",
+      "ideal_for": "SMBs and mid-market teams that want a focused CRM and PHP customization ecosystem.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "crm-pipeline"
+      ],
+      "buyer_roles": [
+        "Sales manager",
+        "CRM administrator"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 75,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "EspoCRM",
+        "Open Source",
+        "espocrm"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "frappe-crm",
+      "name": "Frappe CRM",
+      "edition": "Open Source",
+      "repository": "https://github.com/frappe/crm",
+      "website": "https://frappe.io/crm",
+      "summary": "A clean, modern CRM built on the extensible Frappe framework.",
+      "problem": "Provides lightweight lead and deal management that can be adapted to specific sales processes.",
+      "ideal_for": "SMBs already using Frappe or wanting a customizable open CRM.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "crm-pipeline"
+      ],
+      "buyer_roles": [
+        "Sales manager",
+        "Revenue operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 70,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Frappe CRM",
+        "Open Source",
+        "frappe",
+        "crm"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "easyappointments",
+      "name": "Easy!Appointments",
+      "edition": "Open Source",
+      "repository": "https://github.com/alextselegidis/easyappointments",
+      "website": "https://easyappointments.org/",
+      "summary": "A self-hosted appointment scheduler with services, providers, availability, and calendar synchronization.",
+      "problem": "Lets customers book available time without manual email coordination or per-seat scheduling fees.",
+      "ideal_for": "Service businesses, clinics, consultancies, and customer-facing sales teams.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "appointment-scheduling"
+      ],
+      "buyer_roles": [
+        "Sales operations",
+        "Service manager",
+        "Business owner"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "established",
+      "editorial_score": 72,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Easy!Appointments",
+        "Open Source",
+        "easyappointments"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "chatwoot",
+      "name": "Chatwoot",
+      "edition": "Community Edition",
+      "repository": "https://github.com/chatwoot/chatwoot",
+      "website": "https://www.chatwoot.com/",
+      "summary": "Omnichannel customer support across live chat, email, social, messaging, and a help center.",
+      "problem": "Unifies fragmented customer conversations and contact context into a collaborative support workspace.",
+      "ideal_for": "Digital businesses replacing Intercom, Zendesk, or scattered shared inboxes.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "customer-support"
+      ],
+      "buyer_roles": [
+        "Head of Support",
+        "Customer success",
+        "COO"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 95,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The community application is MIT; paid cloud and enterprise capabilities are separate offerings.",
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Chatwoot",
+        "Community Edition",
+        "chatwoot"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "zammad",
+      "name": "Zammad",
+      "edition": "Open Source",
+      "repository": "https://github.com/zammad/zammad",
+      "website": "https://zammad.org/",
+      "summary": "A polished service desk with email, chat, phone, knowledge base, SLAs, and automation.",
+      "problem": "Provides structured, auditable ticket handling across channels for support and internal service teams.",
+      "ideal_for": "Support desks and IT service teams that need mature workflows and a strong operator UI.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "customer-support"
+      ],
+      "buyer_roles": [
+        "Head of Support",
+        "Service desk manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 83,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Zammad",
+        "Open Source",
+        "zammad"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "freescout",
+      "name": "FreeScout",
+      "edition": "Open Source",
+      "repository": "https://github.com/freescout-help-desk/freescout",
+      "website": "https://freescout.net/",
+      "summary": "A lightweight help desk and shared mailbox inspired by Help Scout.",
+      "problem": "Turns shared support email into assignable, searchable conversations with team context.",
+      "ideal_for": "Small support teams that want simple deployment and familiar email workflows.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "customer-support"
+      ],
+      "buyer_roles": [
+        "Support manager",
+        "Customer success"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 72,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "FreeScout",
+        "Open Source",
+        "freescout"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "bookstack",
+      "name": "BookStack",
+      "edition": "Open Source",
+      "repository": "https://github.com/BookStackApp/BookStack",
+      "website": "https://www.bookstackapp.com/",
+      "summary": "An approachable wiki organized around shelves, books, chapters, and pages.",
+      "problem": "Makes internal and customer-facing knowledge easy to structure, own, search, and maintain.",
+      "ideal_for": "Teams that want an opinionated, user-friendly knowledge base with simple administration.",
+      "department_ids": [
+        "sales-support",
+        "management"
+      ],
+      "category_ids": [
+        "knowledge-base",
+        "knowledge-management"
+      ],
+      "buyer_roles": [
+        "Support operations",
+        "Knowledge manager",
+        "IT manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "partial",
+      "greek_evidence": "https://crowdin.com/project/bookstack",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "BookStack",
+        "Open Source",
+        "bookstack"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "fider",
+      "name": "Fider",
+      "edition": "Open Source",
+      "repository": "https://github.com/getfider/fider",
+      "website": "https://fider.io/",
+      "summary": "A public feedback portal for collecting ideas, voting, discussion, and status updates.",
+      "problem": "Creates a transparent, prioritized customer-feedback loop outside support tickets and spreadsheets.",
+      "ideal_for": "Product and customer-success teams that need an open alternative to proprietary feedback boards.",
+      "department_ids": [
+        "sales-support"
+      ],
+      "category_ids": [
+        "customer-feedback"
+      ],
+      "buyer_roles": [
+        "Product manager",
+        "Customer success",
+        "Support lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "established",
+      "editorial_score": 68,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Fider",
+        "Open Source",
+        "fider"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "mautic",
+      "name": "Mautic",
+      "edition": "Community",
+      "repository": "https://github.com/mautic/mautic",
+      "website": "https://www.mautic.org/",
+      "summary": "A comprehensive marketing automation platform for contacts, segments, campaigns, scoring, email, and journeys.",
+      "problem": "Brings lead nurturing and campaign automation under the company's data and infrastructure control.",
+      "ideal_for": "B2B and lifecycle marketing teams with implementation and deliverability expertise.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "marketing-automation"
+      ],
+      "buyer_roles": [
+        "CMO",
+        "Marketing operations",
+        "Demand generation"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3-plus",
+      "maturity": "established",
+      "editorial_score": 85,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Mautic",
+        "Community",
+        "mautic"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "listmonk",
+      "name": "listmonk",
+      "edition": "Open Source",
+      "repository": "https://github.com/knadh/listmonk",
+      "website": "https://listmonk.app/",
+      "summary": "A high-performance newsletter and mailing-list manager delivered as a compact self-hosted application.",
+      "problem": "Sends high-volume campaigns and manages subscribers without paying a platform tax on every contact.",
+      "ideal_for": "Technical marketing teams that already control their SMTP or transactional email provider.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "email-newsletters"
+      ],
+      "buyer_roles": [
+        "Marketing operations",
+        "Growth lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 87,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "listmonk",
+        "Open Source",
+        "listmonk"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "ghost",
+      "name": "Ghost",
+      "edition": "Open Source",
+      "repository": "https://github.com/TryGhost/Ghost",
+      "website": "https://ghost.org/",
+      "summary": "A modern publishing and membership platform for websites, newsletters, and subscriptions.",
+      "problem": "Combines fast editorial publishing, audience ownership, memberships, and email distribution.",
+      "ideal_for": "Content-led businesses, publishers, thought-leadership teams, and membership products.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "cms-content"
+      ],
+      "buyer_roles": [
+        "Content lead",
+        "CMO",
+        "Publisher"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 96,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Ghost",
+        "Open Source",
+        "ghost"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "strapi",
+      "name": "Strapi Community",
+      "edition": "Community Edition",
+      "repository": "https://github.com/strapi/strapi",
+      "website": "https://strapi.io/",
+      "summary": "A popular headless CMS with customizable content types, APIs, roles, and a large plugin ecosystem.",
+      "problem": "Gives marketing and engineering teams a shared content backend for websites, apps, and digital products.",
+      "ideal_for": "Digital teams that want API-first content management and JavaScript extensibility.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "cms-content"
+      ],
+      "buyer_roles": [
+        "Head of Digital",
+        "Content operations",
+        "Engineering lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 97,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The community core is MIT; enterprise features and cloud services are separately licensed.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Strapi Community",
+        "Community Edition",
+        "strapi"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "postiz",
+      "name": "Postiz",
+      "edition": "Open Source",
+      "repository": "https://github.com/gitroomhq/postiz-app",
+      "website": "https://postiz.com/",
+      "summary": "A modern social media scheduling and publishing platform with collaborative workflows.",
+      "problem": "Centralizes planning and publishing across social channels in a self-hostable workspace.",
+      "ideal_for": "Marketing teams and agencies replacing proprietary social scheduling suites.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "social-scheduling"
+      ],
+      "buyer_roles": [
+        "Social media lead",
+        "Marketing operations",
+        "Agency owner"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 91,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Postiz",
+        "Open Source",
+        "postiz"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "matomo",
+      "name": "Matomo",
+      "edition": "Open Source",
+      "repository": "https://github.com/matomo-org/matomo",
+      "website": "https://matomo.org/",
+      "summary": "A mature privacy-oriented web analytics platform with traffic, goals, campaigns, and reporting.",
+      "problem": "Provides Google Analytics-style insight while retaining first-party control of visitor data.",
+      "ideal_for": "Organizations with privacy, compliance, or data-residency requirements.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "web-product-analytics"
+      ],
+      "buyer_roles": [
+        "Marketing analytics",
+        "DPO",
+        "Head of Digital"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "gpl-3-plus",
+      "maturity": "anchor",
+      "editorial_score": 92,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://hosted.weblate.org/projects/matomo/",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Matomo",
+        "Open Source",
+        "matomo"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "plausible",
+      "name": "Plausible Analytics",
+      "edition": "Community Edition",
+      "repository": "https://github.com/plausible/analytics",
+      "website": "https://plausible.io/",
+      "summary": "A lightweight, privacy-focused web analytics product with a deliberately simple reporting experience.",
+      "problem": "Makes essential website analytics understandable while reducing cookie and tracking complexity.",
+      "ideal_for": "Marketing teams that want clear, privacy-friendly website metrics rather than a large analytics suite.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "web-product-analytics"
+      ],
+      "buyer_roles": [
+        "Marketing lead",
+        "Founder",
+        "DPO"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Plausible Analytics",
+        "Community Edition",
+        "plausible"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "posthog-foss",
+      "name": "PostHog FOSS",
+      "edition": "FOSS Build",
+      "repository": "https://github.com/PostHog/posthog-foss",
+      "website": "https://posthog.com/",
+      "summary": "An open product-analytics stack for events, funnels, retention, feature flags, experiments, and session replay.",
+      "problem": "Connects product behavior to experimentation and delivery in a single technical platform.",
+      "ideal_for": "Software companies with engineering support and sophisticated product analytics needs.",
+      "department_ids": [
+        "marketing"
+      ],
+      "category_ids": [
+        "web-product-analytics"
+      ],
+      "buyer_roles": [
+        "Head of Product",
+        "Growth lead",
+        "Data lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Data services"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 96,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "This profile points to the FOSS-only repository; PostHog's main monorepo also contains separately licensed enterprise code.",
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "PostHog FOSS",
+        "FOSS Build",
+        "posthog",
+        "foss"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "metabase",
+      "name": "Metabase OSS",
+      "edition": "Open Source Edition",
+      "repository": "https://github.com/metabase/metabase",
+      "website": "https://www.metabase.com/",
+      "summary": "Approachable business intelligence for questions, dashboards, SQL, alerts, and embedded analytics.",
+      "problem": "Lets non-technical teams answer recurring data questions without waiting for bespoke analyst reports.",
+      "ideal_for": "SMBs through enterprises seeking fast self-service BI and straightforward deployment.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "bi-dashboards"
+      ],
+      "buyer_roles": [
+        "Head of Data",
+        "Analytics lead",
+        "COO"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 97,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The open-source edition is AGPL; commercial Metabase editions have a separate license.",
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Metabase OSS",
+        "Open Source Edition",
+        "metabase"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "apache-superset",
+      "name": "Apache Superset",
+      "edition": "Open Source",
+      "repository": "https://github.com/apache/superset",
+      "website": "https://superset.apache.org/",
+      "summary": "An enterprise-scale data exploration and visualization platform with rich dashboards and SQL tooling.",
+      "problem": "Serves many analytical users and data sources through a scalable, extensible BI layer.",
+      "ideal_for": "Data-mature mid-market and enterprise organizations with platform engineering capacity.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "bi-dashboards"
+      ],
+      "buyer_roles": [
+        "Head of Data",
+        "BI lead",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 97,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Apache Superset",
+        "Open Source",
+        "apache",
+        "superset"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "redash",
+      "name": "Redash",
+      "edition": "Open Source",
+      "repository": "https://github.com/getredash/redash",
+      "website": "https://redash.io/",
+      "summary": "A well-known SQL-first query, visualization, dashboard, and alerting tool.",
+      "problem": "Gives analysts a simple shared home for database queries and lightweight dashboards.",
+      "ideal_for": "Technical analytics teams that prefer direct SQL workflows and a compact BI surface.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "bi-dashboards"
+      ],
+      "buyer_roles": [
+        "Analytics lead",
+        "Data analyst"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "bsd-2",
+      "maturity": "anchor",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Redash",
+        "Open Source",
+        "redash"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "lightdash",
+      "name": "Lightdash",
+      "edition": "Open Source",
+      "repository": "https://github.com/lightdash/lightdash",
+      "website": "https://www.lightdash.com/",
+      "summary": "A dbt-native BI layer for governed metrics, self-service exploration, and analytics as code.",
+      "problem": "Turns dbt models into consistent business metrics without duplicating semantic logic in dashboards.",
+      "ideal_for": "Modern data teams already standardized on dbt and software-style analytics workflows.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "bi-dashboards"
+      ],
+      "buyer_roles": [
+        "Analytics engineer",
+        "Head of Data"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Data services"
+      ],
+      "license_id": "mit",
+      "maturity": "established",
+      "editorial_score": 80,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The open-source core is MIT; the repository contains a separately licensed enterprise directory.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Lightdash",
+        "Open Source",
+        "lightdash"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "apache-airflow",
+      "name": "Apache Airflow",
+      "edition": "Open Source",
+      "repository": "https://github.com/apache/airflow",
+      "website": "https://airflow.apache.org/",
+      "summary": "The established platform for authoring, scheduling, and monitoring data workflows as code.",
+      "problem": "Makes complex batch data pipelines maintainable, observable, versioned, and recoverable.",
+      "ideal_for": "Data engineering organizations with Python skills and production orchestration needs.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "elt-orchestration"
+      ],
+      "buyer_roles": [
+        "Data engineering lead",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 98,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Apache Airflow",
+        "Open Source",
+        "apache",
+        "airflow"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "meltano",
+      "name": "Meltano",
+      "edition": "Open Source",
+      "repository": "https://github.com/meltano/meltano",
+      "website": "https://meltano.com/",
+      "summary": "A declarative, code-first data-integration engine with a broad Singer connector ecosystem.",
+      "problem": "Standardizes extraction and loading projects while keeping pipeline configuration version-controlled.",
+      "ideal_for": "Lean data teams that prefer composable tooling and code-first deployment.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "elt-orchestration"
+      ],
+      "buyer_roles": [
+        "Data engineering lead",
+        "Analytics engineer"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Data services"
+      ],
+      "license_id": "mit",
+      "maturity": "established",
+      "editorial_score": 70,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Meltano",
+        "Open Source",
+        "meltano"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "openmetadata",
+      "name": "OpenMetadata",
+      "edition": "Open Source",
+      "repository": "https://github.com/open-metadata/OpenMetadata",
+      "website": "https://open-metadata.org/",
+      "summary": "An integrated metadata, discovery, lineage, quality, observability, and governance platform.",
+      "problem": "Creates trusted context around enterprise data so people and systems can discover and govern it.",
+      "ideal_for": "Data-platform teams formalizing ownership, lineage, quality, and AI-ready data context.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "data-governance"
+      ],
+      "buyer_roles": [
+        "Chief Data Officer",
+        "Data governance",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 89,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "OpenMetadata",
+        "Open Source",
+        "openmetadata"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "datahub",
+      "name": "DataHub",
+      "edition": "Open Source",
+      "repository": "https://github.com/datahub-project/datahub",
+      "website": "https://datahub.com/",
+      "summary": "A scalable metadata platform for discovery, lineage, ownership, governance, and data products.",
+      "problem": "Makes a complex data estate searchable and understandable with continuously ingested metadata.",
+      "ideal_for": "Large data organizations needing a developer-friendly, extensible catalog and metadata graph.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "data-governance"
+      ],
+      "buyer_roles": [
+        "Chief Data Officer",
+        "Data platform lead",
+        "Data governance"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Data services"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 90,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "DataHub",
+        "Open Source",
+        "datahub"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "clickhouse",
+      "name": "ClickHouse",
+      "edition": "Open Source",
+      "repository": "https://github.com/ClickHouse/ClickHouse",
+      "website": "https://clickhouse.com/",
+      "summary": "A high-performance column-oriented database for real-time analytics and large-scale reporting.",
+      "problem": "Runs fast analytical queries across very large event and operational datasets at efficient cost.",
+      "ideal_for": "Engineering and data teams building observability, product analytics, or real-time BI platforms.",
+      "department_ids": [
+        "data"
+      ],
+      "category_ids": [
+        "analytical-database"
+      ],
+      "buyer_roles": [
+        "Data platform lead",
+        "CTO",
+        "Analytics engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Data services"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 98,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "ClickHouse",
+        "Open Source",
+        "clickhouse"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "inventree",
+      "name": "InvenTree",
+      "edition": "Open Source",
+      "repository": "https://github.com/inventree/InvenTree",
+      "website": "https://inventree.org/",
+      "summary": "A modern inventory and part-management system with stock, purchasing, builds, BOMs, and APIs.",
+      "problem": "Creates accurate parts and stock control for product, manufacturing, and technical operations.",
+      "ideal_for": "Hardware teams, manufacturers, labs, and technical inventory operations.",
+      "department_ids": [
+        "operations"
+      ],
+      "category_ids": [
+        "inventory-wms"
+      ],
+      "buyer_roles": [
+        "Operations manager",
+        "Supply chain lead",
+        "Manufacturing lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "mit",
+      "maturity": "established",
+      "editorial_score": 78,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "InvenTree",
+        "Open Source",
+        "inventree"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "openboxes",
+      "name": "OpenBoxes",
+      "edition": "Open Source",
+      "repository": "https://github.com/openboxes/openboxes",
+      "website": "https://openboxes.com/",
+      "summary": "A mature supply-chain and inventory system shaped by healthcare and humanitarian logistics.",
+      "problem": "Tracks inventory, stock movements, shipments, purchasing, and replenishment across facilities.",
+      "ideal_for": "Healthcare, NGOs, multi-site logistics, and operations with traceable stock flows.",
+      "department_ids": [
+        "operations"
+      ],
+      "category_ids": [
+        "inventory-wms"
+      ],
+      "buyer_roles": [
+        "Supply chain director",
+        "Warehouse manager",
+        "COO"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support"
+      ],
+      "license_id": "epl-1",
+      "maturity": "niche-leader",
+      "editorial_score": 55,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "OpenBoxes",
+        "Open Source",
+        "openboxes"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "snipe-it",
+      "name": "Snipe-IT",
+      "edition": "Open Source",
+      "repository": "https://github.com/grokability/snipe-it",
+      "website": "https://snipeitapp.com/",
+      "summary": "A focused IT asset and software-license management system with assignments and lifecycle history.",
+      "problem": "Answers who has each asset, where it is, what it cost, and when it must be renewed or replaced.",
+      "ideal_for": "IT and operations teams that need a dependable ITAM register without a full ITSM rollout.",
+      "department_ids": [
+        "operations",
+        "it-security"
+      ],
+      "category_ids": [
+        "asset-management",
+        "itsm-assets"
+      ],
+      "buyer_roles": [
+        "IT manager",
+        "Asset manager",
+        "Finance operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 89,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Snipe-IT",
+        "Open Source",
+        "snipe",
+        "it"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "glpi",
+      "name": "GLPI",
+      "edition": "Open Source",
+      "repository": "https://github.com/glpi-project/glpi",
+      "website": "https://glpi-project.org/",
+      "summary": "A broad IT management suite combining service desk, assets, licenses, CMDB, contracts, and data-center records.",
+      "problem": "Unifies IT service and asset processes with auditable lifecycle and support records.",
+      "ideal_for": "Mid-sized and enterprise IT teams wanting an extensible ITSM and ITAM platform.",
+      "department_ids": [
+        "operations",
+        "it-security"
+      ],
+      "category_ids": [
+        "asset-management",
+        "itsm-assets"
+      ],
+      "buyer_roles": [
+        "IT director",
+        "Service desk manager",
+        "Asset manager"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "established",
+      "editorial_score": 82,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "GLPI",
+        "Open Source",
+        "glpi"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "paperless-ngx",
+      "name": "Paperless-ngx",
+      "edition": "Open Source",
+      "repository": "https://github.com/paperless-ngx/paperless-ngx",
+      "website": "https://docs.paperless-ngx.com/",
+      "summary": "A searchable document archive with ingestion, OCR, tagging, correspondents, document types, and workflows.",
+      "problem": "Turns scanned and digital documents into a searchable, categorized operational archive.",
+      "ideal_for": "Back offices and document-heavy teams that need private OCR and retention workflows.",
+      "department_ids": [
+        "operations"
+      ],
+      "category_ids": [
+        "document-management"
+      ],
+      "buyer_roles": [
+        "Operations manager",
+        "Office manager",
+        "Compliance lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "anchor",
+      "editorial_score": 94,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Paperless-ngx",
+        "Open Source",
+        "paperless",
+        "ngx"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "netbox",
+      "name": "NetBox",
+      "edition": "Open Source",
+      "repository": "https://github.com/netbox-community/netbox",
+      "website": "https://netbox.dev/",
+      "summary": "The established source of truth for networks, IPAM, data centers, devices, circuits, and infrastructure automation.",
+      "problem": "Replaces network spreadsheets with a structured model and API that can drive automation.",
+      "ideal_for": "Infrastructure and network teams operating non-trivial on-premise or hybrid estates.",
+      "department_ids": [
+        "operations",
+        "it-security"
+      ],
+      "category_ids": [
+        "infrastructure-inventory",
+        "network-ipam"
+      ],
+      "buyer_roles": [
+        "Network manager",
+        "Infrastructure lead",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 95,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "NetBox",
+        "Open Source",
+        "netbox"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "keycloak",
+      "name": "Keycloak",
+      "edition": "Open Source",
+      "repository": "https://github.com/keycloak/keycloak",
+      "website": "https://www.keycloak.org/",
+      "summary": "Enterprise identity and access management with SSO, OIDC, SAML, federation, MFA, and fine-grained authorization.",
+      "problem": "Centralizes application authentication and access policy instead of rebuilding identity in every system.",
+      "ideal_for": "Organizations standardizing workforce or customer identity across many applications.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "iam-sso"
+      ],
+      "buyer_roles": [
+        "CISO",
+        "Identity architect",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 98,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Keycloak",
+        "Open Source",
+        "keycloak"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "authentik",
+      "name": "authentik Community",
+      "edition": "Community Core",
+      "repository": "https://github.com/goauthentik/authentik",
+      "website": "https://goauthentik.io/",
+      "summary": "A flexible identity provider and authentication layer with modern flows, federation, and application proxies.",
+      "problem": "Adds SSO and policy to internal or customer applications with a modern administrative experience.",
+      "ideal_for": "Technical IT teams seeking an approachable identity platform and reverse-proxy integration.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "iam-sso"
+      ],
+      "buyer_roles": [
+        "IT security",
+        "Platform engineering",
+        "Systems administrator"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 88,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "Core code is MIT; the authentik/enterprise directory is separately licensed.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "authentik Community",
+        "Community Core",
+        "authentik"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "grafana",
+      "name": "Grafana OSS",
+      "edition": "Open Source",
+      "repository": "https://github.com/grafana/grafana",
+      "website": "https://grafana.com/oss/grafana/",
+      "summary": "The ubiquitous visualization and observability interface for metrics, logs, traces, and operational data.",
+      "problem": "Creates shared dashboards and alerting across heterogeneous infrastructure and application data sources.",
+      "ideal_for": "Any technical organization operating production systems and shared observability practices.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "observability"
+      ],
+      "buyer_roles": [
+        "SRE lead",
+        "Platform engineering",
+        "IT operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 99,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "Grafana OSS is AGPL; enterprise plugins and services are separately licensed.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Grafana OSS",
+        "Open Source",
+        "grafana"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "prometheus",
+      "name": "Prometheus",
+      "edition": "Open Source",
+      "repository": "https://github.com/prometheus/prometheus",
+      "website": "https://prometheus.io/",
+      "summary": "The cloud-native standard for time-series metrics collection, querying, alerting, and service monitoring.",
+      "problem": "Provides reliable numerical telemetry and alert rules for dynamic infrastructure and applications.",
+      "ideal_for": "Engineering organizations building cloud-native or infrastructure monitoring platforms.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "observability"
+      ],
+      "buyer_roles": [
+        "SRE lead",
+        "Platform engineering",
+        "DevOps"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 99,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Prometheus",
+        "Open Source",
+        "prometheus"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "signoz",
+      "name": "SigNoz Community",
+      "edition": "Community Edition",
+      "repository": "https://github.com/SigNoz/signoz",
+      "website": "https://signoz.io/",
+      "summary": "An OpenTelemetry-native observability platform unifying logs, metrics, traces, dashboards, and alerts.",
+      "problem": "Provides a coherent self-hosted alternative to commercial APM and observability suites.",
+      "ideal_for": "Engineering teams standardizing on OpenTelemetry and wanting one operational interface.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "observability"
+      ],
+      "buyer_roles": [
+        "SRE lead",
+        "Engineering manager",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 91,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The community platform is open source; enterprise features and managed cloud are separate.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "SigNoz Community",
+        "Community Edition",
+        "signoz"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "wazuh",
+      "name": "Wazuh",
+      "edition": "Open Source",
+      "repository": "https://github.com/wazuh/wazuh",
+      "website": "https://wazuh.com/",
+      "summary": "An open security platform for endpoint monitoring, threat detection, log analysis, vulnerability data, and compliance.",
+      "problem": "Consolidates endpoint and security telemetry into actionable detection and compliance workflows.",
+      "ideal_for": "Security teams building a cost-conscious SIEM/XDR and compliance monitoring capability.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "siem-xdr"
+      ],
+      "buyer_roles": [
+        "CISO",
+        "SOC manager",
+        "Security operations"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "gpl-2",
+      "maturity": "anchor",
+      "editorial_score": 90,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Wazuh",
+        "Open Source",
+        "wazuh"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "gitea",
+      "name": "Gitea",
+      "edition": "Open Source",
+      "repository": "https://github.com/go-gitea/gitea",
+      "website": "https://about.gitea.com/",
+      "summary": "A fast, lightweight software-development service for Git hosting, reviews, issues, packages, and actions.",
+      "problem": "Provides private source control and collaboration with modest infrastructure requirements.",
+      "ideal_for": "SMBs, internal engineering groups, and regulated teams wanting simple self-hosted Git services.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "source-control-ci"
+      ],
+      "buyer_roles": [
+        "VP Engineering",
+        "DevOps lead",
+        "IT manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 95,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Gitea",
+        "Open Source",
+        "gitea"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "jenkins",
+      "name": "Jenkins",
+      "edition": "Open Source",
+      "repository": "https://github.com/jenkinsci/jenkins",
+      "website": "https://www.jenkins.io/",
+      "summary": "The established automation server with an enormous plugin ecosystem for CI/CD and operational workflows.",
+      "problem": "Automates repeatable software build, test, release, and infrastructure processes across diverse stacks.",
+      "ideal_for": "Organizations with heterogeneous delivery tooling or substantial existing Jenkins expertise.",
+      "department_ids": [
+        "it-security"
+      ],
+      "category_ids": [
+        "source-control-ci"
+      ],
+      "buyer_roles": [
+        "VP Engineering",
+        "DevOps lead",
+        "Platform engineering"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 96,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Jenkins",
+        "Open Source",
+        "jenkins"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "rocket-chat",
+      "name": "Rocket.Chat",
+      "edition": "Community",
+      "repository": "https://github.com/RocketChat/Rocket.Chat",
+      "website": "https://www.rocket.chat/",
+      "summary": "A large-scale communications platform for channels, direct messaging, federation, apps, and omnichannel workflows.",
+      "problem": "Keeps mission-critical team and customer communication within controlled infrastructure.",
+      "ideal_for": "Organizations needing extensible, self-hosted real-time communication and integrations.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "team-messaging"
+      ],
+      "buyer_roles": [
+        "COO",
+        "CIO",
+        "Internal communications"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "mit",
+      "maturity": "anchor",
+      "editorial_score": 94,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://translations.rocket.chat/",
+      "edition_boundary": "Community code is open source; paid enterprise capabilities and services are separate.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Rocket.Chat",
+        "Community",
+        "rocket",
+        "chat"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "mattermost",
+      "name": "Mattermost Community",
+      "edition": "Community",
+      "repository": "https://github.com/mattermost/mattermost",
+      "website": "https://mattermost.com/",
+      "summary": "Secure collaboration for technical and operational teams, including messaging, playbooks, and workflow integrations.",
+      "problem": "Supports sensitive team coordination and incident work where data control and extensibility matter.",
+      "ideal_for": "Engineering, operations, public sector, and regulated organizations.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "team-messaging"
+      ],
+      "buyer_roles": [
+        "CIO",
+        "Engineering leader",
+        "Security operations"
+      ],
+      "company_sizes": [
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 92,
+      "english_support": "verified",
+      "greek_support": "partial",
+      "greek_evidence": "https://translate.mattermost.com/",
+      "edition_boundary": "Community source is AGPL with documented exceptions; enterprise features use a commercial license.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Mattermost Community",
+        "Community",
+        "mattermost"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "openproject",
+      "name": "OpenProject",
+      "edition": "Community Edition",
+      "repository": "https://github.com/opf/openproject",
+      "website": "https://www.openproject.org/",
+      "summary": "Comprehensive project management with planning, agile boards, roadmaps, time, budgets, meetings, and documentation.",
+      "problem": "Gives management one auditable environment for traditional, agile, and hybrid project delivery.",
+      "ideal_for": "Professional services, public bodies, construction, product teams, and PMOs.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "project-management"
+      ],
+      "buyer_roles": [
+        "PMO director",
+        "COO",
+        "Program manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "gpl-3",
+      "maturity": "anchor",
+      "editorial_score": 89,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://crowdin.com/project/openproject",
+      "edition_boundary": "Community Edition is GPL; enterprise add-ons and support are separate.",
+      "featured": true,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "OpenProject",
+        "Community Edition",
+        "openproject"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "plane",
+      "name": "Plane Community",
+      "edition": "Community Edition",
+      "repository": "https://github.com/makeplane/plane",
+      "website": "https://plane.so/",
+      "summary": "A modern work-management platform for issues, cycles, modules, roadmaps, pages, and product delivery.",
+      "problem": "Provides a contemporary open alternative to Jira, Linear, Monday, and ClickUp.",
+      "ideal_for": "Product and engineering teams that prioritize modern UX and self-hosting.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "project-management"
+      ],
+      "buyer_roles": [
+        "Head of Product",
+        "Engineering manager",
+        "PMO"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 96,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "The Community Edition is AGPL; paid tiers and enterprise features are separate.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Plane Community",
+        "Community Edition",
+        "plane"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "small_team",
+      "active": true
+    },
+    {
+      "slug": "leantime",
+      "name": "Leantime",
+      "edition": "Open Source",
+      "repository": "https://github.com/Leantime/leantime",
+      "website": "https://leantime.io/",
+      "summary": "Goals-focused project management designed for non-project managers and neurodiverse teams.",
+      "problem": "Connects strategy, goals, projects, tasks, time, and retrospectives in an approachable workspace.",
+      "ideal_for": "SMBs, innovation teams, and organizations needing accessible planning and execution.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "project-management"
+      ],
+      "buyer_roles": [
+        "COO",
+        "Team lead",
+        "Program manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 82,
+      "english_support": "verified",
+      "greek_support": "unknown",
+      "greek_evidence": null,
+      "edition_boundary": "Core is AGPL; some plugins may use separate enterprise licenses.",
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Leantime",
+        "Open Source",
+        "leantime"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "nextcloud",
+      "name": "Nextcloud",
+      "edition": "Open Source",
+      "repository": "https://github.com/nextcloud/server",
+      "website": "https://nextcloud.com/",
+      "summary": "A private collaboration cloud for files, sharing, calendars, contacts, communication, and an extensive app ecosystem.",
+      "problem": "Gives organizations control of collaborative data while replacing multiple proprietary workspace services.",
+      "ideal_for": "Any organization prioritizing data sovereignty, private collaboration, and extensibility.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "file-collaboration"
+      ],
+      "buyer_roles": [
+        "CIO",
+        "IT director",
+        "Operations lead"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 97,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://explore.transifex.com/nextcloud/nextcloud/",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Nextcloud",
+        "Open Source",
+        "nextcloud"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    },
+    {
+      "slug": "wikijs",
+      "name": "Wiki.js",
+      "edition": "Open Source",
+      "repository": "https://github.com/requarks/wiki",
+      "website": "https://js.wiki/",
+      "summary": "A modern, extensible wiki with a polished editor, authentication integrations, search, and multiple storage options.",
+      "problem": "Creates a flexible home for technical and organizational knowledge with enterprise authentication options.",
+      "ideal_for": "Technical teams that want a modern Node-based wiki and broad integration choices.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "knowledge-management"
+      ],
+      "buyer_roles": [
+        "Knowledge manager",
+        "Engineering lead",
+        "IT manager"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting"
+      ],
+      "license_id": "agpl-3",
+      "maturity": "anchor",
+      "editorial_score": 91,
+      "english_support": "verified",
+      "greek_support": "partial",
+      "greek_evidence": "https://crowdin.com/project/wiki-js",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Wiki.js",
+        "Open Source",
+        "wikijs"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "solo",
+      "active": true
+    },
+    {
+      "slug": "jitsi-meet",
+      "name": "Jitsi Meet",
+      "edition": "Open Source",
+      "repository": "https://github.com/jitsi/jitsi-meet",
+      "website": "https://jitsi.org/jitsi-meet/",
+      "summary": "A widely deployed secure video-conferencing platform for web and mobile meetings.",
+      "problem": "Provides private virtual meetings without requiring every participant to use a proprietary conferencing account.",
+      "ideal_for": "Organizations, public bodies, service providers, and communities needing controlled video meetings.",
+      "department_ids": [
+        "management"
+      ],
+      "category_ids": [
+        "video-meetings"
+      ],
+      "buyer_roles": [
+        "CIO",
+        "Internal communications",
+        "IT operations"
+      ],
+      "company_sizes": [
+        "Small business",
+        "Mid-market",
+        "Enterprise"
+      ],
+      "deployment_modes": [
+        "Docker",
+        "Kubernetes",
+        "Manual"
+      ],
+      "service_types": [
+        "Deployment",
+        "Migration",
+        "Integration",
+        "Customization",
+        "Training",
+        "Support",
+        "Managed hosting",
+        "Security hardening"
+      ],
+      "license_id": "apache-2",
+      "maturity": "anchor",
+      "editorial_score": 94,
+      "english_support": "verified",
+      "greek_support": "verified",
+      "greek_evidence": "https://translate.jitsi.org/",
+      "edition_boundary": null,
+      "featured": false,
+      "last_verified_at": "2026-08-02",
+      "extra_keywords_en": [
+        "Jitsi Meet",
+        "Open Source",
+        "jitsi",
+        "meet"
+      ],
+      "extra_keywords_el": [],
+      "negative_keywords": [],
+      "delivery_fit": "partner_required",
+      "active": true
+    }
+  ]
+}

@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 
 SourceName = Literal["khmdhs", "ted", "demo"]
 FitBand = Literal["Bid candidate", "Worth reading", "Monitor only", "Ignore"]
+SoftwareMatchStatus = Literal["matched", "insufficient_signals"]
+SoftwareMatchConfidence = Literal["high", "medium", "low"]
+SoftwareMatchSource = Literal["deterministic", "ai_refined"]
+DeliveryFit = Literal["solo", "small_team", "partner_required"]
 
 
 DEFAULT_CPV_CODES = [
@@ -118,6 +122,65 @@ class ActivityRequest(BaseModel):
     limit: int = Field(default=100, ge=1, le=1000)
 
 
+class SoftwareMatchDimension(BaseModel):
+    key: str
+    label: str
+    score: int
+    max_score: int
+    reasons: list[str] = Field(default_factory=list)
+
+
+class ServiceRecommendation(BaseModel):
+    service_type: str
+    label: str
+    confidence: Literal["recommended", "possible"] = "possible"
+    reasons: list[str] = Field(default_factory=list)
+
+
+class SoftwareProduct(BaseModel):
+    slug: str
+    name: str
+    edition: str
+    repository: str
+    website: str
+    summary: str
+    problem: str
+    ideal_for: str
+    department_ids: list[str] = Field(default_factory=list)
+    category_ids: list[str] = Field(default_factory=list)
+    buyer_roles: list[str] = Field(default_factory=list)
+    company_sizes: list[str] = Field(default_factory=list)
+    deployment_modes: list[str] = Field(default_factory=list)
+    service_types: list[str] = Field(default_factory=list)
+    license_id: str
+    maturity: Literal["anchor", "established", "niche-leader"]
+    editorial_score: int = Field(ge=0, le=100)
+    english_support: str
+    greek_support: Literal["verified", "partial", "unavailable", "unknown"]
+    greek_evidence: str | None = None
+    edition_boundary: str | None = None
+    featured: bool = False
+    last_verified_at: date
+    extra_keywords_en: list[str] = Field(default_factory=list)
+    extra_keywords_el: list[str] = Field(default_factory=list)
+    negative_keywords: list[str] = Field(default_factory=list)
+    delivery_fit: DeliveryFit = "small_team"
+    active: bool = True
+
+
+class SoftwareMatch(BaseModel):
+    product: SoftwareProduct
+    score: int = Field(ge=0, le=100)
+    confidence: SoftwareMatchConfidence
+    source: SoftwareMatchSource = "deterministic"
+    dimensions: list[SoftwareMatchDimension] = Field(default_factory=list)
+    matched_signals: list[str] = Field(default_factory=list)
+    service_recommendations: list[ServiceRecommendation] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    catalog_version: str
+
+
 class Opportunity(BaseModel):
     id: str
     source: SourceName
@@ -147,6 +210,8 @@ class Opportunity(BaseModel):
     red_flags: list[str] = Field(default_factory=list)
     recommendation: str = "Monitor"
     package_match: str = "Custom software"
+    software_match_status: SoftwareMatchStatus = "insufficient_signals"
+    software_matches: list[SoftwareMatch] = Field(default_factory=list)
     source_payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -181,6 +246,7 @@ class NeedPattern(BaseModel):
     cpv_families: list[str] = Field(default_factory=list)
     buyers: list[str] = Field(default_factory=list)
     samples: list[PatternOpportunitySample] = Field(default_factory=list)
+    recommended_products: list[SoftwareMatch] = Field(default_factory=list)
 
 
 class NeedPatternRequest(BaseModel):
@@ -463,11 +529,13 @@ class OpportunityChatMessage(BaseModel):
     strategic_advice: str | None = None
     citations: list[OpportunityChatCitation] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
+    model: str | None = None
     created_at: datetime
 
 
 class OpportunityChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4_000)
+    model: str | None = Field(default=None, min_length=1, max_length=80)
 
 
 class OpportunityChatThreadResponse(BaseModel):
@@ -564,11 +632,37 @@ class HealthResponse(BaseModel):
     sources: dict[str, str]
 
 
+class AIModelOption(BaseModel):
+    id: str
+    label: str
+    description: str
+    quality: str
+    recommended: bool = False
+
+
 class ConfigResponse(BaseModel):
     default_cpv_codes: list[str]
     default_keywords: list[str]
     packages: list[dict[str, Any]]
     sources: list[dict[str, str]]
+    default_ai_model: str
+    ai_models: list[AIModelOption]
+    software_catalog_version: str
+    software_catalog_count: int
+    software_match_ai_enabled: bool
+
+
+class SoftwareMatchRefineRequest(BaseModel):
+    opportunity: Opportunity
+    model: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class SoftwareMatchRefineResponse(BaseModel):
+    matches: list[SoftwareMatch] = Field(default_factory=list)
+    match_status: SoftwareMatchStatus = "insufficient_signals"
+    model: str | None = None
+    cached: bool = False
+    catalog_version: str
 
 
 OrganizationRole = Literal["buyer", "supplier", "both"]

@@ -13,6 +13,11 @@ const emptyContext = {
   unreadable_document_labels: [],
 }
 
+const aiModels = [
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', description: 'Fast', quality: 'Fast', recommended: false },
+  { id: 'gpt-5.6', label: 'GPT-5.6 Sol', description: 'Best', quality: 'Best', recommended: true },
+]
+
 const persistedAssistant = {
   id: 2,
   role: 'assistant' as const,
@@ -30,6 +35,7 @@ const persistedAssistant = {
     },
   ],
   suggested_questions: ['Ποια είναι τα παραδοτέα;'],
+  model: 'gpt-5.6',
   created_at: '2026-08-04T10:00:00Z',
 }
 
@@ -57,6 +63,7 @@ describe('Opportunity AI workspace', () => {
   it('switches from Decision Brief to independent Ask AI', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ messages: [], context: emptyContext, suggested_questions: [] }))
     const user = userEvent.setup()
+    const onSelectAiModel = vi.fn()
     render(
       <DocumentBriefPanel
         source="demo"
@@ -67,12 +74,17 @@ describe('Opportunity AI workspace', () => {
         loading={false}
         generating={false}
         error={null}
+        aiModels={aiModels}
+        selectedAiModel="gpt-5.6"
+        onSelectAiModel={onSelectAiModel}
         canGenerate
         onGenerate={() => undefined}
       />,
     )
 
     expect(screen.getByRole('tab', { name: /Decision Brief/i })).toHaveAttribute('aria-selected', 'true')
+    await user.selectOptions(screen.getByRole('combobox', { name: /AI model/i }), 'gpt-4.1-mini')
+    expect(onSelectAiModel).toHaveBeenCalledWith('gpt-4.1-mini')
     await user.click(screen.getByRole('tab', { name: /Ask AI/i }))
 
     expect(await screen.findByText(/Δεν χρειάζεται να δημιουργήσεις πρώτα Decision Brief/)).toBeInTheDocument()
@@ -83,10 +95,10 @@ describe('Opportunity AI workspace', () => {
     const thread = { messages: [persistedAssistant], context: { ...emptyContext, ready: true }, suggested_questions: [] }
     fetchMock.mockResolvedValue(jsonResponse(thread))
 
-    const first = render(<OpportunityChatPanel source="demo" reference="ref-1" />)
+    const first = render(<OpportunityChatPanel source="demo" reference="ref-1" model="gpt-5.6" />)
     expect(await screen.findByText(persistedAssistant.content)).toBeInTheDocument()
     first.unmount()
-    render(<OpportunityChatPanel source="demo" reference="ref-1" />)
+    render(<OpportunityChatPanel source="demo" reference="ref-1" model="gpt-5.6" />)
 
     expect(await screen.findByText(persistedAssistant.content)).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)
@@ -111,7 +123,7 @@ describe('Opportunity AI workspace', () => {
     })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
-    render(<OpportunityChatPanel source="demo" reference="ref-1" />)
+    render(<OpportunityChatPanel source="demo" reference="ref-1" model="gpt-5.6" />)
     await screen.findByText(/Ρώτησε για αυτό το opportunity/)
 
     await user.type(screen.getByRole('textbox'), 'Can we bid?')
@@ -121,6 +133,8 @@ describe('Opportunity AI workspace', () => {
 
     await user.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByText(persistedAssistant.content)).toBeInTheDocument()
+    const chatPost = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'POST')
+    expect(JSON.parse(String((chatPost?.[1] as RequestInit).body))).toMatchObject({ message: 'Can we bid?', model: 'gpt-5.6' })
     await user.click(screen.getByRole('button', { name: 'Clear' }))
 
     await waitFor(() => expect(screen.queryByText(persistedAssistant.content)).not.toBeInTheDocument())
@@ -134,7 +148,7 @@ describe('Opportunity AI workspace', () => {
       suggested_questions: [],
     }))
     const user = userEvent.setup()
-    render(<OpportunityChatPanel source="demo" reference="ref-1" />)
+    render(<OpportunityChatPanel source="demo" reference="ref-1" model="gpt-5.6" />)
 
     await user.click(await screen.findByRole('button', { name: /p\.2 · Notice/i }))
 

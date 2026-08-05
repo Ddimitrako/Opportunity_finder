@@ -12,6 +12,7 @@ from app.models import (
     NeedPatternResponse,
     Opportunity,
     PatternOpportunitySample,
+    SoftwareMatch,
 )
 
 
@@ -270,6 +271,7 @@ class PatternDiscoveryService:
             cpv_families=cpv_families,
             buyers=buyers[:6],
             samples=[_sample(item) for item in sorted(opportunities, key=lambda item: item.fit_score, reverse=True)[:3]],
+            recommended_products=_aggregate_products(opportunities),
         )
 
 
@@ -387,6 +389,35 @@ def _top_keywords(matches: list[PatternMatch]) -> list[str]:
         keyword
         for keyword, _ in sorted(counts.items(), key=lambda item: (item[1], item[0]), reverse=True)[:8]
     ]
+
+
+def _aggregate_products(opportunities: list[Opportunity]) -> list[SoftwareMatch]:
+    grouped: dict[str, list[SoftwareMatch]] = {}
+    for opportunity in opportunities:
+        for match in opportunity.software_matches:
+            grouped.setdefault(match.product.slug, []).append(match)
+
+    output: list[tuple[int, int, SoftwareMatch]] = []
+    for matches in grouped.values():
+        count = len(matches)
+        average = round(sum(item.score for item in matches) / count)
+        representative = max(matches, key=lambda item: (item.score, item.product.editorial_score))
+        aggregated = representative.model_copy(
+            deep=True,
+            update={
+                "score": average,
+                "matched_signals": [
+                    f"Recommended for {count} of {len(opportunities)} opportunities in this repeated need",
+                    *representative.matched_signals,
+                ],
+            },
+        )
+        output.append((count, average, aggregated))
+
+    output.sort(
+        key=lambda item: (-item[0], -item[1], -item[2].product.editorial_score, item[2].product.name.casefold())
+    )
+    return [item[2] for item in output[:3]]
 
 
 def _budget_range(budgets: list[float]) -> str:

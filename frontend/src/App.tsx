@@ -57,6 +57,65 @@ type SourceRun = {
   error?: string | null
 }
 
+type SoftwareProduct = {
+  slug: string
+  name: string
+  edition: string
+  repository: string
+  website: string
+  summary: string
+  problem: string
+  ideal_for: string
+  department_ids: string[]
+  category_ids: string[]
+  buyer_roles: string[]
+  company_sizes: string[]
+  deployment_modes: string[]
+  service_types: string[]
+  license_id: string
+  maturity: 'anchor' | 'established' | 'niche-leader'
+  editorial_score: number
+  english_support: string
+  greek_support: 'verified' | 'partial' | 'unavailable' | 'unknown'
+  greek_evidence?: string | null
+  edition_boundary?: string | null
+  featured: boolean
+  last_verified_at: string
+  extra_keywords_en: string[]
+  extra_keywords_el: string[]
+  negative_keywords: string[]
+  delivery_fit: 'solo' | 'small_team' | 'partner_required'
+  active: boolean
+}
+
+type SoftwareMatchDimension = {
+  key: string
+  label: string
+  score: number
+  max_score: number
+  reasons: string[]
+}
+
+type ServiceRecommendation = {
+  service_type: string
+  label: string
+  confidence: 'recommended' | 'possible'
+  reasons: string[]
+}
+
+type SoftwareMatch = {
+  product: SoftwareProduct
+  score: number
+  confidence: 'high' | 'medium' | 'low'
+  source: 'deterministic' | 'ai_refined'
+  dimensions: SoftwareMatchDimension[]
+  matched_signals: string[]
+  service_recommendations: ServiceRecommendation[]
+  caveats: string[]
+  evidence_ids: string[]
+  catalog_version: string
+}
+
 type Opportunity = {
   id: string
   source: SourceName
@@ -78,6 +137,7 @@ type Opportunity = {
   status_label?: string | null
   notice_type?: string | null
   summary: string
+  raw_text?: string
   matched_keywords: string[]
   fit_score: number
   fit_band: 'Bid candidate' | 'Worth reading' | 'Monitor only' | 'Ignore'
@@ -85,6 +145,8 @@ type Opportunity = {
   red_flags: string[]
   recommendation: string
   package_match: string
+  software_match_status: 'matched' | 'insufficient_signals'
+  software_matches: SoftwareMatch[]
   source_payload?: Record<string, unknown>
 }
 
@@ -259,6 +321,7 @@ type OpportunityChatMessage = {
   strategic_advice?: string | null
   citations: OpportunityChatCitation[]
   suggested_questions: string[]
+  model?: string | null
   created_at: string
 }
 
@@ -386,6 +449,7 @@ type NeedPattern = {
   cpv_families: string[]
   buyers: string[]
   samples: PatternOpportunitySample[]
+  recommended_products: SoftwareMatch[]
 }
 
 type NeedPatternResponse = {
@@ -447,6 +511,27 @@ type ConfigResponse = {
   default_keywords: string[]
   packages: Array<{ name: string; label: string; keywords: string[] }>
   sources: Array<{ id: SourceName; label: string }>
+  default_ai_model: string
+  ai_models: AIModelOption[]
+  software_catalog_version: string
+  software_catalog_count: number
+  software_match_ai_enabled: boolean
+}
+
+type SoftwareMatchRefineResponse = {
+  matches: SoftwareMatch[]
+  match_status: 'matched' | 'insufficient_signals'
+  model?: string | null
+  cached: boolean
+  catalog_version: string
+}
+
+type AIModelOption = {
+  id: string
+  label: string
+  description: string
+  quality: string
+  recommended: boolean
 }
 
 type TrackingState = 'new' | 'watching' | 'researching' | 'contact_planned' | 'contacted' | 'meeting' | 'proposal' | 'partner_target' | 'won' | 'lost' | 'archived'
@@ -888,9 +973,17 @@ const FALLBACK_KEYWORDS = [
   'CMS',
 ]
 
+const fallbackAiModels: AIModelOption[] = [
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', description: 'Γρήγορο και οικονομικό.', quality: 'Fast', recommended: false },
+  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', description: 'Ισορροπία ποιότητας και κόστους.', quality: 'Balanced', recommended: true },
+  { id: 'gpt-5.5', label: 'GPT-5.5', description: 'Βαθύτερη επαγγελματική ανάλυση.', quality: 'Deep', recommended: false },
+  { id: 'gpt-5.6', label: 'GPT-5.6 Sol', description: 'Μέγιστη ποιότητα ανάλυσης.', quality: 'Best', recommended: false },
+]
+
 function App() {
   const [activeView, setActiveView] = useState<'opportunities' | 'market'>('opportunities')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
+  const [selectedAiModel, setSelectedAiModel] = useState(() => window.localStorage.getItem('opportunity-ai-model') || 'gpt-4.1-mini')
   const [query, setQuery] = useState('')
   const [budgetMin, setBudgetMin] = useState(5000)
   const [budgetMax, setBudgetMax] = useState(100000)
@@ -1178,6 +1271,11 @@ function App() {
         if (configRes.ok) {
           const nextConfig = (await configRes.json()) as ConfigResponse
           setConfig(nextConfig)
+          const savedModel = window.localStorage.getItem('opportunity-ai-model')
+          const resolvedModel = savedModel && nextConfig.ai_models.some((model) => model.id === savedModel)
+            ? savedModel
+            : nextConfig.default_ai_model
+          setSelectedAiModel(resolvedModel)
           setSelectedCpvs(nextConfig.default_cpv_codes.slice(0, 8))
           setKeywords(nextConfig.default_keywords.slice(0, 10).join(', '))
         }
@@ -1339,7 +1437,7 @@ function App() {
     setDocumentBriefError(null)
     try {
       const res = await fetch(
-        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief?regenerate=${documentBrief ? 'true' : 'false'}`,
+        `${API_BASE}/api/opportunities/${opportunity.source}/${encodeURIComponent(opportunity.source_reference)}/brief?regenerate=${documentBrief ? 'true' : 'false'}&model=${encodeURIComponent(selectedAiModel)}`,
         { method: 'POST' },
       )
       if (!res.ok) {
@@ -1358,6 +1456,11 @@ function App() {
     } finally {
       setDocumentBriefGenerating(false)
     }
+  }
+
+  const selectAiModel = (model: string) => {
+    setSelectedAiModel(model)
+    window.localStorage.setItem('opportunity-ai-model', model)
   }
 
   const shortlistItems = bookmarks.map((bookmark) => bookmark.opportunity)
@@ -1734,6 +1837,10 @@ function App() {
         buyerIntelligence={buyerIntelligence}
         buyerIntelligenceLoading={buyerIntelligenceLoading}
         buyerIntelligenceError={buyerIntelligenceError}
+        aiModels={config?.ai_models ?? fallbackAiModels}
+        selectedAiModel={selectedAiModel}
+        softwareMatchAiEnabled={config?.software_match_ai_enabled ?? false}
+        onSelectAiModel={selectAiModel}
         onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
@@ -2212,6 +2319,13 @@ function PatternsPanel({
                 <strong>{pattern.productization_score}</strong>
               </div>
               <p>{pattern.recommended_package}</p>
+              {pattern.recommended_products?.length ? (
+                <div className="pattern-products" aria-label="Recommended open-source products">
+                  {pattern.recommended_products.map((match) => (
+                    <span key={match.product.slug}>{match.product.name} · {match.score}</span>
+                  ))}
+                </div>
+              ) : null}
               <div className="pattern-metrics">
                 <span><Target size={14} aria-hidden="true" />{pattern.opportunity_count} matches</span>
                 <span><Building2 size={14} aria-hidden="true" />{pattern.buyer_count} buyers</span>
@@ -2406,6 +2520,12 @@ function OpportunityRow({
               <span>{opportunity.source_label}</span>
               {opportunity.procedure_type ? <span>{opportunity.procedure_type}</span> : null}
               {opportunity.package_match ? <span>{packageLabel(opportunity.package_match)}</span> : null}
+              {opportunity.software_matches?.[0] ? (
+                <span className="software-match-chip">
+                  <Sparkles size={12} aria-hidden="true" />
+                  {opportunity.software_matches[0].product.name} · {opportunity.software_matches[0].score}
+                </span>
+              ) : null}
               <span className={`stage-chip ${stage.tone}`}>{stage.label}</span>
               <span className={`action-window ${window.tone}`}>{window.label}</span>
             </div>
@@ -2734,6 +2854,130 @@ function translateChecklistItem(item: GuidanceChecklistItem) {
   }
 }
 
+export function SoftwareMatchesPanel({
+  opportunity,
+  aiEnabled,
+  selectedAiModel,
+}: {
+  opportunity: Opportunity
+  aiEnabled: boolean
+  selectedAiModel: string
+}) {
+  const [matches, setMatches] = useState<SoftwareMatch[]>(opportunity.software_matches ?? [])
+  const [status, setStatus] = useState<'matched' | 'insufficient_signals'>(opportunity.software_match_status ?? 'insufficient_signals')
+  const [refining, setRefining] = useState(false)
+  const [refinementMeta, setRefinementMeta] = useState<{ model?: string | null; cached: boolean } | null>(null)
+  const [refinementError, setRefinementError] = useState<string | null>(null)
+
+  const refine = async () => {
+    setRefining(true)
+    setRefinementError(null)
+    try {
+      const response = await fetch(`${API_BASE}/api/software-matches/refine`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunity, model: selectedAiModel }),
+      })
+      const payload = await response.json().catch(() => null) as (SoftwareMatchRefineResponse & { detail?: string }) | null
+      if (!response.ok || !payload) {
+        throw new Error(payload?.detail ?? `AI refinement returned ${response.status}`)
+      }
+      setMatches(payload.matches)
+      setStatus(payload.match_status)
+      setRefinementMeta({ model: payload.model, cached: payload.cached })
+    } catch (error) {
+      setRefinementError(error instanceof Error ? error.message : 'AI refinement failed safely.')
+    } finally {
+      setRefining(false)
+    }
+  }
+
+  return (
+    <section className="drawer-section software-matches-section">
+      <div className="software-matches-header">
+        <div>
+          <p className="eyebrow">Product matchmaking</p>
+          <h4>Recommended open-source products</h4>
+          <p>Automatic deterministic ranking from the local {matches[0]?.catalog_version ?? 'versioned'} catalog.</p>
+        </div>
+        <button className="software-refine-button" type="button" onClick={() => void refine()} disabled={!aiEnabled || refining}>
+          {refining ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+          {refining ? 'Refining…' : 'Refine with AI'}
+        </button>
+      </div>
+
+      {!aiEnabled ? <p className="software-ai-note">AI refinement is unavailable because no API key is configured. Deterministic matching remains active.</p> : null}
+      {refinementMeta ? (
+        <p className="software-ai-note success">
+          AI refined · {refinementMeta.model ?? selectedAiModel}{refinementMeta.cached ? ' · cached result' : ''}
+        </p>
+      ) : null}
+      {refinementError ? <p className="drawer-error-inline">{refinementError}</p> : null}
+
+      {status === 'insufficient_signals' || !matches.length ? (
+        <div className="software-no-match">
+          <Info size={18} aria-hidden="true" />
+          <div><strong>Insufficient signals</strong><p>No product is being forced into this opportunity. Add specific capability or CPV evidence to improve matching.</p></div>
+        </div>
+      ) : (
+        <div className="software-match-list">
+          {matches.map((match) => (
+            <article className="software-match-card" key={match.product.slug}>
+              <div className="software-match-card-head">
+                <div>
+                  <span>{match.product.edition}</span>
+                  <h5>{match.product.name}</h5>
+                </div>
+                <div className={`software-score ${match.confidence}`}>
+                  <strong>{match.score}</strong>
+                  <small>{match.confidence}</small>
+                </div>
+              </div>
+              <div className="software-source-row">
+                <span>{match.source === 'ai_refined' ? 'AI refined' : 'Deterministic'}</span>
+                <span>{match.product.delivery_fit.replace('_', ' ')}</span>
+                <span>{match.product.license_id}</span>
+              </div>
+              <p>{match.product.summary}</p>
+              {match.matched_signals.length ? (
+                <ul className="software-reasons">
+                  {match.matched_signals.slice(0, 5).map((reason, index) => <li key={`${reason}-${index}`}>{reason}</li>)}
+                </ul>
+              ) : null}
+              {match.service_recommendations.length ? (
+                <div className="software-services">
+                  {match.service_recommendations.map((service) => (
+                    <span className={service.confidence} key={service.service_type}>{service.label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {match.caveats.length ? (
+                <details className="software-caveats">
+                  <summary>License, edition & health caveats ({match.caveats.length})</summary>
+                  <ul>{match.caveats.map((caveat, index) => <li key={`${caveat}-${index}`}>{caveat}</li>)}</ul>
+                </details>
+              ) : null}
+              {match.dimensions.length ? (
+                <details className="software-dimensions">
+                  <summary>Score breakdown</summary>
+                  {match.dimensions.map((dimension) => (
+                    <div key={dimension.key}><span>{dimension.label}</span><strong>{dimension.score}/{dimension.max_score}</strong></div>
+                  ))}
+                </details>
+              ) : null}
+              <div className="software-links">
+                <a href={match.product.website} target="_blank" rel="noreferrer">Website <ExternalLink size={13} aria-hidden="true" /></a>
+                <a href={match.product.repository} target="_blank" rel="noreferrer">Repository <ExternalLink size={13} aria-hidden="true" /></a>
+                {match.evidence_ids.length ? <span>Evidence: {match.evidence_ids.join(', ')}</span> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function DetailsDrawer({
   opportunity,
   details,
@@ -2747,6 +2991,10 @@ function DetailsDrawer({
   buyerIntelligence,
   buyerIntelligenceLoading,
   buyerIntelligenceError,
+  aiModels,
+  selectedAiModel,
+  softwareMatchAiEnabled,
+  onSelectAiModel,
   onGenerateBrief,
   onClose,
 }: {
@@ -2762,6 +3010,10 @@ function DetailsDrawer({
   buyerIntelligence: BuyerIntelligenceResponse | null
   buyerIntelligenceLoading: boolean
   buyerIntelligenceError: string | null
+  aiModels: AIModelOption[]
+  selectedAiModel: string
+  softwareMatchAiEnabled: boolean
+  onSelectAiModel: (model: string) => void
   onGenerateBrief: () => void
   onClose: () => void
 }) {
@@ -2850,6 +3102,13 @@ function DetailsDrawer({
               </div>
             </section>
 
+            <SoftwareMatchesPanel
+              key={`software:${opportunity.id}`}
+              opportunity={opportunity}
+              aiEnabled={softwareMatchAiEnabled}
+              selectedAiModel={selectedAiModel}
+            />
+
             {details?.guidance ? (
               <GuidancePanel guidance={details.guidance} />
             ) : null}
@@ -2867,6 +3126,9 @@ function DetailsDrawer({
                 loading={briefLoading}
                 generating={briefGenerating}
                 error={briefError}
+                aiModels={aiModels}
+                selectedAiModel={selectedAiModel}
+                onSelectAiModel={onSelectAiModel}
                 canGenerate={Boolean(opportunity.source_reference)}
                 onGenerate={onGenerateBrief}
               />
@@ -3450,6 +3712,9 @@ export function DocumentBriefPanel({
   loading,
   generating,
   error,
+  aiModels,
+  selectedAiModel,
+  onSelectAiModel,
   canGenerate,
   onGenerate,
 }: {
@@ -3461,12 +3726,16 @@ export function DocumentBriefPanel({
   loading: boolean
   generating: boolean
   error: string | null
+  aiModels: AIModelOption[]
+  selectedAiModel: string
+  onSelectAiModel: (model: string) => void
   canGenerate: boolean
   onGenerate: () => void
 }) {
   const ActionIcon = generating ? Loader2 : Sparkles
   const [activeTab, setActiveTab] = useState<'brief' | 'chat'>('brief')
   const [preview, setPreview] = useState<PdfPreview | null>(null)
+  const selectedModelInfo = aiModels.find((model) => model.id === selectedAiModel)
   const evidenceMap = new Map((brief?.evidence ?? []).map((item) => [item.id, item]))
   const openEvidence = (evidence: BriefEvidence) => setPreview({
     title: evidence.document_label,
@@ -3486,12 +3755,21 @@ export function DocumentBriefPanel({
             <p>Decision brief και τεκμηριωμένες ερωτήσεις στο ίδιο context.</p>
           </div>
         </div>
-        {activeTab === 'brief' ? (
-          <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
-            <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
-            {generating ? 'Reading documents…' : brief ? 'Regenerate' : 'Generate brief'}
-          </button>
-        ) : null}
+        <div className="ai-model-controls">
+          <label>
+            <span>Model · Brief & Chat</span>
+            <select value={selectedAiModel} onChange={(event) => onSelectAiModel(event.target.value)} disabled={generating} aria-label="AI model for Decision Brief and Ask AI">
+              {aiModels.map((model) => <option value={model.id} key={model.id}>{model.label}{model.recommended ? ' · Recommended' : ''}</option>)}
+            </select>
+            {selectedModelInfo ? <small>{selectedModelInfo.quality} · {selectedModelInfo.description}</small> : null}
+          </label>
+          {activeTab === 'brief' ? (
+            <button className="ai-brief-button" type="button" onClick={onGenerate} disabled={!canGenerate || generating}>
+              <ActionIcon className={generating ? 'spin' : undefined} size={16} aria-hidden="true" />
+              {generating ? 'Reading documents…' : brief ? 'Regenerate' : 'Generate brief'}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="ai-workspace-tabs" role="tablist" aria-label="Opportunity AI views">
@@ -3659,13 +3937,13 @@ export function DocumentBriefPanel({
           </div>
         </div>
       ) : null}
-      {activeTab === 'chat' ? <OpportunityChatPanel source={source} reference={reference} /> : null}
+      {activeTab === 'chat' ? <OpportunityChatPanel source={source} reference={reference} model={selectedAiModel} /> : null}
       {preview ? <PdfPreviewModal preview={preview} onClose={() => setPreview(null)} /> : null}
     </section>
   )
 }
 
-export function OpportunityChatPanel({ source, reference }: { source: SourceName; reference: string }) {
+export function OpportunityChatPanel({ source, reference, model }: { source: SourceName; reference: string; model: string }) {
   const [thread, setThread] = useState<OpportunityChatThreadResponse | null>(null)
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(Boolean(reference))
@@ -3702,7 +3980,7 @@ export function OpportunityChatPanel({ source, reference }: { source: SourceName
       const response = await fetch(`${API_BASE}/api/opportunities/${source}/${encodeURIComponent(reference)}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: nextMessage }),
+        body: JSON.stringify({ message: nextMessage, model }),
       })
       if (!response.ok) throw new Error(await opportunityChatApiError(response))
       const data = (await response.json()) as OpportunityChatTurnResponse
@@ -3813,7 +4091,7 @@ export function OpportunityChatPanel({ source, reference }: { source: SourceName
               {message.strategic_advice ? (
                 <aside className="chat-strategic-take"><Sparkles size={15} aria-hidden="true" /><span><strong>Strategic take</strong>{message.strategic_advice}</span></aside>
               ) : null}
-              <time>{formatDateTime(message.created_at)}</time>
+              <footer>{message.model ? <span>{message.model}</span> : null}<time>{formatDateTime(message.created_at)}</time></footer>
             </div>
           </article>
         ))}

@@ -62,6 +62,22 @@ When the key exists, the API reports `ai_enabled: true` and AI enrichment can be
 
 The opportunity drawer includes an AI Bid Decision Brief v2. It combines deterministic lifecycle/direct-award checks with a strict structured AI scorecard, page-level evidence citations, a 12-month buyer-history context, and `GO` / `CONDITIONAL GO` / `NO-GO` / `INSUFFICIENT DATA` decisions. Existing v1 briefs remain visible and can be regenerated on demand.
 
+## Open-source product matchmaking
+
+Search results are matched automatically against a local catalog of 63 open-source products. Runtime matching is deterministic and free of AI calls; the drawer can optionally rerank the eight strongest candidates with AI after an explicit click. The AI cannot introduce products outside that allow-list, and its result is cached in SQLite by opportunity, model, evidence IDs, and catalog version.
+
+The editable source of truth is `backend/catalog/software_catalog.xlsx`. Runtime code reads only the generated `backend/app/data/software_catalog.json`; there is no runtime dependency or synchronization with the original `opensource-for-business` repository.
+
+After editing the workbook, validate and regenerate the snapshot:
+
+```powershell
+$env:PYTHONPATH='backend'
+.\.venv\Scripts\python -m app.catalog_import
+.\.venv\Scripts\python -m app.catalog_import --check
+```
+
+The workbook contains `Products`, `Departments`, `Categories`, `Licenses`, `Repository Health`, and `Data Dictionary` sheets. Multi-value cells use the visible delimiter ` | `.
+
 ## Market Radar configuration
 
 The radar works immediately with procurement results loaded by the app. For private-company discovery through the official Open Data ΓΕΜΗ API, request a key and add:

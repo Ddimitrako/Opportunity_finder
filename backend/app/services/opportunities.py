@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.scoring import score_opportunity
 from app.services.bookmarks import _resolve_db_path
+from app.services.software_matching import SoftwareMatchingService
 from app.sources.demo import demo_opportunities
 from app.sources.khmdhs import KhmdhsClient
 from app.sources.ted import TedClient
@@ -30,6 +31,7 @@ class OpportunityService:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.db_path = _resolve_db_path(Path(settings.bookmark_db_path))
+        self.software_matching = SoftwareMatchingService()
         self._init_activity_cache()
 
     async def search(self, request: ProcurementSearchRequest) -> SearchResponse:
@@ -54,7 +56,7 @@ class OpportunityService:
             run.model_copy(update={"shown": shown_by_source.get(run.source, 0)})
             for run in source_runs
         ]
-        scored = [score_opportunity(item, request) for item in filtered]
+        scored = [self.software_matching.apply(score_opportunity(item, request)) for item in filtered]
         scored.sort(key=lambda item: (item.fit_score, item.budget or 0), reverse=True)
         scored = scored[: request.limit]
 

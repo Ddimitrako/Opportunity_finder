@@ -5,6 +5,8 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
+from app.ai_models import AI_MODEL_CATALOG, UnsupportedAIModelError, default_ai_model
+from app.catalog import get_software_catalog
 from app.models import (
     ActivityRequest,
     ActivityResponse,
@@ -39,6 +41,8 @@ from app.models import (
     ProcurementSearchRequest,
     SearchResponse,
     SourceName,
+    SoftwareMatchRefineRequest,
+    SoftwareMatchRefineResponse,
     TrackingEntry,
     TrackingEntryCreate,
     TrackingEntryUpdate,
@@ -54,6 +58,11 @@ from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 from app.services.patterns import PatternDiscoveryService
+from app.services.software_refinement import (
+    SoftwareRefinementError,
+    SoftwareRefinementService,
+    SoftwareRefinementUnavailable,
+)
 from app.services.market import MarketService
 
 app = FastAPI(title="Opportunity Finder API", version="0.1.0")
@@ -104,6 +113,10 @@ def get_market_service(settings: Settings = Depends(get_settings)) -> MarketServ
     return MarketService(settings)
 
 
+def get_software_refinement_service(settings: Settings = Depends(get_settings)) -> SoftwareRefinementService:
+    return SoftwareRefinementService(settings)
+
+
 def _allowed_document_hosts(settings: Settings) -> set[str]:
     hosts = {
         urlparse(str(settings.khmdhs_base_url)).hostname,
@@ -128,7 +141,8 @@ async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
 
 
 @app.get("/api/config", response_model=ConfigResponse)
-async def config() -> ConfigResponse:
+async def config(settings: Settings = Depends(get_settings)) -> ConfigResponse:
+    catalog = get_software_catalog()
     return ConfigResponse(
         default_cpv_codes=DEFAULT_CPV_CODES,
         default_keywords=DEFAULT_KEYWORDS,
@@ -138,6 +152,11 @@ async def config() -> ConfigResponse:
             {"id": "ted", "label": "TED"},
             {"id": "demo", "label": "Demo patterns"},
         ],
+        default_ai_model=default_ai_model(settings),
+        ai_models=list(AI_MODEL_CATALOG),
+        software_catalog_version=catalog.catalog_version,
+        software_catalog_count=len(catalog.products),
+        software_match_ai_enabled=bool(settings.openai_api_key),
     )
 
 
@@ -187,6 +206,21 @@ async def search_opportunities(
     response = await service.search(request)
     market.ingest_opportunities(response.opportunities)
     return response
+
+
+@app.post("/api/software-matches/refine", response_model=SoftwareMatchRefineResponse)
+async def refine_software_matches(
+    request: SoftwareMatchRefineRequest,
+    service: SoftwareRefinementService = Depends(get_software_refinement_service),
+) -> SoftwareMatchRefineResponse:
+    try:
+        return await service.refine(request.opportunity, request.model)
+    except UnsupportedAIModelError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SoftwareRefinementUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SoftwareRefinementError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/opportunities/activity", response_model=ActivityResponse)
@@ -476,9 +510,13 @@ async def generate_document_brief(
     source: SourceName,
     reference: str,
     regenerate: bool = False,
+    model: str | None = Query(default=None, max_length=80),
     service: DocumentBriefService = Depends(get_brief_service),
 ) -> DocumentBriefResponse:
-    return await service.generate_brief(source, reference, regenerate=regenerate)
+    try:
+        return await service.generate_brief(source, reference, regenerate=regenerate, model=model)
+    except UnsupportedAIModelError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/opportunities/{source}/{reference}/chat", response_model=OpportunityChatThreadResponse)
@@ -498,7 +536,7 @@ async def ask_about_opportunity(
     service: OpportunityChatService = Depends(get_chat_service),
 ) -> OpportunityChatTurnResponse:
     try:
-        return await service.ask(source, reference, request.message)
+        return await service.ask(source, reference, request.message, model=request.model)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ChatUnavailableError as exc:
