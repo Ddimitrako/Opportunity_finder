@@ -56,6 +56,8 @@ The app works without an OpenAI key. Later, create `backend/.env.local` or `.env
 ```env
 OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-4.1-mini
+SOFTWARE_SCREENING_MODEL=gpt-4o-mini
+SOFTWARE_SCREENING_DEEP_MODEL=gpt-4.1-mini
 ```
 
 When the key exists, the API reports `ai_enabled: true` and AI enrichment can be enabled from the UI.
@@ -65,6 +67,8 @@ The opportunity drawer includes an AI Bid Decision Brief v2. It combines determi
 ## Open-source product matchmaking
 
 Search results are matched automatically against a local catalog of 63 open-source products. Runtime matching is deterministic and free of AI calls; the drawer can optionally rerank the eight strongest candidates with AI after an explicit click. The AI cannot introduce products outside that allow-list, and its result is cached in SQLite by opportunity, model, evidence IDs, and catalog version.
+
+The `Software Match AI` page adds an explicit, persisted bulk-screening workflow for the current search results. It reuses strong deterministic matches, screens remaining titles in groups of up to 40, sends only ambiguous cases to a summary pass, and opens relevant document excerpts for at most five unresolved opportunities. The semantic model returns bounded category IDs and service types—not product slugs—so final product selection and hard exclusions remain deterministic. Saved results are reapplied automatically when the same opportunity is returned by a later search.
 
 The editable source of truth is `backend/catalog/software_catalog.xlsx`. Runtime code reads only the generated `backend/app/data/software_catalog.json`; there is no runtime dependency or synchronization with the original `opensource-for-business` repository.
 

@@ -36,6 +36,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(default=None, repr=False)
     openai_model: str = "gpt-4.1-mini"
+    software_screening_model: str = "gpt-4o-mini"
+    software_screening_deep_model: str = "gpt-4.1-mini"
 
     bookmark_db_path: Path = Path("data/opportunity_finder.sqlite3")
 

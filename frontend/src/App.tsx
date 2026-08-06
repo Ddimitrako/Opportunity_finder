@@ -116,6 +116,37 @@ type SoftwareMatch = {
   catalog_version: string
 }
 
+type SoftwareScreeningStatus = 'catalog_match' | 'needs_review' | 'no_match' | 'error'
+type SoftwareScreeningStage = 'deterministic' | 'title' | 'summary' | 'documents'
+
+type SoftwareScreeningResult = {
+  opportunity_id: string
+  status: SoftwareScreeningStatus
+  stage: SoftwareScreeningStage
+  reason: string
+  matches: SoftwareMatch[]
+  evidence_ids: string[]
+  model?: string | null
+  deep_model?: string | null
+  catalog_version: string
+  prompt_version: string
+  scanned_at: string
+  cached: boolean
+}
+
+type SoftwareScreeningRun = {
+  total: number
+  catalog_matches: number
+  needs_review: number
+  no_matches: number
+  errors: number
+  cached: number
+  ai_calls: number
+  document_escalations: number
+  input_tokens: number
+  output_tokens: number
+}
+
 type Opportunity = {
   id: string
   source: SourceName
@@ -147,6 +178,7 @@ type Opportunity = {
   package_match: string
   software_match_status: 'matched' | 'insufficient_signals'
   software_matches: SoftwareMatch[]
+  software_screening?: SoftwareScreeningResult | null
   source_payload?: Record<string, unknown>
 }
 
@@ -516,6 +548,8 @@ type ConfigResponse = {
   software_catalog_version: string
   software_catalog_count: number
   software_match_ai_enabled: boolean
+  software_screening_model: string
+  software_screening_deep_model: string
 }
 
 type SoftwareMatchRefineResponse = {
@@ -524,6 +558,16 @@ type SoftwareMatchRefineResponse = {
   model?: string | null
   cached: boolean
   catalog_version: string
+}
+
+type SoftwareScreeningResponse = {
+  opportunities: Opportunity[]
+  results: SoftwareScreeningResult[]
+  run: SoftwareScreeningRun
+  catalog_version: string
+  prompt_version: string
+  screening_model: string
+  deep_model: string
 }
 
 type AIModelOption = {
@@ -974,6 +1018,7 @@ const FALLBACK_KEYWORDS = [
 ]
 
 const fallbackAiModels: AIModelOption[] = [
+  { id: 'gpt-4o-mini', label: 'GPT-4o mini', description: 'Οικονομικό classification model.', quality: 'Economy', recommended: false },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', description: 'Γρήγορο και οικονομικό.', quality: 'Fast', recommended: false },
   { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', description: 'Ισορροπία ποιότητας και κόστους.', quality: 'Balanced', recommended: true },
   { id: 'gpt-5.5', label: 'GPT-5.5', description: 'Βαθύτερη επαγγελματική ανάλυση.', quality: 'Deep', recommended: false },
@@ -981,7 +1026,7 @@ const fallbackAiModels: AIModelOption[] = [
 ]
 
 function App() {
-  const [activeView, setActiveView] = useState<'opportunities' | 'market'>('opportunities')
+  const [activeView, setActiveView] = useState<'opportunities' | 'market' | 'matchmaking'>('opportunities')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
   const [selectedAiModel, setSelectedAiModel] = useState(() => window.localStorage.getItem('opportunity-ai-model') || 'gpt-4.1-mini')
   const [query, setQuery] = useState('')
@@ -1022,6 +1067,10 @@ function App() {
   const [patternsLoading, setPatternsLoading] = useState(false)
   const [patternsError, setPatternsError] = useState<string | null>(null)
   const [selectedBuyer, setSelectedBuyer] = useState('all')
+  const [softwareFilter, setSoftwareFilter] = useState<'all' | 'catalog_match' | 'needs_review' | 'no_match' | 'error' | 'unscanned'>('all')
+  const [softwareScreeningLoading, setSoftwareScreeningLoading] = useState(false)
+  const [softwareScreeningError, setSoftwareScreeningError] = useState<string | null>(null)
+  const [softwareScreeningRun, setSoftwareScreeningRun] = useState<SoftwareScreeningRun | null>(null)
   const [moreCpvsOpen, setMoreCpvsOpen] = useState(false)
 
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
@@ -1040,13 +1089,26 @@ function App() {
       .map(([buyer, count]) => ({ buyer, count }))
       .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer))
   }, [response])
-  const filteredOpportunities = useMemo(() => {
+  const buyerFilteredOpportunities = useMemo(() => {
     const opportunities = response?.opportunities ?? []
     if (selectedBuyer === 'all') {
       return opportunities
     }
     return opportunities.filter((opportunity) => opportunity.buyer === selectedBuyer)
   }, [response, selectedBuyer])
+  const softwareFilterCounts = useMemo(() => {
+    const counts = { catalog_match: 0, needs_review: 0, no_match: 0, error: 0, unscanned: 0 }
+    for (const opportunity of buyerFilteredOpportunities) {
+      counts[softwareScreeningStatus(opportunity)] += 1
+    }
+    return counts
+  }, [buyerFilteredOpportunities])
+  const filteredOpportunities = useMemo(() => {
+    if (softwareFilter === 'all') {
+      return buyerFilteredOpportunities
+    }
+    return buyerFilteredOpportunities.filter((opportunity) => softwareScreeningStatus(opportunity) === softwareFilter)
+  }, [buyerFilteredOpportunities, softwareFilter])
   const filteredStats = useMemo(() => opportunityStats(filteredOpportunities), [filteredOpportunities])
   const packageRows = useMemo(() => {
     const packages = filteredStats.by_package
@@ -1131,6 +1193,7 @@ function App() {
     setPatterns([])
     setPatternsError(null)
     setSelectedBuyer('all')
+    setSoftwareFilter('all')
     const requestOnlyOpen = overrides?.onlyOpen ?? onlyOpen
     const requestShowAllFetched = overrides?.showAllFetched ?? showAllFetched
     try {
@@ -1463,6 +1526,33 @@ function App() {
     window.localStorage.setItem('opportunity-ai-model', model)
   }
 
+  const runSoftwareScreening = async (force = false) => {
+    const opportunities = response?.opportunities ?? []
+    if (!opportunities.length) {
+      setSoftwareScreeningError('Run an opportunity search before starting software screening.')
+      return
+    }
+    setSoftwareScreeningLoading(true)
+    setSoftwareScreeningError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/software-matches/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunities, force, max_document_escalations: 5 }),
+      })
+      const payload = await res.json().catch(() => null) as (SoftwareScreeningResponse & { detail?: string }) | null
+      if (!res.ok || !payload) {
+        throw new Error(payload?.detail ?? `Software screening API returned ${res.status}`)
+      }
+      setResponse((current) => current ? { ...current, opportunities: payload.opportunities } : current)
+      setSoftwareScreeningRun(payload.run)
+    } catch (exc) {
+      setSoftwareScreeningError(exc instanceof Error ? exc.message : 'Software screening failed safely.')
+    } finally {
+      setSoftwareScreeningLoading(false)
+    }
+  }
+
   const shortlistItems = bookmarks.map((bookmark) => bookmark.opportunity)
   const renderCpvCategory = (group: CpvCategory) => {
     const expanded = expandedCpvGroups[group.id] ?? Boolean(group.defaultOpen)
@@ -1513,6 +1603,27 @@ function App() {
 
   if (activeView === 'market') {
     return <MarketRadar onOpenOpportunities={() => setActiveView('opportunities')} />
+  }
+
+  if (activeView === 'matchmaking') {
+    return (
+      <SoftwareMatchWorkspace
+        opportunities={response?.opportunities ?? []}
+        aiEnabled={config?.software_match_ai_enabled ?? false}
+        catalogCount={config?.software_catalog_count ?? 63}
+        screeningModel={config?.software_screening_model ?? 'gpt-4o-mini'}
+        deepModel={config?.software_screening_deep_model ?? 'gpt-4.1-mini'}
+        loading={softwareScreeningLoading}
+        error={softwareScreeningError}
+        run={softwareScreeningRun}
+        onBack={() => setActiveView('opportunities')}
+        onScan={(force) => void runSoftwareScreening(force)}
+        onOpenOpportunity={(opportunity) => {
+          setActiveView('opportunities')
+          void openDetails(opportunity)
+        }}
+      />
+    )
   }
 
   return (
@@ -1628,6 +1739,20 @@ function App() {
                 ))}
               </select>
             </label>
+            <label className="field">
+              <span>
+                <Sparkles size={16} aria-hidden="true" />
+                Software match
+              </span>
+              <select value={softwareFilter} disabled={loading} onChange={(event) => setSoftwareFilter(event.target.value as typeof softwareFilter)}>
+                <option value="all">All match states ({buyerFilteredOpportunities.length})</option>
+                <option value="catalog_match">Catalog match ({softwareFilterCounts.catalog_match})</option>
+                <option value="needs_review">Needs review ({softwareFilterCounts.needs_review})</option>
+                <option value="no_match">No match ({softwareFilterCounts.no_match})</option>
+                <option value="error">Errors ({softwareFilterCounts.error})</option>
+                <option value="unscanned">Not scanned ({softwareFilterCounts.unscanned})</option>
+              </select>
+            </label>
           </div>
 
           <div className="filter-group">
@@ -1688,6 +1813,11 @@ function App() {
             <h2>Shortlist μικρών full-stack έργων</h2>
           </div>
           <div className="topbar-actions">
+            <button className="market-nav-button software-nav-button" type="button" onClick={() => setActiveView('matchmaking')}>
+              <Sparkles size={17} aria-hidden="true" />
+              Software Match AI
+              <span>{softwareFilterCounts.catalog_match}</span>
+            </button>
             <button className="market-nav-button" type="button" onClick={() => setActiveView('market')}>
               <Radar size={17} aria-hidden="true" />
               Market Radar
@@ -1705,6 +1835,7 @@ function App() {
 
         <section className="metric-strip">
           <Metric icon={DatabaseZap} label="Results" value={loading ? '...' : String(filteredStats.total)} />
+          <Metric icon={Sparkles} label="Catalog matches" value={String(softwareFilterCounts.catalog_match)} tone="blue" />
           <Metric icon={Target} label="Bid candidates" value={String(filteredStats.bid_candidates)} tone="green" />
           <Metric icon={Gauge} label="Average fit" value={`${filteredStats.average_score}/100`} tone="blue" />
           <Metric icon={CircleDollarSign} label="Tracked budget" value={formatCurrency(filteredStats.total_budget)} tone="amber" />
@@ -2484,6 +2615,178 @@ function SmartCalendarPanel({
   )
 }
 
+export function SoftwareMatchWorkspace({
+  opportunities,
+  aiEnabled,
+  catalogCount,
+  screeningModel,
+  deepModel,
+  loading,
+  error,
+  run,
+  onBack,
+  onScan,
+  onOpenOpportunity,
+}: {
+  opportunities: Opportunity[]
+  aiEnabled: boolean
+  catalogCount: number
+  screeningModel: string
+  deepModel: string
+  loading: boolean
+  error: string | null
+  run: SoftwareScreeningRun | null
+  onBack: () => void
+  onScan: (force: boolean) => void
+  onOpenOpportunity: (opportunity: Opportunity) => void
+}) {
+  const [filter, setFilter] = useState<'all' | 'catalog_match' | 'needs_review' | 'no_match' | 'error' | 'unscanned'>('all')
+  const counts = useMemo(() => {
+    const next = { catalog_match: 0, needs_review: 0, no_match: 0, error: 0, unscanned: 0 }
+    for (const opportunity of opportunities) {
+      next[softwareScreeningStatus(opportunity)] += 1
+    }
+    return next
+  }, [opportunities])
+  const visible = useMemo(
+    () => filter === 'all' ? opportunities : opportunities.filter((item) => softwareScreeningStatus(item) === filter),
+    [filter, opportunities],
+  )
+  const storedCount = opportunities.length - counts.unscanned
+
+  return (
+    <div className="matchmaking-workspace">
+      <header className="matchmaking-topbar">
+        <div>
+          <button className="matchmaking-back" type="button" onClick={onBack}>
+            <ChevronLeft size={16} aria-hidden="true" />
+            Opportunities
+          </button>
+          <p className="eyebrow">Open-source catalog intelligence</p>
+          <h1>Software Match AI</h1>
+          <p>Title-first semantic screening για {catalogCount} catalog products, με έγγραφα μόνο όταν τα φθηνότερα στάδια δεν αρκούν.</p>
+        </div>
+        <button className="matchmaking-scan-button" type="button" onClick={() => onScan(false)} disabled={!aiEnabled || loading || !opportunities.length}>
+          {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
+          {loading ? 'Screening in progress…' : storedCount ? 'Scan new or changed' : 'Scan current opportunities'}
+        </button>
+      </header>
+
+      {!aiEnabled ? (
+        <section className="matchmaking-alert">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <span>AI screening is unavailable because no API key is configured. Existing deterministic matches remain visible.</span>
+        </section>
+      ) : null}
+      {error ? <section className="matchmaking-alert error"><AlertTriangle size={18} aria-hidden="true" /><span>{error}</span></section> : null}
+      {loading ? (
+        <section className="matchmaking-progress">
+          <Loader2 className="spin" size={19} aria-hidden="true" />
+          <div><strong>Running the cost-controlled funnel</strong><span>Τα αποθηκευμένα αποτελέσματα παραλείπονται. Έως 5 opportunities μπορούν να φτάσουν στο document stage.</span></div>
+        </section>
+      ) : null}
+
+      <section className="matchmaking-metrics">
+        <div><Sparkles size={19} /><span>Catalog match</span><strong>{counts.catalog_match}</strong></div>
+        <div><Info size={19} /><span>Needs review</span><strong>{counts.needs_review}</strong></div>
+        <div><CheckCircle2 size={19} /><span>No match</span><strong>{counts.no_match}</strong></div>
+        <div><DatabaseZap size={19} /><span>Saved / scanned</span><strong>{storedCount}/{opportunities.length}</strong></div>
+      </section>
+
+      <section className="matchmaking-funnel" aria-label="Software screening funnel">
+        <div><span>1</span><strong>Deterministic</strong><small>0 tokens · reuse strong matches & exclusions</small></div>
+        <ArrowUpRight size={18} aria-hidden="true" />
+        <div><span>2</span><strong>Title batch</strong><small>{screeningModel} · one call for up to 40 titles</small></div>
+        <ArrowUpRight size={18} aria-hidden="true" />
+        <div><span>3</span><strong>Summary</strong><small>Only ambiguous titles</small></div>
+        <ArrowUpRight size={18} aria-hidden="true" />
+        <div><span>4</span><strong>Documents</strong><small>{deepModel} · relevant excerpts only</small></div>
+      </section>
+
+      {run ? (
+        <section className="matchmaking-run-summary">
+          <strong>Last scan</strong>
+          <span>{run.ai_calls} AI calls</span>
+          <span>{run.cached} cached</span>
+          <span>{run.document_escalations} document escalations</span>
+          <span>{(run.input_tokens + run.output_tokens).toLocaleString('en-US')} tokens</span>
+        </section>
+      ) : null}
+
+      <section className="matchmaking-results">
+        <div className="matchmaking-results-head">
+          <div><p className="eyebrow">Persisted screening results</p><h2>{visible.length} opportunities</h2></div>
+          <div className="matchmaking-filters" role="group" aria-label="Software screening status">
+            {([
+              ['all', 'All', opportunities.length],
+              ['catalog_match', 'Catalog match', counts.catalog_match],
+              ['needs_review', 'Needs review', counts.needs_review],
+              ['no_match', 'No match', counts.no_match],
+              ['unscanned', 'Not scanned', counts.unscanned],
+              ['error', 'Errors', counts.error],
+            ] as const).map(([value, label, count]) => (
+              <button className={filter === value ? 'active' : ''} type="button" onClick={() => setFilter(value)} key={value}>{label} <span>{count}</span></button>
+            ))}
+          </div>
+        </div>
+
+        <div className="matchmaking-list">
+          {visible.map((opportunity) => {
+            const status = softwareScreeningStatus(opportunity)
+            const screening = opportunity.software_screening
+            const products = screening?.matches?.length ? screening.matches : opportunity.software_matches
+            return (
+              <article className="matchmaking-result-card" key={opportunity.id}>
+                <div className="matchmaking-result-main">
+                  <div className="matchmaking-result-meta">
+                    <span className={`screening-status ${status}`}>{softwareScreeningLabel(status)}</span>
+                    <span>{screening ? `${screening.stage} stage` : opportunity.software_matches.length ? 'deterministic live match' : 'not scanned'}</span>
+                    {screening?.cached ? <span>cached</span> : null}
+                  </div>
+                  <h3>{opportunity.title}</h3>
+                  <p>{screening?.reason ?? (opportunity.software_matches.length ? 'The deterministic catalog scorer found a confirmed match.' : 'Run screening to classify this opportunity.')}</p>
+                  <div className="matchmaking-result-context">
+                    <span>{opportunity.buyer}</span>
+                    <span>{opportunity.source_label}</span>
+                    {opportunity.cpv_codes[0] ? <span>CPV {opportunity.cpv_codes[0]}</span> : null}
+                  </div>
+                </div>
+                <div className="matchmaking-result-products">
+                  {products.length ? products.slice(0, 3).map((match) => (
+                    <div className="matchmaking-product" key={match.product.slug}>
+                      <span>{match.score}</span>
+                      <div><strong>{match.product.name}</strong><small>{match.confidence} · {match.source === 'ai_refined' ? 'semantic + deterministic' : 'deterministic'}</small></div>
+                    </div>
+                  )) : <span className="matchmaking-no-product">No catalog product selected</span>}
+                  <button type="button" onClick={() => onOpenOpportunity(opportunity)}>Open details <PanelRightOpen size={14} aria-hidden="true" /></button>
+                </div>
+              </article>
+            )
+          })}
+          {!visible.length ? <div className="matchmaking-empty"><Search size={20} /><strong>No opportunities in this filter</strong></div> : null}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function softwareScreeningStatus(opportunity: Opportunity): SoftwareScreeningStatus | 'unscanned' {
+  if (opportunity.software_screening) {
+    return opportunity.software_screening.status
+  }
+  return opportunity.software_match_status === 'matched' && opportunity.software_matches.length ? 'catalog_match' : 'unscanned'
+}
+
+function softwareScreeningLabel(status: SoftwareScreeningStatus | 'unscanned') {
+  return ({
+    catalog_match: 'Catalog match',
+    needs_review: 'Needs review',
+    no_match: 'No match',
+    error: 'Error',
+    unscanned: 'Not scanned',
+  })[status]
+}
+
 function OpportunityRow({
   opportunity,
   guidance,
@@ -2521,9 +2824,16 @@ function OpportunityRow({
               {opportunity.procedure_type ? <span>{opportunity.procedure_type}</span> : null}
               {opportunity.package_match ? <span>{packageLabel(opportunity.package_match)}</span> : null}
               {opportunity.software_matches?.[0] ? (
-                <span className="software-match-chip">
+                <span className={`software-match-chip ${opportunity.software_matches[0].confidence}`}>
                   <Sparkles size={12} aria-hidden="true" />
-                  {opportunity.software_matches[0].product.name} · {opportunity.software_matches[0].score}
+                  Catalog match · {opportunity.software_matches[0].product.name} · {opportunity.software_matches[0].score}
+                  {opportunity.software_matches.length > 1 ? ` · +${opportunity.software_matches.length - 1}` : ''}
+                </span>
+              ) : null}
+              {opportunity.software_screening?.status === 'needs_review' ? (
+                <span className="software-review-chip">
+                  <Info size={12} aria-hidden="true" />
+                  Software fit needs review
                 </span>
               ) : null}
               <span className={`stage-chip ${stage.tone}`}>{stage.label}</span>

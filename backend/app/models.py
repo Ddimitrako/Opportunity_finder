@@ -9,6 +9,8 @@ SoftwareMatchStatus = Literal["matched", "insufficient_signals"]
 SoftwareMatchConfidence = Literal["high", "medium", "low"]
 SoftwareMatchSource = Literal["deterministic", "ai_refined"]
 DeliveryFit = Literal["solo", "small_team", "partner_required"]
+SoftwareScreeningStatus = Literal["catalog_match", "needs_review", "no_match", "error"]
+SoftwareScreeningStage = Literal["deterministic", "title", "summary", "documents"]
 
 
 DEFAULT_CPV_CODES = [
@@ -181,6 +183,21 @@ class SoftwareMatch(BaseModel):
     catalog_version: str
 
 
+class SoftwareScreeningResult(BaseModel):
+    opportunity_id: str
+    status: SoftwareScreeningStatus
+    stage: SoftwareScreeningStage
+    reason: str
+    matches: list[SoftwareMatch] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    model: str | None = None
+    deep_model: str | None = None
+    catalog_version: str
+    prompt_version: str
+    scanned_at: datetime
+    cached: bool = False
+
+
 class Opportunity(BaseModel):
     id: str
     source: SourceName
@@ -212,6 +229,7 @@ class Opportunity(BaseModel):
     package_match: str = "Custom software"
     software_match_status: SoftwareMatchStatus = "insufficient_signals"
     software_matches: list[SoftwareMatch] = Field(default_factory=list)
+    software_screening: SoftwareScreeningResult | None = None
     source_payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -650,6 +668,8 @@ class ConfigResponse(BaseModel):
     software_catalog_version: str
     software_catalog_count: int
     software_match_ai_enabled: bool
+    software_screening_model: str
+    software_screening_deep_model: str
 
 
 class SoftwareMatchRefineRequest(BaseModel):
@@ -663,6 +683,35 @@ class SoftwareMatchRefineResponse(BaseModel):
     model: str | None = None
     cached: bool = False
     catalog_version: str
+
+
+class SoftwareScreeningRequest(BaseModel):
+    opportunities: list[Opportunity] = Field(min_length=1, max_length=100)
+    force: bool = False
+    max_document_escalations: int = Field(default=5, ge=0, le=10)
+
+
+class SoftwareScreeningRun(BaseModel):
+    total: int
+    catalog_matches: int
+    needs_review: int
+    no_matches: int
+    errors: int
+    cached: int
+    ai_calls: int
+    document_escalations: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class SoftwareScreeningResponse(BaseModel):
+    opportunities: list[Opportunity]
+    results: list[SoftwareScreeningResult]
+    run: SoftwareScreeningRun
+    catalog_version: str
+    prompt_version: str
+    screening_model: str
+    deep_model: str
 
 
 OrganizationRole = Literal["buyer", "supplier", "both"]

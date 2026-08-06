@@ -8,6 +8,12 @@ from app.models import AIModelOption
 
 AI_MODEL_CATALOG: tuple[AIModelOption, ...] = (
     AIModelOption(
+        id="gpt-4o-mini",
+        label="GPT-4o mini",
+        description="Πολύ οικονομικό για ταξινόμηση, tagging και structured screening.",
+        quality="Economy",
+    ),
+    AIModelOption(
         id="gpt-4.1-mini",
         label="GPT-4.1 mini",
         description="Γρήγορο και οικονομικό για καθημερινές ερωτήσεις.",

@@ -612,7 +612,7 @@ h5 {
 
 .metric-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 16px;
 }
@@ -4357,6 +4357,9 @@ h5 {
 }
 
 .source-line .software-match-chip { display: inline-flex; align-items: center; gap: 4px; color: #075985; background: #e0f2fe; border-color: #bae6fd; }
+.source-line .software-match-chip.high { color: #166534; background: #dcfce7; border-color: #86efac; }
+.source-line .software-match-chip.low { color: #92400e; background: #fef3c7; border-color: #fde68a; }
+.source-line .software-review-chip { display: inline-flex; align-items: center; gap: 4px; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; border-radius: 999px; padding: 3px 7px; }
 .pattern-products { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .pattern-products span { border: 1px solid #bae6fd; border-radius: 999px; background: #f0f9ff; color: #075985; font-size: .72rem; font-weight: 700; padding: 4px 8px; }
 .software-matches-section { border-color: #bae6fd; background: linear-gradient(145deg, #fff 0%, #f0f9ff 100%); }
@@ -4394,6 +4397,84 @@ h5 {
 
 @media (max-width: 1100px) { .software-match-list { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .software-matches-header { flex-direction: column; } .software-refine-button { width: 100%; } }
+
+/* Persisted software screening workspace */
+.software-nav-button { border-color: #7dd3fc; color: #075985; background: #f0f9ff; }
+.software-nav-button > span { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; color: #fff; background: #0284c7; font-size: 10px; }
+.matchmaking-workspace { min-height: 100vh; box-sizing: border-box; padding: 32px; color: #17212b; background: radial-gradient(circle at top right, rgba(14,165,233,.1), transparent 28%), #f4f7f9; }
+.matchmaking-topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; max-width: 1500px; margin: 0 auto 22px; }
+.matchmaking-topbar > div { max-width: 820px; }
+.matchmaking-topbar h1 { margin: 5px 0 8px; font-size: clamp(30px, 4vw, 46px); }
+.matchmaking-topbar p:last-child { color: #52636d; line-height: 1.55; }
+.matchmaking-back { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 24px; border: 0; color: #376274; background: transparent; font: inherit; font-size: 13px; font-weight: 800; padding: 0; cursor: pointer; }
+.matchmaking-scan-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; border: 1px solid #0369a1; border-radius: 11px; color: #fff; background: #0369a1; box-shadow: 0 12px 26px rgba(3,105,161,.18); font: inherit; font-weight: 850; padding: 0 17px; cursor: pointer; white-space: nowrap; }
+.matchmaking-scan-button:disabled { border-color: #cbd5e1; color: #64748b; background: #e2e8f0; box-shadow: none; cursor: not-allowed; }
+.matchmaking-alert, .matchmaking-progress { display: flex; align-items: center; gap: 10px; max-width: 1470px; margin: 0 auto 16px; border: 1px solid #fcd34d; border-radius: 10px; color: #854d0e; background: #fffbeb; padding: 12px 14px; }
+.matchmaking-alert.error { border-color: #fecaca; color: #991b1b; background: #fef2f2; }
+.matchmaking-progress { border-color: #bae6fd; color: #075985; background: #f0f9ff; }
+.matchmaking-progress div { display: grid; gap: 2px; }
+.matchmaking-progress span { font-size: 12px; }
+.matchmaking-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 1500px; margin: 0 auto 14px; }
+.matchmaking-metrics > div { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 9px; min-height: 66px; border: 1px solid #dbe4e8; border-radius: 11px; background: rgba(255,255,255,.92); padding: 12px 14px; }
+.matchmaking-metrics svg { color: #0284c7; }
+.matchmaking-metrics span { color: #64748b; font-size: 12px; font-weight: 750; }
+.matchmaking-metrics strong { font-size: 22px; }
+.matchmaking-funnel { display: flex; align-items: stretch; gap: 10px; max-width: 1500px; margin: 0 auto 14px; }
+.matchmaking-funnel > div { flex: 1; display: grid; grid-template-columns: 27px 1fr; grid-template-areas: "step title" "step detail"; align-items: center; gap: 2px 9px; min-width: 0; border: 1px solid #d8e4e9; border-radius: 11px; background: #fff; padding: 12px; }
+.matchmaking-funnel > div > span { grid-area: step; display: grid; width: 27px; height: 27px; place-items: center; border-radius: 999px; color: #fff; background: #0e7490; font-size: 11px; font-weight: 900; }
+.matchmaking-funnel strong { grid-area: title; font-size: 13px; }
+.matchmaking-funnel small { grid-area: detail; color: #64748b; overflow-wrap: anywhere; }
+.matchmaking-funnel > svg { align-self: center; flex: 0 0 auto; color: #94a3b8; }
+.matchmaking-run-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 1500px; margin: 0 auto 18px; color: #475569; font-size: 12px; }
+.matchmaking-run-summary strong { margin-right: 3px; }
+.matchmaking-run-summary span { border-radius: 999px; background: #e8eef1; padding: 5px 9px; }
+.matchmaking-results { max-width: 1500px; margin: 0 auto; border: 1px solid #d9e3e7; border-radius: 15px; background: rgba(255,255,255,.72); overflow: hidden; }
+.matchmaking-results-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #dde6ea; padding: 18px; }
+.matchmaking-results-head h2 { margin-top: 4px; font-size: 23px; }
+.matchmaking-filters { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.matchmaking-filters button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; border: 1px solid #d4dee3; border-radius: 999px; color: #52636d; background: #fff; font: inherit; font-size: 11px; font-weight: 800; padding: 0 10px; cursor: pointer; }
+.matchmaking-filters button.active { border-color: #0284c7; color: #075985; background: #e0f2fe; }
+.matchmaking-filters button span { display: grid; min-width: 18px; height: 18px; place-items: center; border-radius: 999px; background: #e2e8f0; font-size: 9px; }
+.matchmaking-list { display: grid; }
+.matchmaking-result-card { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); gap: 20px; border-bottom: 1px solid #e2e8f0; padding: 18px; }
+.matchmaking-result-card:last-child { border-bottom: 0; }
+.matchmaking-result-main h3 { margin: 8px 0 6px; font-size: 16px; }
+.matchmaking-result-main > p { color: #536570; font-size: 12px; line-height: 1.5; }
+.matchmaking-result-meta, .matchmaking-result-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.matchmaking-result-meta > span, .matchmaking-result-context > span { border-radius: 999px; color: #64748b; background: #eef2f4; font-size: 10px; font-weight: 750; padding: 4px 7px; }
+.matchmaking-result-context { margin-top: 10px; }
+.matchmaking-result-context > span { border-radius: 0; background: transparent; padding: 0 8px 0 0; }
+.screening-status.catalog_match { color: #166534; background: #dcfce7; }
+.screening-status.needs_review { color: #92400e; background: #fef3c7; }
+.screening-status.no_match { color: #475569; background: #e2e8f0; }
+.screening-status.error { color: #991b1b; background: #fee2e2; }
+.screening-status.unscanned { color: #075985; background: #e0f2fe; }
+.matchmaking-result-products { display: grid; align-content: start; gap: 7px; }
+.matchmaking-product { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 8px; border: 1px solid #dbeafe; border-radius: 9px; background: #f8fcff; padding: 7px; }
+.matchmaking-product > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 8px; color: #075985; background: #e0f2fe; font-size: 12px; font-weight: 900; }
+.matchmaking-product div { display: grid; gap: 2px; }
+.matchmaking-product strong { font-size: 12px; }
+.matchmaking-product small { color: #64748b; font-size: 9px; }
+.matchmaking-no-product { color: #94a3b8; font-size: 11px; padding: 9px 0; }
+.matchmaking-result-products > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; background: #fff; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.matchmaking-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 150px; color: #64748b; }
+
+@media (max-width: 1180px) {
+  .metric-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .matchmaking-funnel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .matchmaking-funnel > svg { display: none; }
+}
+@media (max-width: 760px) {
+  .matchmaking-workspace { padding: 18px; }
+  .matchmaking-topbar, .matchmaking-results-head { align-items: stretch; flex-direction: column; }
+  .matchmaking-scan-button { width: 100%; }
+  .matchmaking-metrics, .matchmaking-funnel { grid-template-columns: 1fr 1fr; }
+  .matchmaking-filters { justify-content: flex-start; }
+  .matchmaking-result-card { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .metric-strip, .matchmaking-metrics, .matchmaking-funnel { grid-template-columns: 1fr; }
+}
 
 /* Opportunity AI workspace */
 .ai-model-controls { display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px; }

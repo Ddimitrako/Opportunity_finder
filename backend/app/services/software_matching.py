@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from datetime import date, datetime
 
 from app.catalog import CatalogCategory, CatalogRepositoryHealth, SoftwareCatalog, get_software_catalog
@@ -17,6 +18,7 @@ from app.models import (
 MATCH_THRESHOLD = 55
 AI_CANDIDATE_THRESHOLD = 30
 GENERIC_CPV_PREFIXES = {"48", "72"}
+REVIEW_THRESHOLD = 45
 
 STOP_WORDS = {
     "and", "the", "for", "with", "from", "that", "this", "into", "your", "our", "open", "source",
@@ -43,6 +45,16 @@ SERVICE_PRIORITY = (
 )
 
 
+@dataclass(frozen=True)
+class SemanticMatchHints:
+    category_ids: tuple[str, ...] = ()
+    capability_terms: tuple[str, ...] = ()
+    service_types: tuple[str, ...] = ()
+    confidence: str = "medium"
+    reason: str = ""
+    evidence_ids: tuple[str, ...] = ()
+
+
 class SoftwareMatchingService:
     def __init__(self, catalog: SoftwareCatalog | None = None):
         self.catalog = catalog or get_software_catalog()
@@ -66,21 +78,36 @@ class SoftwareMatchingService:
     def candidates(self, opportunity: Opportunity, *, limit: int = 8) -> list[SoftwareMatch]:
         return self.match(opportunity, limit=limit, threshold=AI_CANDIDATE_THRESHOLD)
 
+    def semantic_candidates(
+        self,
+        opportunity: Opportunity,
+        hints: SemanticMatchHints,
+        *,
+        limit: int = 8,
+        threshold: int = REVIEW_THRESHOLD,
+    ) -> list[SoftwareMatch]:
+        return self.match(opportunity, limit=limit, threshold=threshold, semantic_hints=hints)
+
     def match(
         self,
         opportunity: Opportunity,
         *,
         limit: int = 3,
         threshold: int = MATCH_THRESHOLD,
+        semantic_hints: SemanticMatchHints | None = None,
     ) -> list[SoftwareMatch]:
         text = _opportunity_text(opportunity)
         service_hits = _service_hits(text)
+        if semantic_hints:
+            for service_type in semantic_hints.service_types:
+                if service_type in SERVICE_SIGNALS:
+                    service_hits.setdefault(service_type, ["AI semantic screening"])
         matches: list[SoftwareMatch] = []
         for product in self.catalog.products:
             health = self.health.get(product.slug)
             if not product.active or (health and health.archived):
                 continue
-            match = self._score_product(opportunity, text, product, health, service_hits)
+            match = self._score_product(opportunity, text, product, health, service_hits, semantic_hints)
             if match is not None and match.score >= threshold:
                 matches.append(match)
         matches.sort(key=lambda item: (-item.score, -item.product.editorial_score, item.product.name.casefold(), item.product.slug))
@@ -93,6 +120,7 @@ class SoftwareMatchingService:
         product: SoftwareProduct,
         health: CatalogRepositoryHealth | None,
         service_hits: dict[str, list[str]],
+        semantic_hints: SemanticMatchHints | None = None,
     ) -> SoftwareMatch | None:
         categories = [self.categories[item] for item in product.category_ids if item in self.categories]
         category_terms = _matched_category_terms(text, categories)
@@ -108,21 +136,38 @@ class SoftwareMatchingService:
         matched_brands = _matched_terms(text, brand_terms)
         product_tokens = _product_tokens(product)
         token_hits = sorted(token for token in product_tokens if _contains_term(text, token))
+        semantic_categories = set(semantic_hints.category_ids) if semantic_hints else set()
+        semantic_category_match = sorted(semantic_categories.intersection(product.category_ids))
+        semantic_capability_hits = (
+            _matched_terms(
+                _normalize(" ".join((product.summary, product.problem, product.ideal_for))),
+                semantic_hints.capability_terms,
+            )
+            if semantic_hints
+            else []
+        )
 
         # A broad 48/72 CPV family is never sufficient by itself.
-        if not category_terms and not cpv_prefixes and not matched_brands:
+        if not category_terms and not cpv_prefixes and not matched_brands and not semantic_category_match:
             return None
 
         category_score = 0
         if category_terms:
             category_score = min(40, 37 + 3 * (len(category_terms) - 1))
+        if semantic_category_match:
+            semantic_category_score = 40 if semantic_hints and semantic_hints.confidence == "high" else 36
+            category_score = max(category_score, semantic_category_score)
 
         cpv_score = 0
         if cpv_prefixes:
             longest = max(len(prefix) for prefix in cpv_prefixes)
             cpv_score = 25 if longest >= 6 else 21 if longest >= 4 else 16
 
-        product_score = min(15, len(matched_brands) * 10 + len(token_hits) * 3)
+        semantic_product_score = 0
+        if semantic_category_match:
+            semantic_product_score = 10 if semantic_hints and semantic_hints.confidence == "high" else 7
+            semantic_product_score += min(4, len(semantic_capability_hits) * 2)
+        product_score = min(15, len(matched_brands) * 10 + len(token_hits) * 3 + semantic_product_score)
         matched_service_types = [item for item in product.service_types if item in service_hits]
         service_score = min(10, len(matched_service_types) * 5)
 
@@ -150,7 +195,7 @@ class SoftwareMatchingService:
             min(100, category_score + cpv_score + product_score + service_score + maturity_score + locale_health_score - penalties),
         )
 
-        strong_signals = sum((bool(category_terms), bool(cpv_prefixes), bool(matched_brands)))
+        strong_signals = sum((bool(category_terms or semantic_category_match), bool(cpv_prefixes), bool(matched_brands or semantic_capability_hits)))
         confidence = "high" if score >= 75 and strong_signals >= 2 else "medium" if score >= MATCH_THRESHOLD else "low"
 
         dimensions = [
@@ -159,7 +204,8 @@ class SoftwareMatchingService:
                 label="Category / capability",
                 score=category_score,
                 max_score=40,
-                reasons=[f"Matched capability: {term}" for term in category_terms[:4]],
+                reasons=[f"Matched capability: {term}" for term in category_terms[:4]]
+                + [f"AI taxonomy category: {category_id}" for category_id in semantic_category_match[:3]],
             ),
             SoftwareMatchDimension(
                 key="cpv",
@@ -174,7 +220,8 @@ class SoftwareMatchingService:
                 label="Product relevance",
                 score=product_score,
                 max_score=15,
-                reasons=[f"Product term: {term}" for term in (matched_brands + token_hits)[:4]],
+                reasons=[f"Product term: {term}" for term in (matched_brands + token_hits)[:4]]
+                + [f"Semantic capability: {term}" for term in semantic_capability_hits[:3]],
             ),
             SoftwareMatchDimension(
                 key="services",
@@ -210,6 +257,10 @@ class SoftwareMatchingService:
             )
 
         signals = [f"Capability: {term}" for term in category_terms[:3]]
+        if semantic_hints and semantic_category_match:
+            signals.extend(f"AI category: {category_id}" for category_id in semantic_category_match[:2])
+            if semantic_hints.reason:
+                signals.insert(0, semantic_hints.reason)
         signals.extend(f"CPV: {prefix}" for prefix in cpv_prefixes[:2])
         signals.extend(f"Product: {term}" for term in matched_brands[:2])
         signals.extend(f"Service: {item}" for item in matched_service_types[:3])
@@ -218,11 +269,12 @@ class SoftwareMatchingService:
             product=product,
             score=score,
             confidence=confidence,
-            source="deterministic",
+            source="ai_refined" if semantic_hints else "deterministic",
             dimensions=dimensions,
             matched_signals=signals,
             service_recommendations=_service_recommendations(product, service_hits),
             caveats=_caveats(product, health, self.licenses.get(product.license_id)),
+            evidence_ids=list(semantic_hints.evidence_ids) if semantic_hints else [],
             catalog_version=self.catalog_version,
         )
 

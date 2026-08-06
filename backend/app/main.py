@@ -43,6 +43,8 @@ from app.models import (
     SourceName,
     SoftwareMatchRefineRequest,
     SoftwareMatchRefineResponse,
+    SoftwareScreeningRequest,
+    SoftwareScreeningResponse,
     TrackingEntry,
     TrackingEntryCreate,
     TrackingEntryUpdate,
@@ -62,6 +64,11 @@ from app.services.software_refinement import (
     SoftwareRefinementError,
     SoftwareRefinementService,
     SoftwareRefinementUnavailable,
+)
+from app.services.software_screening import (
+    SoftwareScreeningError,
+    SoftwareScreeningService,
+    SoftwareScreeningUnavailable,
 )
 from app.services.market import MarketService
 
@@ -117,6 +124,10 @@ def get_software_refinement_service(settings: Settings = Depends(get_settings)) 
     return SoftwareRefinementService(settings)
 
 
+def get_software_screening_service(settings: Settings = Depends(get_settings)) -> SoftwareScreeningService:
+    return SoftwareScreeningService(settings)
+
+
 def _allowed_document_hosts(settings: Settings) -> set[str]:
     hosts = {
         urlparse(str(settings.khmdhs_base_url)).hostname,
@@ -157,6 +168,8 @@ async def config(settings: Settings = Depends(get_settings)) -> ConfigResponse:
         software_catalog_version=catalog.catalog_version,
         software_catalog_count=len(catalog.products),
         software_match_ai_enabled=bool(settings.openai_api_key),
+        software_screening_model=settings.software_screening_model,
+        software_screening_deep_model=settings.software_screening_deep_model,
     )
 
 
@@ -202,8 +215,10 @@ async def search_opportunities(
     request: ProcurementSearchRequest,
     service: OpportunityService = Depends(get_service),
     market: MarketService = Depends(get_market_service),
+    screening: SoftwareScreeningService = Depends(get_software_screening_service),
 ) -> SearchResponse:
     response = await service.search(request)
+    response = response.model_copy(update={"opportunities": screening.apply_saved(response.opportunities)})
     market.ingest_opportunities(response.opportunities)
     return response
 
@@ -220,6 +235,25 @@ async def refine_software_matches(
     except SoftwareRefinementUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SoftwareRefinementError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/software-matches/scan", response_model=SoftwareScreeningResponse)
+async def scan_software_matches(
+    request: SoftwareScreeningRequest,
+    service: SoftwareScreeningService = Depends(get_software_screening_service),
+) -> SoftwareScreeningResponse:
+    try:
+        return await service.scan(
+            request.opportunities,
+            force=request.force,
+            max_document_escalations=request.max_document_escalations,
+        )
+    except UnsupportedAIModelError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SoftwareScreeningUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SoftwareScreeningError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
