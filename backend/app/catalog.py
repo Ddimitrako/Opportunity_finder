@@ -57,14 +57,39 @@ class CatalogRepositoryHealth(BaseModel):
     status: Literal["verified", "pending-refresh", "error"]
 
 
+class CatalogBusinessUseCase(BaseModel):
+    slug: str
+    title_en: str
+    title_el: str
+    description_en: str
+    description_el: str
+    business_problem_en: str
+    business_problem_el: str
+    department_id: str
+    category_ids: list[str] = Field(default_factory=list)
+    fit: Literal["direct", "partial", "foundation"]
+    status: Literal["active"] = "active"
+
+
+class CatalogUseCaseSolution(BaseModel):
+    use_case_slug: str
+    project_slug: str
+    rank: int = Field(ge=1, le=2)
+    fit: Literal["direct", "partial", "foundation"]
+    rationale_en: str
+    rationale_el: str
+
+
 class SoftwareCatalog(BaseModel):
-    schema_version: int = 1
+    schema_version: int = 2
     catalog_version: str
     source: dict[str, str]
     departments: list[CatalogDepartment]
     categories: list[CatalogCategory]
     licenses: list[CatalogLicense]
     repository_health: list[CatalogRepositoryHealth]
+    business_use_cases: list[CatalogBusinessUseCase] = Field(default_factory=list)
+    use_case_solutions: list[CatalogUseCaseSolution] = Field(default_factory=list)
     products: list[SoftwareProduct]
 
     @model_validator(mode="after")
@@ -80,7 +105,7 @@ class SoftwareCatalog(BaseModel):
 def catalog_version(payload: dict[str, Any]) -> str:
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-    return f"v1-{digest[:16]}"
+    return f"v{payload.get('schema_version', 1)}-{digest[:16]}"
 
 
 def load_software_catalog(path: Path = CATALOG_PATH) -> SoftwareCatalog:

@@ -13,13 +13,6 @@ from app.catalog import SoftwareCatalog, catalog_version
 
 
 DELIMITER = " | "
-EXPECTED_COUNTS = {
-    "products": 63,
-    "departments": 8,
-    "categories": 39,
-    "licenses": 11,
-    "repository_health": 63,
-}
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_WORKBOOK = BACKEND_DIR / "catalog" / "software_catalog.xlsx"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "software_catalog.json"
@@ -168,6 +161,7 @@ def workbook_payload(path: Path) -> dict[str, Any]:
             "service_types": _list(row.get("service_types")),
             "license_id": _text(row["license_id"], required=True),
             "maturity": _text(row["maturity"], required=True),
+            "solution_type": _text(row.get("solution_type")) or "production-platform",
             "editorial_score": int(row["editorial_score"]),
             "english_support": _text(row["english_support"], required=True),
             "greek_support": _text(row["greek_support"], required=True),
@@ -183,21 +177,60 @@ def workbook_payload(path: Path) -> dict[str, Any]:
         }
         for row in _rows(workbook, "Products")
     ]
+    business_use_cases = [
+        {
+            "slug": _text(row["slug"], required=True),
+            "title_en": _text(row["title_en"], required=True),
+            "title_el": _text(row["title_el"], required=True),
+            "description_en": _text(row["description_en"], required=True),
+            "description_el": _text(row["description_el"], required=True),
+            "business_problem_en": _text(row["business_problem_en"], required=True),
+            "business_problem_el": _text(row["business_problem_el"], required=True),
+            "department_id": _text(row["department_id"], required=True),
+            "category_ids": _list(row.get("category_ids")),
+            "fit": _text(row["fit"], required=True),
+            "status": _text(row["status"], required=True),
+        }
+        for row in _rows(workbook, "Business Use Cases")
+    ]
+    use_case_solutions = [
+        {
+            "use_case_slug": _text(row["use_case_slug"], required=True),
+            "project_slug": _text(row["project_slug"], required=True),
+            "rank": int(row["rank"]),
+            "fit": _text(row["fit"], required=True),
+            "rationale_en": _text(row["rationale_en"], required=True),
+            "rationale_el": _text(row["rationale_el"], required=True),
+        }
+        for row in _rows(workbook, "Use Case Solutions")
+    ]
+
+    expected_counts = {
+        "products": int(dictionary.get("products_count", len(products))),
+        "departments": int(dictionary.get("departments_count", len(departments))),
+        "categories": int(dictionary.get("categories_count", len(categories))),
+        "licenses": int(dictionary.get("licenses_count", len(licenses))),
+        "repository_health": int(dictionary.get("repository_health_count", len(repository_health))),
+        "business_use_cases": int(dictionary.get("business_use_cases_count", len(business_use_cases))),
+        "use_case_solutions": int(dictionary.get("use_case_solutions_count", len(use_case_solutions))),
+    }
 
     payload: dict[str, Any] = {
         "schema_version": schema_version,
         "source": {
-            "name": dictionary.get("source_name", "opensource-for-business"),
-            "snapshot_date": dictionary.get("source_snapshot_date", "2026-08-02"),
+            "name": dictionary.get("catalog_name", "Opportunity Finder Open Source Catalog"),
+            "snapshot_date": dictionary.get("snapshot_date", "2026-08-06"),
             "ownership": dictionary.get("ownership", "Opportunity Finder"),
         },
         "departments": departments,
         "categories": categories,
         "licenses": licenses,
         "repository_health": repository_health,
+        "business_use_cases": business_use_cases,
+        "use_case_solutions": use_case_solutions,
         "products": products,
     }
-    _validate_relationships(payload)
+    _validate_relationships(payload, expected_counts)
     payload["catalog_version"] = catalog_version(payload)
     try:
         return SoftwareCatalog.model_validate(payload).model_dump(mode="json")
@@ -205,8 +238,8 @@ def workbook_payload(path: Path) -> dict[str, Any]:
         raise ValueError(f"Workbook schema validation failed: {exc}") from exc
 
 
-def _validate_relationships(payload: dict[str, Any]) -> None:
-    for name, expected in EXPECTED_COUNTS.items():
+def _validate_relationships(payload: dict[str, Any], expected_counts: dict[str, int]) -> None:
+    for name, expected in expected_counts.items():
         actual = len(payload[name])
         if actual != expected:
             raise ValueError(f"Expected {expected} {name}, found {actual}")
@@ -223,8 +256,12 @@ def _validate_relationships(payload: dict[str, Any]) -> None:
     product_slugs = unique(payload["products"], "slug", "product slug")
     unique(payload["products"], "repository", "product repository URL")
     health_slugs = unique(payload["repository_health"], "slug", "repository health slug")
+    use_case_slugs = unique(payload["business_use_cases"], "slug", "business use case slug")
     if product_slugs != health_slugs:
         raise ValueError("Repository Health slugs must match Products slugs exactly")
+    relation_pairs = [(item["use_case_slug"], item["project_slug"]) for item in payload["use_case_solutions"]]
+    if len(relation_pairs) != len(set(relation_pairs)):
+        raise ValueError("Duplicate use case solution relation detected")
     for category in payload["categories"]:
         if category["department_id"] not in department_ids:
             raise ValueError(f"Unknown department on category {category['id']}")
@@ -242,6 +279,16 @@ def _validate_relationships(payload: dict[str, Any]) -> None:
                 raise ValueError(f"Invalid {field} URL on product {product['slug']}")
         if product["greek_evidence"] and not _valid_url(product["greek_evidence"]):
             raise ValueError(f"Invalid Greek evidence URL on product {product['slug']}")
+    for use_case in payload["business_use_cases"]:
+        if use_case["department_id"] not in department_ids:
+            raise ValueError(f"Unknown department on use case {use_case['slug']}")
+        if not use_case["category_ids"] or not set(use_case["category_ids"]).issubset(category_ids):
+            raise ValueError(f"Invalid categories on use case {use_case['slug']}")
+    for relation in payload["use_case_solutions"]:
+        if relation["use_case_slug"] not in use_case_slugs:
+            raise ValueError(f"Unknown use case on relation {relation['use_case_slug']}")
+        if relation["project_slug"] not in product_slugs:
+            raise ValueError(f"Unknown product on use case relation {relation['project_slug']}")
     for license_profile in payload["licenses"]:
         if not _valid_url(license_profile["evidence"]):
             raise ValueError(f"Invalid evidence URL on license {license_profile['id']}")
@@ -270,7 +317,7 @@ def main() -> int:
     if args.check:
         if not args.output.exists() or args.output.read_text(encoding="utf-8") != serialized:
             raise SystemExit("software catalog JSON is stale; regenerate it from the workbook")
-        print(f"Catalog OK: {len(payload['products'])} products, {payload['catalog_version']}")
+        print(f"Catalog OK: {len(payload['products'])} products, {len(payload['business_use_cases'])} use cases, {payload['catalog_version']}")
         return 0
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(serialized, encoding="utf-8")

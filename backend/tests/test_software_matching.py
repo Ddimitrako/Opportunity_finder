@@ -65,6 +65,20 @@ def test_ties_have_stable_ordering() -> None:
     assert first == second
 
 
+def test_new_civic_and_smart_city_use_cases_match_expected_projects() -> None:
+    service = SoftwareMatchingService()
+    cases = [
+        ("Προμήθεια πλατφόρμας για ελεγχόμενη στάθμευση", {"openparking", "parkapi"}),
+        ("Σύστημα για έξυπνα υδρόμετρα και τηλεμέτρηση", {"thingsboard", "openremote"}),
+        ("Πλατφόρμα για διαχείριση στόλου", {"traccar", "fleetbase"}),
+        ("Συντονισμός πόρων πολιτικής προστασίας", {"sahana-eden", "ushahidi"}),
+        ("Πλατφόρμα για δημόσια διαβούλευση", {"decidim", "consul-democracy"}),
+    ]
+    for title, expected in cases:
+        slugs = {item.product.slug for item in service.match(opportunity(title), limit=6)}
+        assert slugs.intersection(expected), (title, slugs)
+
+
 def test_golden_eval_recall_and_false_recommendation_rate() -> None:
     service = SoftwareMatchingService()
     cases = json.loads(FIXTURES.read_text(encoding="utf-8"))

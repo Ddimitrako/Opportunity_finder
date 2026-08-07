@@ -9,6 +9,7 @@ SoftwareMatchStatus = Literal["matched", "insufficient_signals"]
 SoftwareMatchConfidence = Literal["high", "medium", "low"]
 SoftwareMatchSource = Literal["deterministic", "ai_refined"]
 DeliveryFit = Literal["solo", "small_team", "partner_required"]
+SolutionType = Literal["production-platform", "specialist-component", "reference-implementation"]
 SoftwareScreeningStatus = Literal["catalog_match", "needs_review", "no_match", "error"]
 SoftwareScreeningStage = Literal["deterministic", "title", "summary", "documents"]
 
@@ -156,6 +157,7 @@ class SoftwareProduct(BaseModel):
     service_types: list[str] = Field(default_factory=list)
     license_id: str
     maturity: Literal["anchor", "established", "niche-leader"]
+    solution_type: SolutionType = "production-platform"
     editorial_score: int = Field(ge=0, le=100)
     english_support: str
     greek_support: Literal["verified", "partial", "unavailable", "unknown"]

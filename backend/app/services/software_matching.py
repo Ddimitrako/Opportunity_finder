@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from app.catalog import CatalogCategory, CatalogRepositoryHealth, SoftwareCatalog, get_software_catalog
+from app.catalog import CatalogBusinessUseCase, CatalogCategory, CatalogRepositoryHealth, SoftwareCatalog, get_software_catalog
 from app.models import (
     Opportunity,
     ServiceRecommendation,
@@ -19,6 +19,7 @@ MATCH_THRESHOLD = 55
 AI_CANDIDATE_THRESHOLD = 30
 GENERIC_CPV_PREFIXES = {"48", "72"}
 REVIEW_THRESHOLD = 45
+GENERIC_CAPABILITY_TERMS = {"procurement", "software procurement", "software", "system", "platform"}
 
 STOP_WORDS = {
     "and", "the", "for", "with", "from", "that", "this", "into", "your", "our", "open", "source",
@@ -61,6 +62,12 @@ class SoftwareMatchingService:
         self.categories = {item.id: item for item in self.catalog.categories}
         self.licenses = {item.id: item for item in self.catalog.licenses}
         self.health = {item.slug: item for item in self.catalog.repository_health}
+        self.use_cases = {item.slug: item for item in self.catalog.business_use_cases if item.status == "active"}
+        self.use_cases_by_product: dict[str, list[CatalogBusinessUseCase]] = {}
+        for relation in self.catalog.use_case_solutions:
+            use_case = self.use_cases.get(relation.use_case_slug)
+            if use_case:
+                self.use_cases_by_product.setdefault(relation.project_slug, []).append(use_case)
 
     @property
     def catalog_version(self) -> str:
@@ -124,6 +131,7 @@ class SoftwareMatchingService:
     ) -> SoftwareMatch | None:
         categories = [self.categories[item] for item in product.category_ids if item in self.categories]
         category_terms = _matched_category_terms(text, categories)
+        use_case_terms = _matched_use_case_terms(text, self.use_cases_by_product.get(product.slug, []))
         category_negative = _matched_terms(
             text,
             (term for category in categories for term in category.negative_keywords),
@@ -148,12 +156,14 @@ class SoftwareMatchingService:
         )
 
         # A broad 48/72 CPV family is never sufficient by itself.
-        if not category_terms and not cpv_prefixes and not matched_brands and not semantic_category_match:
+        if not category_terms and not use_case_terms and not cpv_prefixes and not matched_brands and not semantic_category_match:
             return None
 
         category_score = 0
         if category_terms:
-            category_score = min(40, 37 + 3 * (len(category_terms) - 1))
+            category_score = 40
+        if use_case_terms:
+            category_score = 40
         if semantic_category_match:
             semantic_category_score = 40 if semantic_hints and semantic_hints.confidence == "high" else 36
             category_score = max(category_score, semantic_category_score)
@@ -167,7 +177,7 @@ class SoftwareMatchingService:
         if semantic_category_match:
             semantic_product_score = 10 if semantic_hints and semantic_hints.confidence == "high" else 7
             semantic_product_score += min(4, len(semantic_capability_hits) * 2)
-        product_score = min(15, len(matched_brands) * 10 + len(token_hits) * 3 + semantic_product_score)
+        product_score = min(15, len(matched_brands) * 10 + len(token_hits) * 3 + len(category_terms) * 11 + len(use_case_terms) * 12 + semantic_product_score)
         matched_service_types = [item for item in product.service_types if item in service_hits]
         service_score = min(10, len(matched_service_types) * 5)
 
@@ -195,7 +205,7 @@ class SoftwareMatchingService:
             min(100, category_score + cpv_score + product_score + service_score + maturity_score + locale_health_score - penalties),
         )
 
-        strong_signals = sum((bool(category_terms or semantic_category_match), bool(cpv_prefixes), bool(matched_brands or semantic_capability_hits)))
+        strong_signals = sum((bool(category_terms or use_case_terms or semantic_category_match), bool(cpv_prefixes), bool(matched_brands or semantic_capability_hits)))
         confidence = "high" if score >= 75 and strong_signals >= 2 else "medium" if score >= MATCH_THRESHOLD else "low"
 
         dimensions = [
@@ -205,6 +215,7 @@ class SoftwareMatchingService:
                 score=category_score,
                 max_score=40,
                 reasons=[f"Matched capability: {term}" for term in category_terms[:4]]
+                + [f"Matched use case: {term}" for term in use_case_terms[:3]]
                 + [f"AI taxonomy category: {category_id}" for category_id in semantic_category_match[:3]],
             ),
             SoftwareMatchDimension(
@@ -257,6 +268,7 @@ class SoftwareMatchingService:
             )
 
         signals = [f"Capability: {term}" for term in category_terms[:3]]
+        signals.extend(f"Use case: {term}" for term in use_case_terms[:2])
         if semantic_hints and semantic_category_match:
             signals.extend(f"AI category: {category_id}" for category_id in semantic_category_match[:2])
             if semantic_hints.reason:
@@ -324,7 +336,29 @@ def _matched_terms(text: str, terms) -> list[str]:
 
 
 def _matched_category_terms(text: str, categories: list[CatalogCategory]) -> list[str]:
-    return _matched_terms(text, (term for category in categories for term in (*category.keywords_en, *category.keywords_el)))
+    return [
+        term
+        for term in _matched_terms(text, (term for category in categories for term in (*category.keywords_en, *category.keywords_el)))
+        if _normalize(term) not in GENERIC_CAPABILITY_TERMS
+    ]
+
+
+def _matched_use_case_terms(text: str, use_cases: list[CatalogBusinessUseCase]) -> list[str]:
+    return _matched_terms(
+        text,
+        (
+            term
+            for use_case in use_cases
+            for term in (
+                use_case.title_en,
+                use_case.title_el,
+                use_case.description_en,
+                use_case.description_el,
+                use_case.business_problem_en,
+                use_case.business_problem_el,
+            )
+        ),
+    )
 
 
 def _cpv_digits(value: str) -> str:
