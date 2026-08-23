@@ -105,6 +105,8 @@ function props(opportunities: WorkspaceOpportunity[]) {
     onBack: vi.fn(),
     onScan: vi.fn(),
     onOpenOpportunity: vi.fn(),
+    username: 'admin',
+    onLogout: vi.fn(async () => undefined),
   }
 }
 

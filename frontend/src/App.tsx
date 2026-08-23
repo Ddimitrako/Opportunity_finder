@@ -1118,15 +1118,25 @@ function App() {
 
   return (
     <div className="authenticated-app">
-      <div className="session-control" aria-label="Συνδεδεμένος χρήστης">
-        <UserRound size={16} aria-hidden="true" />
-        <span>{session.username ?? 'admin'}</span>
-        <button type="button" onClick={() => void logout()}>
-          <LogOut size={15} aria-hidden="true" />
-          Αποσύνδεση
-        </button>
+      <OpportunityFinderApp username={session.username ?? 'admin'} onLogout={logout} />
+    </div>
+  )
+}
+
+function SessionControl({ username, onLogout }: { username: string; onLogout: () => Promise<void> }) {
+  return (
+    <div className="session-control" aria-label="Συνδεδεμένος χρήστης">
+      <div className="session-identity">
+        <UserRound size={17} aria-hidden="true" />
+        <span>
+          <small>Συνδεδεμένος ως</small>
+          <strong>{username}</strong>
+        </span>
       </div>
-      <OpportunityFinderApp />
+      <button type="button" onClick={() => void onLogout()}>
+        <LogOut size={15} aria-hidden="true" />
+        Αποσύνδεση
+      </button>
     </div>
   )
 }
@@ -1201,7 +1211,7 @@ function LoginPage({
   )
 }
 
-function OpportunityFinderApp() {
+function OpportunityFinderApp({ username, onLogout }: { username: string; onLogout: () => Promise<void> }) {
   const [activeView, setActiveView] = useState<'opportunities' | 'market' | 'matchmaking'>('opportunities')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
   const [selectedAiModel, setSelectedAiModel] = useState(() => window.localStorage.getItem('opportunity-ai-model') || 'gpt-4.1-mini')
@@ -1778,7 +1788,7 @@ function OpportunityFinderApp() {
   }
 
   if (activeView === 'market') {
-    return <MarketRadar onOpenOpportunities={() => setActiveView('opportunities')} />
+    return <MarketRadar username={username} onLogout={onLogout} onOpenOpportunities={() => setActiveView('opportunities')} />
   }
 
   if (activeView === 'matchmaking') {
@@ -1798,6 +1808,8 @@ function OpportunityFinderApp() {
           setActiveView('opportunities')
           void openDetails(opportunity)
         }}
+        username={username}
+        onLogout={onLogout}
       />
     )
   }
@@ -1978,6 +1990,7 @@ function OpportunityFinderApp() {
             {loading ? <Loader2 className="spin" size={17} aria-hidden="true" /> : <RefreshCw size={17} aria-hidden="true" />}
             Search opportunities
             </button>
+            <SessionControl username={username} onLogout={onLogout} />
           </div>
         </form>
       </aside>
@@ -2155,7 +2168,15 @@ function OpportunityFinderApp() {
   )
 }
 
-function MarketRadar({ onOpenOpportunities }: { onOpenOpportunities: () => void }) {
+function MarketRadar({
+  username,
+  onLogout,
+  onOpenOpportunities,
+}: {
+  username: string
+  onLogout: () => Promise<void>
+  onOpenOpportunities: () => void
+}) {
   const [config, setConfig] = useState<MarketConfig | null>(null)
   const [overview, setOverview] = useState<MarketOverview | null>(null)
   const [buyers, setBuyers] = useState<MarketOrganization[]>([])
@@ -2319,6 +2340,8 @@ function MarketRadar({ onOpenOpportunities }: { onOpenOpportunities: () => void 
           <button className="secondary-action" type="submit" disabled={!config?.gemi_enabled}><Plus size={15} /> Αποθήκευση profile</button>
           {profileMessage ? <small>{profileMessage}</small> : null}
         </form>
+
+        <SessionControl username={username} onLogout={onLogout} />
       </aside>
 
       <main className="market-workspace">
@@ -2803,6 +2826,8 @@ export function SoftwareMatchWorkspace({
   onBack,
   onScan,
   onOpenOpportunity,
+  username,
+  onLogout,
 }: {
   opportunities: Opportunity[]
   aiEnabled: boolean
@@ -2815,6 +2840,8 @@ export function SoftwareMatchWorkspace({
   onBack: () => void
   onScan: (force: boolean) => void
   onOpenOpportunity: (opportunity: Opportunity) => void
+  username: string
+  onLogout: () => Promise<void>
 }) {
   const [filter, setFilter] = useState<'all' | 'catalog_match' | 'needs_review' | 'no_match' | 'error' | 'unscanned'>('all')
   const counts = useMemo(() => {
@@ -2833,7 +2860,7 @@ export function SoftwareMatchWorkspace({
   return (
     <div className="matchmaking-workspace">
       <header className="matchmaking-topbar">
-        <div>
+        <div className="matchmaking-heading">
           <button className="matchmaking-back" type="button" onClick={onBack}>
             <ChevronLeft size={16} aria-hidden="true" />
             Opportunities
@@ -2842,10 +2869,13 @@ export function SoftwareMatchWorkspace({
           <h1>Software Match AI</h1>
           <p>Title-first semantic screening για {catalogCount} catalog products, με έγγραφα μόνο όταν τα φθηνότερα στάδια δεν αρκούν.</p>
         </div>
-        <button className="matchmaking-scan-button" type="button" onClick={() => onScan(false)} disabled={!aiEnabled || loading || !opportunities.length}>
-          {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
-          {loading ? 'Screening in progress…' : storedCount ? 'Scan new or changed' : 'Scan current opportunities'}
-        </button>
+        <div className="matchmaking-topbar-actions">
+          <SessionControl username={username} onLogout={onLogout} />
+          <button className="matchmaking-scan-button" type="button" onClick={() => onScan(false)} disabled={!aiEnabled || loading || !opportunities.length}>
+            {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
+            {loading ? 'Screening in progress…' : storedCount ? 'Scan new or changed' : 'Scan current opportunities'}
+          </button>
+        </div>
       </header>
 
       {!aiEnabled ? (

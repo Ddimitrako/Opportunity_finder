@@ -151,22 +151,44 @@
 }
 
 .session-control {
-  position: fixed;
-  top: 14px;
-  right: 18px;
-  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #d1dce1;
+  border-radius: 11px;
+  background: #ffffff;
+  padding: 8px 8px 8px 10px;
+  color: #43535d;
+  box-shadow: 0 6px 18px rgba(25, 45, 55, 0.08);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.session-identity {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #d1dce1;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  padding: 5px 6px 5px 11px;
-  color: #43535d;
-  box-shadow: 0 8px 24px rgba(25, 45, 55, 0.12);
-  backdrop-filter: blur(10px);
+}
+
+.session-identity > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.session-identity small {
+  color: #71818a;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.session-identity strong {
+  overflow: hidden;
+  color: #263840;
   font-size: 12px;
-  font-weight: 750;
+  text-overflow: ellipsis;
 }
 
 .session-control button {
@@ -175,7 +197,7 @@
   align-items: center;
   gap: 6px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   color: #4f616a;
   background: #edf2f4;
   padding: 0 10px;
@@ -199,15 +221,6 @@
 @media (max-width: 640px) {
   .login-card {
     padding: 28px 22px;
-  }
-
-  .session-control {
-    top: 8px;
-    right: 8px;
-  }
-
-  .session-control > span {
-    display: none;
   }
 }
 
@@ -324,6 +337,10 @@ h5 {
   border-top: 1px solid #d9e0e4;
   background: #f8fafb;
   box-shadow: 0 -10px 24px rgba(17, 25, 31, 0.06);
+}
+
+.sidebar-actions .session-control {
+  margin-top: 10px;
 }
 
 .field {
@@ -3729,6 +3746,19 @@ h5 {
 .market-discovery-form input { width: 100%; border: 1px solid; border-radius: 8px; padding: 9px; font: inherit; }
 .market-discovery-form .secondary-action { color: #eaf2f5; border-color: #596f79; background: #294957; }
 
+.market-sidebar .session-control {
+  margin-top: auto;
+  border-color: #49616d;
+  color: #eaf2f5;
+  background: #203d4b;
+  box-shadow: none;
+}
+
+.market-sidebar .session-identity small { color: #afc2ca; }
+.market-sidebar .session-identity strong { color: #ffffff; }
+.market-sidebar .session-control button { color: #eaf2f5; background: #294957; }
+.market-sidebar .session-control button:hover { color: #ffffff; background: #8f2929; }
+
 .market-workspace { min-width: 0; display: grid; align-content: start; gap: 18px; padding: 26px 30px 46px; }
 .market-topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .market-topbar h2 { margin: 2px 0 0; color: #17252d; font-size: 26px; }
@@ -4608,7 +4638,9 @@ h5 {
 .software-nav-button > span { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; color: #fff; background: #0284c7; font-size: 10px; }
 .matchmaking-workspace { min-height: 100vh; box-sizing: border-box; padding: 32px; color: #17212b; background: radial-gradient(circle at top right, rgba(14,165,233,.1), transparent 28%), #f4f7f9; }
 .matchmaking-topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; max-width: 1500px; margin: 0 auto 22px; }
-.matchmaking-topbar > div { max-width: 820px; }
+.matchmaking-heading { max-width: 820px; }
+.matchmaking-topbar-actions { display: grid; justify-items: end; gap: 10px; }
+.matchmaking-topbar-actions .session-control { min-width: 240px; }
 .matchmaking-topbar h1 { margin: 5px 0 8px; font-size: clamp(30px, 4vw, 46px); }
 .matchmaking-topbar p:last-child { color: #52636d; line-height: 1.55; }
 .matchmaking-back { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 24px; border: 0; color: #376274; background: transparent; font: inherit; font-size: 13px; font-weight: 800; padding: 0; cursor: pointer; }
@@ -4672,7 +4704,9 @@ h5 {
 @media (max-width: 760px) {
   .matchmaking-workspace { padding: 18px; }
   .matchmaking-topbar, .matchmaking-results-head { align-items: stretch; flex-direction: column; }
-  .matchmaking-scan-button { width: 100%; }
+  .matchmaking-topbar-actions { width: 100%; justify-items: stretch; }
+  .matchmaking-topbar-actions .session-control,
+  .matchmaking-scan-button { width: 100%; box-sizing: border-box; }
   .matchmaking-metrics, .matchmaking-funnel { grid-template-columns: 1fr 1fr; }
   .matchmaking-filters { justify-content: flex-start; }
   .matchmaking-result-card { grid-template-columns: 1fr; }

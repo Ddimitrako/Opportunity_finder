@@ -48,4 +48,27 @@ describe('Application authentication', () => {
       expect.objectContaining({ credentials: 'include', method: 'POST' }),
     )
   })
+
+  it('places the signed-in user and logout action inside the sidebar', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/session')) {
+        return Promise.resolve(jsonResponse({ authenticated: true, username: 'admin' }))
+      }
+      if (url.endsWith('/api/auth/logout')) {
+        return Promise.resolve(jsonResponse({ authenticated: false, username: null }))
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unavailable in this test' }, 500))
+    })
+
+    const user = userEvent.setup()
+    render(<App />)
+
+    const sessionControl = await screen.findByLabelText('Συνδεδεμένος χρήστης')
+    expect(sessionControl.closest('aside')).toHaveClass('sidebar')
+    expect(sessionControl).toHaveTextContent('admin')
+
+    await user.click(screen.getByRole('button', { name: 'Αποσύνδεση' }))
+    expect(await screen.findByRole('heading', { name: 'Ασφαλής πρόσβαση' })).toBeInTheDocument()
+  })
 })
