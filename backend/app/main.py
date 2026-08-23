@@ -1,9 +1,19 @@
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from app.auth import (
+    LoginRequest,
+    SessionResponse,
+    clear_session_cookie,
+    create_session_token,
+    credentials_are_valid,
+    session_username,
+    set_session_cookie,
+)
 from app.config import Settings, get_settings
 from app.ai_models import AI_MODEL_CATALOG, UnsupportedAIModelError, default_ai_model
 from app.catalog import get_software_catalog
@@ -72,7 +82,15 @@ from app.services.software_screening import (
 )
 from app.services.market import MarketService
 
-app = FastAPI(title="Opportunity Finder API", version="0.1.0")
+runtime_settings = get_settings()
+production_docs = runtime_settings.environment.lower() != "production"
+app = FastAPI(
+    title="Opportunity Finder API",
+    version="0.1.0",
+    docs_url="/docs" if production_docs else None,
+    redoc_url="/redoc" if production_docs else None,
+    openapi_url="/openapi.json" if production_docs else None,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,11 +99,42 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        runtime_settings.frontend_origin,
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+PUBLIC_API_PATHS = {
+    "/api/health",
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/session",
+}
+
+
+@app.middleware("http")
+async def require_authenticated_api(request: Request, call_next):
+    settings = get_settings()
+    path = request.url.path.rstrip("/") or "/"
+    if (
+        not settings.auth_required
+        or request.method == "OPTIONS"
+        or not path.startswith("/api/")
+        or path in PUBLIC_API_PATHS
+    ):
+        return await call_next(request)
+
+    username = session_username(request.cookies.get(settings.auth_cookie_name), settings)
+    if not username:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Authentication required."},
+            headers={"Cache-Control": "no-store", "WWW-Authenticate": "Session"},
+        )
+    request.state.auth_username = username
+    return await call_next(request)
 
 
 def get_service(settings: Settings = Depends(get_settings)) -> OpportunityService:
@@ -149,6 +198,48 @@ async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
             "demo": "Curated local patterns for UI and scoring validation",
         },
     )
+
+
+@app.post("/api/auth/login", response_model=SessionResponse)
+async def login(
+    payload: LoginRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
+) -> SessionResponse:
+    if not settings.auth_required:
+        return SessionResponse(authenticated=True, username=settings.auth_username)
+    if not credentials_are_valid(payload.username, payload.password, settings):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password.",
+            headers={"Cache-Control": "no-store", "WWW-Authenticate": "Session"},
+        )
+    set_session_cookie(response, create_session_token(settings), settings)
+    response.headers["Cache-Control"] = "no-store"
+    return SessionResponse(authenticated=True, username=settings.auth_username)
+
+
+@app.get("/api/auth/session", response_model=SessionResponse)
+async def auth_session(
+    request: Request,
+    response: Response,
+    settings: Settings = Depends(get_settings),
+) -> SessionResponse:
+    response.headers["Cache-Control"] = "no-store"
+    if not settings.auth_required:
+        return SessionResponse(authenticated=True, username=settings.auth_username)
+    username = session_username(request.cookies.get(settings.auth_cookie_name), settings)
+    return SessionResponse(authenticated=bool(username), username=username)
+
+
+@app.post("/api/auth/logout", response_model=SessionResponse)
+async def logout(
+    response: Response,
+    settings: Settings = Depends(get_settings),
+) -> SessionResponse:
+    clear_session_cookie(response, settings)
+    response.headers["Cache-Control"] = "no-store"
+    return SessionResponse(authenticated=False)
 
 
 @app.get("/api/config", response_model=ConfigResponse)

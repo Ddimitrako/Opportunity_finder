@@ -23,6 +23,8 @@ import {
   Info,
   Layers3,
   Loader2,
+  LockKeyhole,
+  LogOut,
   MessageSquare,
   PanelRightOpen,
   Radar,
@@ -736,7 +738,19 @@ type MarketRefresh = {
   message?: string | null
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+
+const authenticatedFetch: typeof globalThis.fetch = async (input, init) => {
+  const response = await globalThis.fetch(input, { ...init, credentials: 'include' })
+  const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  const isAuthRequest = requestUrl.includes('/api/auth/')
+  if (response.status === 401 && !isAuthRequest) {
+    window.dispatchEvent(new Event('opportunity-auth-required'))
+  }
+  return response
+}
+
+const fetch = authenticatedFetch
 
 const CALENDAR_WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
@@ -1025,7 +1039,169 @@ const fallbackAiModels: AIModelOption[] = [
   { id: 'gpt-5.6', label: 'GPT-5.6 Sol', description: 'Μέγιστη ποιότητα ανάλυσης.', quality: 'Best', recommended: false },
 ]
 
+type AuthSession = {
+  authenticated: boolean
+  username?: string | null
+}
+
 function App() {
+  const [session, setSession] = useState<AuthSession | null>(null)
+  const [sessionError, setSessionError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadSession() {
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/session`)
+        if (!response.ok) throw new Error(`Session check returned ${response.status}`)
+        const nextSession = (await response.json()) as AuthSession
+        if (!cancelled) setSession(nextSession)
+      } catch {
+        if (!cancelled) {
+          setSession({ authenticated: false })
+          setSessionError('Δεν ήταν δυνατή η σύνδεση με την εφαρμογή. Δοκίμασε ξανά.')
+        }
+      }
+    }
+    void loadSession()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const requireLogin = () => setSession({ authenticated: false })
+    window.addEventListener('opportunity-auth-required', requireLogin)
+    return () => window.removeEventListener('opportunity-auth-required', requireLogin)
+  }, [])
+
+  const login = async (username: string, password: string) => {
+    setSessionError(null)
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const payload = await response.json().catch(() => null) as (AuthSession & { detail?: string }) | null
+      if (!response.ok || !payload?.authenticated) {
+        const message = response.status === 401 ? 'Λάθος όνομα χρήστη ή κωδικός.' : payload?.detail
+        return message ?? 'Η σύνδεση απέτυχε. Δοκίμασε ξανά.'
+      }
+      setSession(payload)
+      return null
+    } catch {
+      return 'Δεν ήταν δυνατή η σύνδεση με τον server.'
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST' })
+    } finally {
+      setSession({ authenticated: false })
+    }
+  }
+
+  if (!session) {
+    return (
+      <main className="auth-page auth-loading" aria-busy="true">
+        <Loader2 className="spin" size={30} aria-hidden="true" />
+        <p>Έλεγχος ασφαλούς συνεδρίας…</p>
+      </main>
+    )
+  }
+
+  if (!session.authenticated) {
+    return <LoginPage initialError={sessionError} onLogin={login} />
+  }
+
+  return (
+    <div className="authenticated-app">
+      <div className="session-control" aria-label="Συνδεδεμένος χρήστης">
+        <UserRound size={16} aria-hidden="true" />
+        <span>{session.username ?? 'admin'}</span>
+        <button type="button" onClick={() => void logout()}>
+          <LogOut size={15} aria-hidden="true" />
+          Αποσύνδεση
+        </button>
+      </div>
+      <OpportunityFinderApp />
+    </div>
+  )
+}
+
+function LoginPage({
+  initialError,
+  onLogin,
+}: {
+  initialError: string | null
+  onLogin: (username: string, password: string) => Promise<string | null>
+}) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(initialError)
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    const nextError = await onLogin(username.trim(), password)
+    setError(nextError)
+    setSubmitting(false)
+  }
+
+  return (
+    <main className="auth-page">
+      <section className="login-card" aria-labelledby="login-title">
+        <div className="login-brand-mark">
+          <Target size={28} aria-hidden="true" />
+        </div>
+        <p className="login-eyebrow">Opportunity Finder</p>
+        <h1 id="login-title">Ασφαλής πρόσβαση</h1>
+        <p className="login-intro">Συνδέσου για να δεις opportunities, αποθηκευμένα δεδομένα και AI εργαλεία.</p>
+
+        <form onSubmit={submit}>
+          <label>
+            <span>Όνομα χρήστη</span>
+            <input
+              autoComplete="username"
+              autoFocus
+              maxLength={128}
+              required
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Κωδικός</span>
+            <input
+              autoComplete="current-password"
+              maxLength={256}
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          {error ? <p className="login-error" role="alert">{error}</p> : null}
+          <button className="login-submit" disabled={submitting} type="submit">
+            {submitting ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <LockKeyhole size={18} aria-hidden="true" />}
+            {submitting ? 'Σύνδεση…' : 'Σύνδεση'}
+          </button>
+        </form>
+
+        <div className="login-security-note">
+          <ShieldCheck size={17} aria-hidden="true" />
+          <span>Η συνεδρία αποθηκεύεται σε ασφαλές, HttpOnly cookie.</span>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function OpportunityFinderApp() {
   const [activeView, setActiveView] = useState<'opportunities' | 'market' | 'matchmaking'>('opportunities')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
   const [selectedAiModel, setSelectedAiModel] = useState(() => window.localStorage.getItem('opportunity-ai-model') || 'gpt-4.1-mini')

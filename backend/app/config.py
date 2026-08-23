@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, Field
+from pydantic import AnyHttpUrl, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
 
     khmdhs_base_url: AnyHttpUrl = "https://cerpp.eprocurement.gov.gr"
-    khmdhs_verify_ssl: bool = False
+    khmdhs_verify_ssl: bool = True
     khmdhs_timeout_seconds: float = 18
 
     ted_base_url: AnyHttpUrl = "https://api.ted.europa.eu"
@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     software_screening_model: str = "gpt-4o-mini"
     software_screening_deep_model: str = "gpt-4.1-mini"
 
+    auth_required: bool = False
+    auth_username: str = "admin"
+    auth_password_hash: str | None = Field(default=None, repr=False)
+    auth_secret_key: str | None = Field(default=None, repr=False)
+    auth_session_hours: int = Field(default=12, ge=1, le=168)
+    auth_cookie_name: str = Field(default="opportunity_session", pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+    auth_cookie_secure: bool = False
+
     bookmark_db_path: Path = Path("data/opportunity_finder.sqlite3")
 
     model_config = SettingsConfigDict(
@@ -51,6 +59,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        if self.environment.lower() != "production":
+            return self
+        if not self.auth_required:
+            raise ValueError("AUTH_REQUIRED must be true in production")
+        if not self.auth_password_hash:
+            raise ValueError("AUTH_PASSWORD_HASH is required in production")
+        if not self.auth_secret_key or len(self.auth_secret_key) < 32:
+            raise ValueError("AUTH_SECRET_KEY must contain at least 32 characters in production")
+        return self
 
 
 @lru_cache

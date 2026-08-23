@@ -5,8 +5,14 @@ services:
     container_name: opportunity-finder-backend
     environment:
       ENVIRONMENT: production
-      FRONTEND_ORIGIN: http://localhost:5173
-      KHMDHS_VERIFY_SSL: "false"
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      KHMDHS_VERIFY_SSL: "true"
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      AUTH_USERNAME: ${AUTH_USERNAME:-admin}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:-}
+      AUTH_SESSION_HOURS: ${AUTH_SESSION_HOURS:-12}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
       GEMI_API_KEY: ${GEMI_API_KEY:-}
@@ -14,7 +20,7 @@ services:
       MARKET_REFRESH_HOUR: ${MARKET_REFRESH_HOUR:-7}
       BOOKMARK_DB_PATH: /app/data/opportunity_finder.sqlite3
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - bookmark-data:/app/data
     restart: unless-stopped
@@ -26,7 +32,13 @@ services:
     command: ["python", "-m", "app.worker", "--interval"]
     environment:
       ENVIRONMENT: production
-      KHMDHS_VERIFY_SSL: "false"
+      KHMDHS_VERIFY_SSL: "true"
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      AUTH_USERNAME: ${AUTH_USERNAME:-admin}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:-}
+      AUTH_SESSION_HOURS: ${AUTH_SESSION_HOURS:-12}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       GEMI_API_KEY: ${GEMI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
@@ -41,7 +53,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     container_name: opportunity-finder-frontend
     depends_on:
       - backend

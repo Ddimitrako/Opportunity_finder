@@ -19,6 +19,7 @@ backend/.env
 backend/.env.local
 frontend/.env
 frontend/.env.local
+docker-compose.override.yml
 
 *-dev.log
 *-dev.err.log

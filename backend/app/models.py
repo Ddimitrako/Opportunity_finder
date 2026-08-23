@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 SourceName = Literal["khmdhs", "ted", "demo"]
 FitBand = Literal["Bid candidate", "Worth reading", "Monitor only", "Ignore"]
@@ -103,8 +103,8 @@ DEFAULT_KEYWORDS = [
 
 class ProcurementSearchRequest(BaseModel):
     query: str = Field(default="", max_length=100)
-    keywords: list[str] = Field(default_factory=lambda: DEFAULT_KEYWORDS.copy())
-    cpv_codes: list[str] = Field(default_factory=lambda: DEFAULT_CPV_CODES.copy())
+    keywords: list[str] = Field(default_factory=lambda: DEFAULT_KEYWORDS.copy(), max_length=50)
+    cpv_codes: list[str] = Field(default_factory=lambda: DEFAULT_CPV_CODES.copy(), max_length=100)
     budget_min: float = Field(default=5_000, ge=0)
     budget_max: float = Field(default=100_000, ge=0)
     date_from: date = Field(default_factory=lambda: date.today() - timedelta(days=180))
@@ -112,17 +112,31 @@ class ProcurementSearchRequest(BaseModel):
     deadline_after: date = Field(default_factory=date.today)
     only_open: bool = True
     show_all_fetched: bool = False
-    sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted", "demo"])
+    sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted", "demo"], min_length=1, max_length=3)
     include_demo_when_empty: bool = True
     page: int = Field(default=0, ge=0)
     limit: int = Field(default=40, ge=1, le=100)
 
+    @field_validator("sources")
+    @classmethod
+    def sources_must_be_unique(cls, sources: list[SourceName]) -> list[SourceName]:
+        if len(sources) != len(set(sources)):
+            raise ValueError("sources must contain unique values")
+        return sources
+
 
 class ActivityRequest(BaseModel):
-    sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted"])
-    cpv_codes: list[str] = Field(default_factory=lambda: DEFAULT_CPV_CODES)
+    sources: list[SourceName] = Field(default_factory=lambda: ["khmdhs", "ted"], min_length=1, max_length=3)
+    cpv_codes: list[str] = Field(default_factory=lambda: DEFAULT_CPV_CODES, max_length=100)
     days: int = Field(default=3, ge=1, le=366)
     limit: int = Field(default=100, ge=1, le=1000)
+
+    @field_validator("sources")
+    @classmethod
+    def sources_must_be_unique(cls, sources: list[SourceName]) -> list[SourceName]:
+        if len(sources) != len(set(sources)):
+            raise ValueError("sources must contain unique values")
+        return sources
 
 
 class SoftwareMatchDimension(BaseModel):
@@ -270,7 +284,7 @@ class NeedPattern(BaseModel):
 
 
 class NeedPatternRequest(BaseModel):
-    opportunities: list[Opportunity] = Field(default_factory=list)
+    opportunities: list[Opportunity] = Field(default_factory=list, max_length=100)
     min_opportunities: int = Field(default=2, ge=1, le=20)
     max_patterns: int = Field(default=8, ge=1, le=20)
 
@@ -611,7 +625,7 @@ class DiavgeiaDecisionSignal(BaseModel):
 class BuyerIntelligenceRequest(BaseModel):
     buyer: str = Field(min_length=1, max_length=240)
     opportunity: Opportunity | None = None
-    market_opportunities: list[Opportunity] = Field(default_factory=list)
+    market_opportunities: list[Opportunity] = Field(default_factory=list, max_length=100)
     diavgeia_limit: int = Field(default=8, ge=0, le=30)
     history_days: int = Field(default=720, ge=0, le=1800)
     history_limit: int = Field(default=40, ge=0, le=120)

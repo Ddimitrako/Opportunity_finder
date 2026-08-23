@@ -4,6 +4,15 @@ Full-stack platform for discovering Greek and EU public procurement opportunitie
 
 It also includes a Buyer-Need & Software Market Radar that persists buyer signals, procurement lifecycle evidence, suppliers/integrators, software-brand mentions, market trends and lightweight follow-up tracking.
 
+## Current production access
+
+- URL: `https://srv1136832.hstgr.cloud`
+- Username: `admin`
+- Password: intentionally not stored in Git; keep it in the project owner's password manager. The VPS stores only its PBKDF2 hash in `/home/Opportunity_finder/.env` with permissions `600`.
+- Nginx Proxy Manager upstream: `http://opportunity-finder-frontend:80` on the shared `voyag_network`.
+
+To rotate the password, generate a new PBKDF2 hash with `app.auth.hash_password`, replace `AUTH_PASSWORD_HASH` in the protected VPS `.env`, and recreate the backend container. Never commit the password, its hash, or `AUTH_SECRET_KEY`.
+
 ## Stack
 
 - Backend: FastAPI
@@ -17,10 +26,15 @@ It also includes a Buyer-Need & Software Market Radar that persists buyer signal
 With Docker Compose:
 
 ```powershell
+$env:PYTHONPATH='backend'
+.\.venv\Scripts\python -c "from getpass import getpass; from app.auth import hash_password; print(hash_password(getpass('Login password: ')))"
+.\.venv\Scripts\python -c "import secrets; print(secrets.token_urlsafe(48))"
 docker compose up --build
 ```
 
-Open `http://localhost:5173`. The API is exposed at `http://localhost:8000`.
+Put the generated password hash and secret in `.env` as `AUTH_PASSWORD_HASH` and `AUTH_SECRET_KEY`; single-quote the password hash so its `$` separators remain literal. Set `AUTH_USERNAME` as needed. Open `http://localhost:5173`. The frontend proxies `/api` internally, while the backend debug port is bound only to `127.0.0.1:8000`.
+
+For an HTTPS deployment behind Nginx Proxy Manager, proxy the public hostname to the frontend on port `5173`, enable Force SSL, HTTP/2 and HSTS, then set `FRONTEND_ORIGIN=https://your-hostname` and `AUTH_COOKIE_SECURE=true`. Do not publish or proxy backend port `8000` directly.
 
 Docker Compose also starts `market-worker`, which refreshes the radar daily at 07:00 Europe/Athens. A source failure is isolated and recorded in the refresh status.
 
