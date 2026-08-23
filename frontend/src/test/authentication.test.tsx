@@ -16,6 +16,7 @@ describe('Application authentication', () => {
   const fetchMock = vi.fn()
 
   beforeEach(() => {
+    window.localStorage.clear()
     vi.stubGlobal('fetch', fetchMock)
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input).endsWith('/api/auth/session')) {
@@ -67,6 +68,13 @@ describe('Application authentication', () => {
     const sessionControl = await screen.findByLabelText('Συνδεδεμένος χρήστης')
     expect(sessionControl.closest('aside')).toHaveClass('sidebar')
     expect(sessionControl).toHaveTextContent('admin')
+
+    await user.click(screen.getByRole('button', { name: 'Απόκρυψη sidebar' }))
+    expect(sessionControl.closest('.app-shell')).toHaveClass('sidebar-collapsed')
+    expect(window.localStorage.getItem('opportunity-sidebar')).toBe('hidden')
+
+    await user.click(screen.getByRole('button', { name: 'Εμφάνιση sidebar' }))
+    expect(sessionControl.closest('.app-shell')).not.toHaveClass('sidebar-collapsed')
 
     await user.click(screen.getByRole('button', { name: 'Αποσύνδεση' }))
     expect(await screen.findByRole('heading', { name: 'Ασφαλής πρόσβαση' })).toBeInTheDocument()

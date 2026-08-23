@@ -218,6 +218,14 @@
   color: #182025;
 }
 
+.app-shell.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar-collapsed .sidebar {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .login-card {
     padding: 28px 22px;
@@ -241,6 +249,33 @@
   align-items: center;
   gap: 13px;
   margin-bottom: 24px;
+}
+
+.sidebar-hide-button,
+.sidebar-show-button {
+  flex: 0 0 auto;
+  min-width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #cfdbdf;
+  border-radius: 9px;
+  color: #53666f;
+  background: #ffffff;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.sidebar-hide-button {
+  margin-left: auto;
+}
+
+.sidebar-hide-button:hover,
+.sidebar-show-button:hover {
+  border-color: #82a8b5;
+  color: #174f60;
+  background: #edf6f8;
 }
 
 .brand-mark {
@@ -784,6 +819,17 @@ h5 {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.topbar-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-heading > div {
+  min-width: 0;
 }
 
 .status-pill {

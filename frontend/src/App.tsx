@@ -26,6 +26,8 @@ import {
   LockKeyhole,
   LogOut,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelRightOpen,
   Radar,
   RefreshCw,
@@ -1213,6 +1215,7 @@ function LoginPage({
 
 function OpportunityFinderApp({ username, onLogout }: { username: string; onLogout: () => Promise<void> }) {
   const [activeView, setActiveView] = useState<'opportunities' | 'market' | 'matchmaking'>('opportunities')
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.localStorage.getItem('opportunity-sidebar') !== 'hidden')
   const [config, setConfig] = useState<ConfigResponse | null>(null)
   const [selectedAiModel, setSelectedAiModel] = useState(() => window.localStorage.getItem('opportunity-ai-model') || 'gpt-4.1-mini')
   const [query, setQuery] = useState('')
@@ -1258,6 +1261,11 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
   const [softwareScreeningError, setSoftwareScreeningError] = useState<string | null>(null)
   const [softwareScreeningRun, setSoftwareScreeningRun] = useState<SoftwareScreeningRun | null>(null)
   const [moreCpvsOpen, setMoreCpvsOpen] = useState(false)
+
+  const updateSidebarVisibility = useCallback((open: boolean) => {
+    setSidebarOpen(open)
+    window.localStorage.setItem('opportunity-sidebar', open ? 'visible' : 'hidden')
+  }, [])
 
   const cpvOptions = config?.default_cpv_codes ?? FALLBACK_CPV
   const cpvGroups = useMemo(() => buildCpvGroups(cpvOptions), [cpvOptions])
@@ -1815,7 +1823,7 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
       <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-mark">
@@ -1825,6 +1833,15 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
             <p className="eyebrow">Opportunity Finder</p>
             <h1>Public software bids</h1>
           </div>
+          <button
+            className="sidebar-hide-button"
+            type="button"
+            aria-label="Απόκρυψη sidebar"
+            title="Απόκρυψη sidebar"
+            onClick={() => updateSidebarVisibility(false)}
+          >
+            <PanelLeftClose size={18} aria-hidden="true" />
+          </button>
         </div>
 
         <form className="filter-form" onSubmit={onSubmit}>
@@ -1997,9 +2014,22 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
 
       <main className="workspace">
         <header className="topbar">
-          <div>
+          <div className="topbar-heading">
+            {!sidebarOpen ? (
+              <button
+                className="sidebar-show-button"
+                type="button"
+                aria-label="Εμφάνιση sidebar"
+                title="Εμφάνιση sidebar"
+                onClick={() => updateSidebarVisibility(true)}
+              >
+                <PanelLeftOpen size={19} aria-hidden="true" />
+              </button>
+            ) : null}
+            <div>
             <p className="eyebrow">Greece-first procurement intelligence</p>
             <h2>Shortlist μικρών full-stack έργων</h2>
+            </div>
           </div>
           <div className="topbar-actions">
             <button className="market-nav-button software-nav-button" type="button" onClick={() => setActiveView('matchmaking')}>
