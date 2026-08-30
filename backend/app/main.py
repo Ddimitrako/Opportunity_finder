@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from urllib.parse import urlparse
 
 import httpx
@@ -15,7 +16,7 @@ from app.auth import (
     set_session_cookie,
 )
 from app.config import Settings, get_settings
-from app.ai_models import AI_MODEL_CATALOG, UnsupportedAIModelError, default_ai_model
+from app.ai_models import AI_MODEL_CATALOG, UnsupportedAIModelError, default_ai_model, resolve_ai_model
 from app.catalog import get_software_catalog
 from app.models import (
     ActivityRequest,
@@ -25,6 +26,8 @@ from app.models import (
     BookmarkUpsertRequest,
     BuyerIntelligenceRequest,
     BuyerIntelligenceResponse,
+    AIWorkflowSettings,
+    CompanyProfile,
     ConfigResponse,
     DEFAULT_CPV_CODES,
     DEFAULT_KEYWORDS,
@@ -43,14 +46,21 @@ from app.models import (
     MarketSignalListResponse,
     NeedPatternRequest,
     NeedPatternResponse,
+    Opportunity,
     OpportunityDetails,
     OpportunityChatContextStatus,
     OpportunityChatRequest,
     OpportunityChatThreadResponse,
     OpportunityChatTurnResponse,
     ProcurementSearchRequest,
+    PursuitFeedbackRequest,
+    PursuitListResponse,
+    PursuitRecord,
+    PursuitUpdateRequest,
+    PursuitUpsertRequest,
     SearchResponse,
     SourceName,
+    SourceRun,
     SoftwareMatchRefineRequest,
     SoftwareMatchRefineResponse,
     SoftwareScreeningRequest,
@@ -70,6 +80,7 @@ from app.services.buyer_intelligence import BuyerIntelligenceService
 from app.services.details import OpportunityDetailsService
 from app.services.opportunities import OpportunityService
 from app.services.patterns import PatternDiscoveryService
+from app.services.pursuits import PursuitService, PursuitSettingsService
 from app.services.software_refinement import (
     SoftwareRefinementError,
     SoftwareRefinementService,
@@ -149,6 +160,14 @@ def get_bookmark_service(settings: Settings = Depends(get_settings)) -> Bookmark
     return BookmarkService(settings)
 
 
+def get_pursuit_service(settings: Settings = Depends(get_settings)) -> PursuitService:
+    return PursuitService(settings)
+
+
+def get_pursuit_settings_service(settings: Settings = Depends(get_settings)) -> PursuitSettingsService:
+    return PursuitSettingsService(settings)
+
+
 def get_brief_service(settings: Settings = Depends(get_settings)) -> DocumentBriefService:
     return DocumentBriefService(settings)
 
@@ -174,7 +193,12 @@ def get_software_refinement_service(settings: Settings = Depends(get_settings)) 
 
 
 def get_software_screening_service(settings: Settings = Depends(get_settings)) -> SoftwareScreeningService:
-    return SoftwareScreeningService(settings)
+    workflows = PursuitSettingsService(settings).get_ai_settings()
+    routed_settings = settings.model_copy(update={
+        "software_screening_model": workflows.scan.model,
+        "software_screening_deep_model": workflows.dossier.model,
+    })
+    return SoftwareScreeningService(routed_settings)
 
 
 def _allowed_document_hosts(settings: Settings) -> set[str]:
@@ -184,6 +208,55 @@ def _allowed_document_hosts(settings: Settings) -> set[str]:
         urlparse(str(settings.diavgeia_base_url)).hostname,
     }
     return {host for host in hosts if host}
+
+
+def _qualified_private_candidates(market: MarketService) -> list[Opportunity]:
+    """Admit private signals only when need, recency, evidence and contact path are explicit."""
+    software_terms = (
+        "software", "λογισμ", "dashboard", "portal", "crm", "erp", "workflow",
+        "automation", "integration", "api", "data platform", "analytics", "web app",
+        "ψηφιακ", "πληροφοριακ", "διασυνδεσ", "αυτοματοποι",
+    )
+    cutoff = date.today() - timedelta(days=90)
+    candidates: list[Opportunity] = []
+    for signal in market.list_signals(min_score=70, limit=50).items:
+        evidence = signal.evidence
+        evidence_source = evidence.source.casefold()
+        text = f"{evidence.title} {evidence.excerpt} {signal.why_now}".casefold()
+        if not evidence_source.startswith("company_"):
+            continue
+        if signal.stage not in {"early", "open"} or signal.confidence < 70:
+            continue
+        if not evidence.url or not evidence.published_at or evidence.published_at < cutoff:
+            continue
+        if not any(term in text for term in software_terms):
+            continue
+        candidates.append(Opportunity(
+            id=f"market-{signal.id}",
+            source="market",
+            source_label="Private signal",
+            title=evidence.title,
+            buyer=signal.organization_name,
+            budget=None,
+            deadline=None,
+            published_at=evidence.published_at,
+            url=evidence.url,
+            platform_label="Official company page",
+            status_label=signal.stage,
+            notice_type=signal.kind,
+            summary=f"{signal.why_now} {evidence.excerpt}"[:900],
+            raw_text=text,
+            candidate_type="outbound",
+            procurement_stage=signal.stage,
+            source_payload={
+                "organization_id": signal.organization_id,
+                "need_score": signal.need_score,
+                "confidence": signal.confidence,
+                "category": signal.category,
+                "score_reasons": signal.score_reasons,
+            },
+        ))
+    return candidates
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -309,9 +382,98 @@ async def search_opportunities(
     screening: SoftwareScreeningService = Depends(get_software_screening_service),
 ) -> SearchResponse:
     response = await service.search(request)
-    response = response.model_copy(update={"opportunities": screening.apply_saved(response.opportunities)})
-    market.ingest_opportunities(response.opportunities)
+    private_candidates = service.prepare_external_candidates(_qualified_private_candidates(market), request)
+    opportunities = screening.apply_saved([*response.opportunities, *private_candidates])
+    opportunities = service.apply_pursuit_assessment(opportunities)
+    verdict_order = {"pursue": 2, "review": 1, "skip": 0}
+    opportunities.sort(
+        key=lambda item: (
+            verdict_order.get(item.pursuit_assessment.verdict if item.pursuit_assessment else "review", 0),
+            item.pursuit_assessment.priority_score if item.pursuit_assessment else item.fit_score,
+        ),
+        reverse=True,
+    )
+    source_runs = list(response.source_runs)
+    if private_candidates:
+        source_runs.append(SourceRun(source="market", status="ok", items=len(private_candidates), shown=len(private_candidates), elapsed_ms=0))
+    response = response.model_copy(update={"opportunities": opportunities[:request.limit], "source_runs": source_runs})
+    market.ingest_opportunities([item for item in response.opportunities if item.source != "market"])
     return response
+
+
+@app.get("/api/settings/company-profile", response_model=CompanyProfile)
+async def company_profile(
+    service: PursuitSettingsService = Depends(get_pursuit_settings_service),
+) -> CompanyProfile:
+    return service.get_company_profile()
+
+
+@app.put("/api/settings/company-profile", response_model=CompanyProfile)
+async def update_company_profile(
+    request: CompanyProfile,
+    service: PursuitSettingsService = Depends(get_pursuit_settings_service),
+) -> CompanyProfile:
+    return service.save_company_profile(request)
+
+
+@app.get("/api/settings/ai", response_model=AIWorkflowSettings)
+async def ai_workflow_settings(
+    service: PursuitSettingsService = Depends(get_pursuit_settings_service),
+) -> AIWorkflowSettings:
+    return service.get_ai_settings()
+
+
+@app.put("/api/settings/ai", response_model=AIWorkflowSettings)
+async def update_ai_workflow_settings(
+    request: AIWorkflowSettings,
+    settings: Settings = Depends(get_settings),
+    service: PursuitSettingsService = Depends(get_pursuit_settings_service),
+) -> AIWorkflowSettings:
+    try:
+        for route in (request.scan, request.dossier, request.chat):
+            resolve_ai_model(settings, route.model)
+    except UnsupportedAIModelError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return service.save_ai_settings(request)
+
+
+@app.get("/api/pursuits", response_model=PursuitListResponse)
+async def list_pursuits(
+    service: PursuitService = Depends(get_pursuit_service),
+) -> PursuitListResponse:
+    return service.list()
+
+
+@app.post("/api/pursuits", response_model=PursuitRecord)
+async def save_pursuit(
+    request: PursuitUpsertRequest,
+    service: PursuitService = Depends(get_pursuit_service),
+) -> PursuitRecord:
+    return service.upsert(request)
+
+
+@app.patch("/api/pursuits/{pursuit_id}", response_model=PursuitRecord)
+async def update_pursuit(
+    pursuit_id: str,
+    request: PursuitUpdateRequest,
+    service: PursuitService = Depends(get_pursuit_service),
+) -> PursuitRecord:
+    pursuit = service.update(pursuit_id, request)
+    if pursuit is None:
+        raise HTTPException(status_code=404, detail="Pursuit not found.")
+    return pursuit
+
+
+@app.post("/api/pursuits/{pursuit_id}/feedback", response_model=PursuitRecord)
+async def save_pursuit_feedback(
+    pursuit_id: str,
+    request: PursuitFeedbackRequest,
+    service: PursuitService = Depends(get_pursuit_service),
+) -> PursuitRecord:
+    pursuit = service.save_feedback(pursuit_id, request)
+    if pursuit is None:
+        raise HTTPException(status_code=404, detail="Pursuit not found.")
+    return pursuit
 
 
 @app.post("/api/software-matches/refine", response_model=SoftwareMatchRefineResponse)

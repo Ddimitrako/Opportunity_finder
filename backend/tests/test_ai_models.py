@@ -15,7 +15,8 @@ class AIModelSelectionTests(unittest.TestCase):
     def test_catalog_includes_requested_analysis_models(self) -> None:
         model_ids = {item.id for item in AI_MODEL_CATALOG}
         self.assertIn("gpt-5.5", model_ids)
-        self.assertIn("gpt-5.6", model_ids)
+        self.assertIn("gpt-5.6-sol", model_ids)
+        self.assertIn("gpt-5.6-luna", model_ids)
         self.assertIn("gpt-5.6-terra", model_ids)
 
     def test_requested_model_is_validated_against_catalog(self) -> None:

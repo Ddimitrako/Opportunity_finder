@@ -3,7 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-SourceName = Literal["khmdhs", "ted", "demo"]
+SourceName = Literal["khmdhs", "ted", "demo", "market"]
 FitBand = Literal["Bid candidate", "Worth reading", "Monitor only", "Ignore"]
 SoftwareMatchStatus = Literal["matched", "insufficient_signals"]
 SoftwareMatchConfidence = Literal["high", "medium", "low"]
@@ -12,6 +12,19 @@ DeliveryFit = Literal["solo", "small_team", "partner_required"]
 SolutionType = Literal["production-platform", "specialist-component", "reference-implementation"]
 SoftwareScreeningStatus = Literal["catalog_match", "needs_review", "no_match", "error"]
 SoftwareScreeningStage = Literal["deterministic", "title", "summary", "documents"]
+CandidateType = Literal["bid_now", "position_early", "outbound", "historical", "review"]
+PursuitVerdict = Literal["pursue", "review", "skip"]
+PursuitConfidence = Literal["high", "medium", "low"]
+PursuitStatus = Literal["review", "pursue", "waiting", "won", "lost"]
+SolutionRoute = Literal[
+    "oss_configuration",
+    "oss_extension",
+    "custom_dashboard",
+    "custom_web_app",
+    "integration_data",
+    "license_hardware",
+    "unknown",
+]
 
 
 DEFAULT_CPV_CODES = [
@@ -214,6 +227,75 @@ class SoftwareScreeningResult(BaseModel):
     cached: bool = False
 
 
+class PursuitFactor(BaseModel):
+    key: Literal["access", "win_chance", "delivery_fit", "value_effort"]
+    label: str
+    score: int = Field(ge=0, le=100)
+    reasons: list[str] = Field(default_factory=list)
+
+
+class PursuitAssessment(BaseModel):
+    verdict: PursuitVerdict = "review"
+    confidence: PursuitConfidence = "low"
+    priority_score: int = Field(default=0, ge=0, le=100)
+    candidate_type: CandidateType = "review"
+    solution_route: SolutionRoute = "unknown"
+    factors: list[PursuitFactor] = Field(default_factory=list)
+    hard_gates: list[str] = Field(default_factory=list)
+    top_reasons: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    next_action: str = "Review the source evidence."
+    assessed_at: datetime = Field(default_factory=datetime.utcnow)
+    rules_version: str = "pursuit-v1"
+
+
+class CompanyProfile(BaseModel):
+    delivery_mode: Literal["solo_first", "small_team", "partner_network"] = "solo_first"
+    core_capabilities: list[str] = Field(default_factory=lambda: [
+        "open-source deployment and customization",
+        "custom dashboards and web applications",
+        "portals and workflows",
+        "API and systems integration",
+        "data and business intelligence",
+    ])
+    preferred_solution_routes: list[SolutionRoute] = Field(default_factory=lambda: [
+        "oss_configuration",
+        "oss_extension",
+        "custom_dashboard",
+        "custom_web_app",
+        "integration_data",
+    ])
+    team_size: int = Field(default=1, ge=1, le=100)
+    partners_available: bool = True
+    quick_win_budget_max: float = Field(default=30_000, ge=0)
+    core_budget_max: float = Field(default=80_000, ge=0)
+    minimum_viable_budget: float = Field(default=5_000, ge=0)
+    certifications: list[str] = Field(default_factory=list)
+    reference_projects: list[str] = Field(default_factory=list)
+    annual_turnover: float | None = Field(default=None, ge=0)
+    profile_notes: str = Field(default="", max_length=4_000)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class CompanyProfileUpdate(CompanyProfile):
+    pass
+
+
+class AIWorkflowRoute(BaseModel):
+    model: str
+    reasoning_effort: Literal["none", "low", "medium", "high", "xhigh", "max"] = "low"
+
+
+class AIWorkflowSettings(BaseModel):
+    preset: Literal["economy", "balanced", "best", "custom"] = "balanced"
+    scan: AIWorkflowRoute = Field(default_factory=lambda: AIWorkflowRoute(model="gpt-5.6-luna", reasoning_effort="low"))
+    dossier: AIWorkflowRoute = Field(default_factory=lambda: AIWorkflowRoute(model="gpt-5.6-terra", reasoning_effort="medium"))
+    chat: AIWorkflowRoute = Field(default_factory=lambda: AIWorkflowRoute(model="gpt-5.6-terra", reasoning_effort="medium"))
+    auto_deep_limit: int = Field(default=5, ge=0, le=10)
+    max_deep_runs: int = Field(default=10, ge=0, le=20)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Opportunity(BaseModel):
     id: str
     source: SourceName
@@ -246,6 +328,10 @@ class Opportunity(BaseModel):
     software_match_status: SoftwareMatchStatus = "insufficient_signals"
     software_matches: list[SoftwareMatch] = Field(default_factory=list)
     software_screening: SoftwareScreeningResult | None = None
+    candidate_type: CandidateType = "review"
+    procurement_stage: str = "unknown"
+    solution_route: SolutionRoute = "unknown"
+    pursuit_assessment: PursuitAssessment | None = None
     source_payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -396,6 +482,59 @@ class BookmarkStatusResponse(BaseModel):
 
 class BookmarkUpsertRequest(BaseModel):
     opportunity: Opportunity
+
+
+class PursuitUpsertRequest(BaseModel):
+    opportunity: Opportunity
+    status: PursuitStatus = "review"
+    next_action: str | None = Field(default=None, max_length=500)
+    next_action_at: date | None = None
+    notes: str = Field(default="", max_length=4_000)
+
+
+class PursuitUpdateRequest(BaseModel):
+    status: PursuitStatus | None = None
+    next_action: str | None = Field(default=None, max_length=500)
+    next_action_at: date | None = None
+    notes: str | None = Field(default=None, max_length=4_000)
+
+
+class PursuitFeedbackRequest(BaseModel):
+    fit: bool
+    reason: Literal[
+        "incumbent",
+        "eligibility",
+        "delivery_size",
+        "wrong_solution",
+        "low_value",
+        "insufficient_evidence",
+        "good_fit",
+        "other",
+    ]
+    notes: str = Field(default="", max_length=1_000)
+
+
+class PursuitFeedback(BaseModel):
+    fit: bool
+    reason: str
+    notes: str = ""
+    created_at: datetime
+
+
+class PursuitRecord(BaseModel):
+    id: str
+    opportunity: Opportunity
+    status: PursuitStatus
+    next_action: str | None = None
+    next_action_at: date | None = None
+    notes: str = ""
+    feedback: PursuitFeedback | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PursuitListResponse(BaseModel):
+    pursuits: list[PursuitRecord]
 
 
 DocumentBriefVerdict = Literal["yes", "no", "maybe", "unknown"]

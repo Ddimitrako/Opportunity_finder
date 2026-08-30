@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.scoring import score_opportunity
 from app.services.bookmarks import _resolve_db_path
+from app.services.pursuits import PursuitAssessmentService, PursuitSettingsService
 from app.services.software_matching import SoftwareMatchingService
 from app.sources.demo import demo_opportunities
 from app.sources.khmdhs import KhmdhsClient
@@ -32,6 +33,8 @@ class OpportunityService:
         self.settings = settings
         self.db_path = _resolve_db_path(Path(settings.bookmark_db_path))
         self.software_matching = SoftwareMatchingService()
+        self.pursuit_assessment = PursuitAssessmentService()
+        self.pursuit_settings = PursuitSettingsService(settings)
         self._init_activity_cache()
 
     async def search(self, request: ProcurementSearchRequest) -> SearchResponse:
@@ -56,8 +59,19 @@ class OpportunityService:
             run.model_copy(update={"shown": shown_by_source.get(run.source, 0)})
             for run in source_runs
         ]
-        scored = [self.software_matching.apply(score_opportunity(item, request)) for item in filtered]
-        scored.sort(key=lambda item: (item.fit_score, item.budget or 0), reverse=True)
+        scored = self.apply_pursuit_assessment([
+            self.software_matching.apply(score_opportunity(item, request))
+            for item in filtered
+        ])
+        verdict_order = {"pursue": 2, "review": 1, "skip": 0}
+        scored.sort(
+            key=lambda item: (
+                verdict_order.get(item.pursuit_assessment.verdict if item.pursuit_assessment else "review", 0),
+                item.pursuit_assessment.priority_score if item.pursuit_assessment else item.fit_score,
+                item.budget or 0,
+            ),
+            reverse=True,
+        )
         scored = scored[: request.limit]
 
         return SearchResponse(
@@ -67,6 +81,20 @@ class OpportunityService:
             source_runs=source_runs,
             stats=_stats(scored),
         )
+
+    def apply_pursuit_assessment(self, opportunities: list[Opportunity]) -> list[Opportunity]:
+        """Apply the saved company profile after all matching/enrichment steps."""
+        profile = self.pursuit_settings.get_company_profile()
+        return [self.pursuit_assessment.assess(item, profile) for item in opportunities]
+
+    def prepare_external_candidates(
+        self,
+        opportunities: list[Opportunity],
+        request: ProcurementSearchRequest,
+    ) -> list[Opportunity]:
+        """Score and match already-qualified candidates from non-procurement sources."""
+        prepared = [self.software_matching.apply(score_opportunity(item, request)) for item in opportunities]
+        return self.apply_pursuit_assessment(prepared)
 
     async def activity(self, request: ActivityRequest) -> ActivityResponse:
         today = date.today()
@@ -354,6 +382,9 @@ def _filter_opportunities(items: list[Opportunity], request: ProcurementSearchRe
         if item.published_at is None and request.only_open:
             continue
         if request.only_open:
+            if item.candidate_type == "position_early":
+                output.append(item)
+                continue
             if item.deadline is None or item.deadline < request.deadline_after:
                 continue
             if _looks_closed_or_awarded(item):

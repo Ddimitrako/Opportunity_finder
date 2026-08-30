@@ -161,8 +161,8 @@ def score_opportunity(opportunity: Opportunity, request: ProcurementSearchReques
     opportunity.fit_score = max(0, min(100, score))
     opportunity.fit_band = fit_band(opportunity.fit_score)
     opportunity.recommendation = recommendation(opportunity.fit_score)
-    opportunity.score_reasons = []
-    opportunity.red_flags = []
+    opportunity.score_reasons = reasons
+    opportunity.red_flags = red_flags
     opportunity.matched_keywords = matched_keywords[:8]
     opportunity.package_match = package_match
     return opportunity

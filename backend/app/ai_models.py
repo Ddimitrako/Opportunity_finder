@@ -26,6 +26,12 @@ AI_MODEL_CATALOG: tuple[AIModelOption, ...] = (
         quality="Strong",
     ),
     AIModelOption(
+        id="gpt-5.6-luna",
+        label="GPT-5.6 Luna",
+        description="Οικονομικό model για bulk screening και υψηλό throughput.",
+        quality="Economy",
+    ),
+    AIModelOption(
         id="gpt-5.6-terra",
         label="GPT-5.6 Terra",
         description="Ισορροπία βαθύτερης ανάλυσης, ταχύτητας και κόστους.",
@@ -39,14 +45,14 @@ AI_MODEL_CATALOG: tuple[AIModelOption, ...] = (
         quality="Deep",
     ),
     AIModelOption(
-        id="gpt-5.6",
+        id="gpt-5.6-sol",
         label="GPT-5.6 Sol",
         description="Μέγιστη ποιότητα για τα δυσκολότερα opportunities.",
         quality="Best",
     ),
 )
 
-ALLOWED_AI_MODELS = {item.id for item in AI_MODEL_CATALOG}
+ALLOWED_AI_MODELS = {item.id for item in AI_MODEL_CATALOG} | {"gpt-5.6"}
 FALLBACK_AI_MODEL = "gpt-4.1-mini"
 
 

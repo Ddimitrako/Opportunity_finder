@@ -33,6 +33,8 @@ class TedClient:
                 "deadline",
                 "BT-131(d)-Lot",
                 "deadline-receipt-tender-date-lot",
+                "total-value",
+                "classification-cpv",
             ],
             "page": max(1, request.page + 1),
             "limit": min(request.limit, 50),
@@ -139,6 +141,7 @@ class TedClient:
         publication_number = first_text(record.get("publication-number") or record.get("publicationNumber"))
         cpv_codes = collect_cpv_codes(record)
         notice_type = first_text(record.get("notice-type") or record.get("noticeType"))
+        notice_type_text = notice_type.casefold()
         deadline = parse_date(
             record.get("deadline")
             or record.get("BT-131(d)-Lot")
@@ -146,6 +149,20 @@ class TedClient:
         )
         summary = truncate(" ".join([title, buyer, first_text(record.get("organisation-country-buyer")), notice_type]), 300)
         url = f"https://ted.europa.eu/en/notice/-/detail/{publication_number}" if publication_number else None
+        raw_budget = record.get("total-value") or record.get("totalValue")
+        try:
+            budget = float(first_text(raw_budget)) if raw_budget not in (None, "") else None
+        except (TypeError, ValueError):
+            budget = None
+        if any(term in notice_type_text for term in ("award", "result")):
+            procurement_stage = "award"
+            candidate_type = "historical"
+        elif any(term in notice_type_text for term in ("prior", "planning", "consultation", "market")):
+            procurement_stage = "planning"
+            candidate_type = "position_early"
+        else:
+            procurement_stage = "competition"
+            candidate_type = "bid_now" if deadline else "review"
         return Opportunity(
             id=f"ted-{stable_id(publication_number, title, buyer)}",
             source="ted",
@@ -155,7 +172,7 @@ class TedClient:
             buyer_type=None,
             procedure_type=notice_type or None,
             cpv_codes=cpv_codes,
-            budget=None,
+            budget=budget,
             deadline=deadline,
             published_at=parse_date(record.get("publication-date") or record.get("publicationDate")),
             country=first_text(record.get("organisation-country-buyer"), "GR"),
@@ -166,6 +183,8 @@ class TedClient:
             notice_type=notice_type or None,
             summary=summary,
             raw_text=summary,
+            candidate_type=candidate_type,
+            procurement_stage=procurement_stage,
             source_payload={"publicationNumber": publication_number},
         )
 

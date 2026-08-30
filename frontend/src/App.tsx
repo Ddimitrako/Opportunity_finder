@@ -50,7 +50,7 @@ import {
 import { type CSSProperties, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
-type SourceName = 'khmdhs' | 'ted' | 'demo'
+type SourceName = 'khmdhs' | 'ted' | 'demo' | 'market'
 
 type SourceRun = {
   source: SourceName
@@ -151,6 +151,31 @@ type SoftwareScreeningRun = {
   output_tokens: number
 }
 
+type CandidateType = 'bid_now' | 'position_early' | 'outbound' | 'historical' | 'review'
+type PursuitVerdict = 'pursue' | 'review' | 'skip'
+type PursuitStatus = 'review' | 'pursue' | 'waiting' | 'won' | 'lost'
+type SolutionRoute = 'oss_configuration' | 'oss_extension' | 'custom_dashboard' | 'custom_web_app' | 'integration_data' | 'license_hardware' | 'unknown'
+
+type PursuitFactor = {
+  key: 'access' | 'win_chance' | 'delivery_fit' | 'value_effort'
+  label: string
+  score: number
+  reasons: string[]
+}
+
+type PursuitAssessment = {
+  verdict: PursuitVerdict
+  confidence: 'high' | 'medium' | 'low'
+  priority_score: number
+  candidate_type: CandidateType
+  solution_route: SolutionRoute
+  factors: PursuitFactor[]
+  hard_gates: string[]
+  top_reasons: string[]
+  risks: string[]
+  next_action: string
+}
+
 type Opportunity = {
   id: string
   source: SourceName
@@ -183,7 +208,49 @@ type Opportunity = {
   software_match_status: 'matched' | 'insufficient_signals'
   software_matches: SoftwareMatch[]
   software_screening?: SoftwareScreeningResult | null
+  candidate_type?: CandidateType
+  procurement_stage?: string
+  solution_route?: SolutionRoute
+  pursuit_assessment?: PursuitAssessment | null
   source_payload?: Record<string, unknown>
+}
+
+type PursuitRecord = {
+  id: string
+  opportunity: Opportunity
+  status: PursuitStatus
+  next_action?: string | null
+  next_action_at?: string | null
+  notes: string
+  feedback?: { fit: boolean; reason: string; notes: string; created_at: string } | null
+  created_at: string
+  updated_at: string
+}
+
+type CompanyProfile = {
+  delivery_mode: 'solo_first' | 'small_team' | 'partner_network'
+  core_capabilities: string[]
+  preferred_solution_routes: SolutionRoute[]
+  team_size: number
+  partners_available: boolean
+  quick_win_budget_max: number
+  core_budget_max: number
+  minimum_viable_budget: number
+  certifications: string[]
+  reference_projects: string[]
+  annual_turnover?: number | null
+  profile_notes: string
+  updated_at: string
+}
+
+type AIWorkflowSettings = {
+  preset: 'economy' | 'balanced' | 'best' | 'custom'
+  scan: { model: string; reasoning_effort: string }
+  dossier: { model: string; reasoning_effort: string }
+  chat: { model: string; reasoning_effort: string }
+  auto_deep_limit: number
+  max_deep_runs: number
+  updated_at: string
 }
 
 type DocumentLink = {
@@ -760,6 +827,7 @@ const SOURCE_META: Record<SourceName, { label: string; icon: LucideIcon }> = {
   khmdhs: { label: 'ΚΗΜΔΗΣ', icon: DatabaseZap },
   ted: { label: 'TED', icon: Globe2 },
   demo: { label: 'Demo', icon: Sparkles },
+  market: { label: 'Private signal', icon: Building2 },
 }
 
 const DASHBOARD_SOURCES: SourceName[] = ['khmdhs', 'ted']
@@ -1036,9 +1104,10 @@ const FALLBACK_KEYWORDS = [
 const fallbackAiModels: AIModelOption[] = [
   { id: 'gpt-4o-mini', label: 'GPT-4o mini', description: 'Οικονομικό classification model.', quality: 'Economy', recommended: false },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', description: 'Γρήγορο και οικονομικό.', quality: 'Fast', recommended: false },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', description: 'Bulk screening χαμηλού κόστους.', quality: 'Economy', recommended: false },
   { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', description: 'Ισορροπία ποιότητας και κόστους.', quality: 'Balanced', recommended: true },
   { id: 'gpt-5.5', label: 'GPT-5.5', description: 'Βαθύτερη επαγγελματική ανάλυση.', quality: 'Deep', recommended: false },
-  { id: 'gpt-5.6', label: 'GPT-5.6 Sol', description: 'Μέγιστη ποιότητα ανάλυσης.', quality: 'Best', recommended: false },
+  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', description: 'Μέγιστη ποιότητα ανάλυσης.', quality: 'Best', recommended: false },
 ]
 
 type AuthSession = {
@@ -1251,6 +1320,14 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
   const [buyerIntelligenceError, setBuyerIntelligenceError] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([])
   const [bookmarkError, setBookmarkError] = useState<string | null>(null)
+  const [pursuits, setPursuits] = useState<PursuitRecord[]>([])
+  const [pursuitError, setPursuitError] = useState<string | null>(null)
+  const [verdictFilter, setVerdictFilter] = useState<'all' | PursuitVerdict>('all')
+  const [candidateFilter, setCandidateFilter] = useState<'all' | CandidateType>('all')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null)
+  const [aiWorkflows, setAiWorkflows] = useState<AIWorkflowSettings | null>(null)
+  const [settingsSaving, setSettingsSaving] = useState(false)
   const [guidanceByOpportunityId, setGuidanceByOpportunityId] = useState<Record<string, OpportunityGuidance>>({})
   const [patterns, setPatterns] = useState<NeedPattern[]>([])
   const [patternsLoading, setPatternsLoading] = useState(false)
@@ -1298,11 +1375,13 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
     return counts
   }, [buyerFilteredOpportunities])
   const filteredOpportunities = useMemo(() => {
-    if (softwareFilter === 'all') {
-      return buyerFilteredOpportunities
-    }
-    return buyerFilteredOpportunities.filter((opportunity) => softwareScreeningStatus(opportunity) === softwareFilter)
-  }, [buyerFilteredOpportunities, softwareFilter])
+    return buyerFilteredOpportunities.filter((opportunity) => {
+      if (softwareFilter !== 'all' && softwareScreeningStatus(opportunity) !== softwareFilter) return false
+      if (verdictFilter !== 'all' && opportunity.pursuit_assessment?.verdict !== verdictFilter) return false
+      if (candidateFilter !== 'all' && opportunity.candidate_type !== candidateFilter) return false
+      return true
+    })
+  }, [buyerFilteredOpportunities, candidateFilter, softwareFilter, verdictFilter])
   const filteredStats = useMemo(() => opportunityStats(filteredOpportunities), [filteredOpportunities])
   const packageRows = useMemo(() => {
     const packages = filteredStats.by_package
@@ -1311,6 +1390,12 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
       .slice(0, 5)
   }, [filteredStats])
   const bookmarkedIds = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
+  const pursuitById = useMemo(() => new Map(pursuits.map((pursuit) => [pursuit.id, pursuit])), [pursuits])
+  const verdictCounts = useMemo(() => {
+    const counts = { pursue: 0, review: 0, skip: 0 }
+    for (const item of buyerFilteredOpportunities) counts[item.pursuit_assessment?.verdict ?? 'review'] += 1
+    return counts
+  }, [buyerFilteredOpportunities])
 
   const migrateLegacyShortlist = useCallback(async (opportunities: Opportunity[]) => {
     let legacyIds: string[]
@@ -1466,6 +1551,27 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
     }
   }, [])
 
+  const loadPursuitWorkspace = useCallback(async () => {
+    setPursuitError(null)
+    try {
+      const [pursuitsRes, profileRes, aiRes] = await Promise.all([
+        fetch(`${API_BASE}/api/pursuits`),
+        fetch(`${API_BASE}/api/settings/company-profile`),
+        fetch(`${API_BASE}/api/settings/ai`),
+      ])
+      if (![pursuitsRes, profileRes, aiRes].every((res) => res.ok)) throw new Error('Pursuit workspace is unavailable')
+      const pursuitData = (await pursuitsRes.json()) as { pursuits: PursuitRecord[] }
+      const profileData = (await profileRes.json()) as CompanyProfile
+      const aiData = (await aiRes.json()) as AIWorkflowSettings
+      setPursuits(pursuitData.pursuits)
+      setCompanyProfile(profileData)
+      setAiWorkflows(aiData)
+      setSelectedAiModel(aiData.dossier.model)
+    } catch (exc) {
+      setPursuitError(exc instanceof Error ? exc.message : 'Pursuit workspace failed')
+    }
+  }, [])
+
   const loadCachedBrief = useCallback(async (opportunity: Opportunity) => {
     if (!opportunity.source_reference) {
       setDocumentBrief(null)
@@ -1540,6 +1646,7 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
         setConfig(null)
       }
       await loadBookmarks()
+      await loadPursuitWorkspace()
       await runSearch()
     }
     void boot()
@@ -1685,6 +1792,86 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
     }
   }
 
+  const savePursuit = async (opportunity: Opportunity, status?: PursuitStatus) => {
+    setPursuitError(null)
+    const targetStatus = status ?? (opportunity.pursuit_assessment?.verdict === 'pursue' ? 'pursue' : 'review')
+    try {
+      const res = await fetch(`${API_BASE}/api/pursuits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunity,
+          status: targetStatus,
+          next_action: opportunity.pursuit_assessment?.next_action ?? null,
+        }),
+      })
+      if (!res.ok) throw new Error(`Pursuit API returned ${res.status}`)
+      const saved = (await res.json()) as PursuitRecord
+      setPursuits((current) => [saved, ...current.filter((item) => item.id !== saved.id)])
+      return saved
+    } catch (exc) {
+      setPursuitError(exc instanceof Error ? exc.message : 'Pursuit update failed')
+      return null
+    }
+  }
+
+  const saveFitFeedback = async (opportunity: Opportunity, fit: boolean) => {
+    const saved = pursuitById.get(opportunity.id) ?? await savePursuit(opportunity)
+    if (!saved) return
+    try {
+      const res = await fetch(`${API_BASE}/api/pursuits/${encodeURIComponent(opportunity.id)}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fit, reason: fit ? 'good_fit' : 'wrong_solution', notes: '' }),
+      })
+      if (!res.ok) throw new Error(`Feedback API returned ${res.status}`)
+      const updated = (await res.json()) as PursuitRecord
+      setPursuits((current) => current.map((item) => item.id === updated.id ? updated : item))
+    } catch (exc) {
+      setPursuitError(exc instanceof Error ? exc.message : 'Feedback update failed')
+    }
+  }
+
+  const updatePursuitStatus = async (pursuitId: string, status: PursuitStatus) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/pursuits/${encodeURIComponent(pursuitId)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error(`Pipeline API returned ${res.status}`)
+      const updated = (await res.json()) as PursuitRecord
+      setPursuits((current) => current.map((item) => item.id === updated.id ? updated : item))
+    } catch (exc) {
+      setPursuitError(exc instanceof Error ? exc.message : 'Pipeline status update failed')
+    }
+  }
+
+  const saveWorkspaceSettings = async () => {
+    if (!companyProfile || !aiWorkflows) return
+    setSettingsSaving(true)
+    setPursuitError(null)
+    try {
+      const [profileRes, aiRes] = await Promise.all([
+        fetch(`${API_BASE}/api/settings/company-profile`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(companyProfile),
+        }),
+        fetch(`${API_BASE}/api/settings/ai`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiWorkflows),
+        }),
+      ])
+      if (!profileRes.ok || !aiRes.ok) throw new Error(`Settings API returned ${!profileRes.ok ? profileRes.status : aiRes.status}`)
+      setCompanyProfile((await profileRes.json()) as CompanyProfile)
+      const savedAi = (await aiRes.json()) as AIWorkflowSettings
+      setAiWorkflows(savedAi)
+      setSelectedAiModel(savedAi.dossier.model)
+      setSettingsOpen(false)
+      await runSearch()
+    } catch (exc) {
+      setPursuitError(exc instanceof Error ? exc.message : 'Settings update failed')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
   const generateDocumentBrief = async (opportunity: Opportunity) => {
     if (!opportunity.source_reference) {
       setDocumentBriefError('No source reference available for this opportunity.')
@@ -1732,7 +1919,7 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
       const res = await fetch(`${API_BASE}/api/software-matches/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ opportunities, force, max_document_escalations: 5 }),
+        body: JSON.stringify({ opportunities, force, max_document_escalations: aiWorkflows?.auto_deep_limit ?? 5 }),
       })
       const payload = await res.json().catch(() => null) as (SoftwareScreeningResponse & { detail?: string }) | null
       if (!res.ok || !payload) {
@@ -1740,6 +1927,7 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
       }
       setResponse((current) => current ? { ...current, opportunities: payload.opportunities } : current)
       setSoftwareScreeningRun(payload.run)
+      await runSearch()
     } catch (exc) {
       setSoftwareScreeningError(exc instanceof Error ? exc.message : 'Software screening failed safely.')
     } finally {
@@ -2028,14 +2216,13 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
             ) : null}
             <div>
             <p className="eyebrow">Greece-first procurement intelligence</p>
-            <h2>Shortlist μικρών full-stack έργων</h2>
+            <h2>Action Feed · τι αξίζει να κυνηγήσεις τώρα</h2>
             </div>
           </div>
           <div className="topbar-actions">
-            <button className="market-nav-button software-nav-button" type="button" onClick={() => setActiveView('matchmaking')}>
-              <Sparkles size={17} aria-hidden="true" />
-              Software Match AI
-              <span>{softwareFilterCounts.catalog_match}</span>
+            <button className="market-nav-button software-nav-button" type="button" onClick={() => setSettingsOpen(true)}>
+              <Bot size={17} aria-hidden="true" />
+              Company fit & AI
             </button>
             <button className="market-nav-button" type="button" onClick={() => setActiveView('market')}>
               <Radar size={17} aria-hidden="true" />
@@ -2051,15 +2238,19 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
             <span>{error}</span>
           </section>
         ) : null}
+        {pursuitError ? (
+          <section className="error-band"><AlertTriangle size={18} aria-hidden="true" /><span>{pursuitError}</span></section>
+        ) : null}
 
         <section className="metric-strip">
-          <Metric icon={DatabaseZap} label="Results" value={loading ? '...' : String(filteredStats.total)} />
-          <Metric icon={Sparkles} label="Catalog matches" value={String(softwareFilterCounts.catalog_match)} tone="blue" />
-          <Metric icon={Target} label="Bid candidates" value={String(filteredStats.bid_candidates)} tone="green" />
-          <Metric icon={Gauge} label="Average fit" value={`${filteredStats.average_score}/100`} tone="blue" />
-          <Metric icon={CircleDollarSign} label="Tracked budget" value={formatCurrency(filteredStats.total_budget)} tone="amber" />
+          <Metric icon={Target} label="Pursue" value={loading ? '...' : String(verdictCounts.pursue)} tone="green" />
+          <Metric icon={Gauge} label="Review" value={String(verdictCounts.review)} tone="blue" />
+          <Metric icon={AlertTriangle} label="Skip" value={String(verdictCounts.skip)} tone="amber" />
+          <Metric icon={Handshake} label="Pipeline" value={String(pursuits.length)} tone="blue" />
         </section>
 
+        <details className="secondary-insights">
+          <summary><BarChart3 size={17} aria-hidden="true" /> Market context & diagnostics</summary>
         <section className="insight-layout">
           <SmartCalendarPanel activity={activity} loading={activityLoading} error={activityError} selectedSources={sources} />
 
@@ -2140,16 +2331,27 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
             </div>
           </div>
         </section>
+        </details>
 
         <section className="results-header">
           <div>
-            <p className="eyebrow">Ranked opportunities</p>
-            <h3>{loading ? 'Loading opportunities' : `${filteredOpportunities.length} matches`}</h3>
+            <p className="eyebrow">Decision queue</p>
+            <h3>{loading ? 'Loading opportunities' : `${filteredOpportunities.length} actionable records`}</h3>
           </div>
-          <div className="legend">
-            <span><i className="legend-dot green" />80+</span>
-            <span><i className="legend-dot blue" />60+</span>
-            <span><i className="legend-dot amber" />40+</span>
+          <div className="decision-filters" aria-label="Action feed filters">
+            {(['all', 'pursue', 'review', 'skip'] as const).map((value) => (
+              <button className={verdictFilter === value ? 'active' : ''} type="button" key={value} onClick={() => setVerdictFilter(value)}>
+                {value === 'all' ? 'All' : value === 'pursue' ? 'Pursue' : value === 'review' ? 'Review' : 'Skip'}
+              </button>
+            ))}
+            <select value={candidateFilter} onChange={(event) => setCandidateFilter(event.target.value as typeof candidateFilter)} aria-label="Candidate type">
+              <option value="all">All stages</option>
+              <option value="bid_now">Bid now</option>
+              <option value="position_early">Position early</option>
+              <option value="outbound">Outbound</option>
+              <option value="historical">Historical</option>
+              <option value="review">Unknown stage</option>
+            </select>
           </div>
         </section>
 
@@ -2160,16 +2362,26 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
               <span>Fetching and scoring sources...</span>
             </div>
           ) : (
-            filteredOpportunities.map((opportunity) => (
+            filteredOpportunities.length ? filteredOpportunities.map((opportunity) => (
               <OpportunityRow
                 key={opportunity.id}
                 opportunity={opportunity}
                 guidance={guidanceByOpportunityId[opportunity.id]}
                 pinned={bookmarkedIds.has(opportunity.id)}
+                pursuit={pursuitById.get(opportunity.id)}
                 onTogglePin={() => void toggleBookmark(opportunity)}
+                onSavePursuit={() => void savePursuit(opportunity)}
+                onUpdateStatus={(status) => void updatePursuitStatus(opportunity.id, status)}
+                onFitFeedback={(fit) => void saveFitFeedback(opportunity, fit)}
                 onOpenDetails={() => void openDetails(opportunity)}
               />
-            ))
+            )) : (
+              <div className="loading-state empty-feed-state">
+                <Target size={24} aria-hidden="true" />
+                <strong>No candidates passed the current filters.</strong>
+                <span>Expand the date range or use “Show all fetched”. Private signals appear only with a specific software need and an official contact path.</span>
+              </div>
+            )
           )}
         </section>
       </main>
@@ -2194,6 +2406,100 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
         onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
+      {settingsOpen && companyProfile && aiWorkflows ? (
+        <PursuitSettingsModal
+          profile={companyProfile}
+          workflows={aiWorkflows}
+          aiModels={config?.ai_models ?? fallbackAiModels}
+          saving={settingsSaving}
+          onProfile={setCompanyProfile}
+          onWorkflows={setAiWorkflows}
+          onSave={() => void saveWorkspaceSettings()}
+          onOpenMatchLab={() => setActiveView('matchmaking')}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function PursuitSettingsModal({
+  profile,
+  workflows,
+  aiModels,
+  saving,
+  onProfile,
+  onWorkflows,
+  onSave,
+  onOpenMatchLab,
+  onClose,
+}: {
+  profile: CompanyProfile
+  workflows: AIWorkflowSettings
+  aiModels: AIModelOption[]
+  saving: boolean
+  onProfile: (profile: CompanyProfile) => void
+  onWorkflows: (settings: AIWorkflowSettings) => void
+  onSave: () => void
+  onOpenMatchLab: () => void
+  onClose: () => void
+}) {
+  const applyPreset = (preset: AIWorkflowSettings['preset']) => {
+    const routes = preset === 'economy'
+      ? { scan: 'gpt-5.6-luna', dossier: 'gpt-5.6-luna', chat: 'gpt-5.6-luna' }
+      : preset === 'best'
+        ? { scan: 'gpt-5.6-terra', dossier: 'gpt-5.6-sol', chat: 'gpt-5.6-sol' }
+        : { scan: 'gpt-5.6-luna', dossier: 'gpt-5.6-terra', chat: 'gpt-5.6-terra' }
+    onWorkflows({
+      ...workflows,
+      preset,
+      scan: { ...workflows.scan, model: routes.scan },
+      dossier: { ...workflows.dossier, model: routes.dossier },
+      chat: { ...workflows.chat, model: routes.chat },
+    })
+  }
+  const setRoute = (route: 'scan' | 'dossier' | 'chat', model: string) => {
+    onWorkflows({ ...workflows, preset: 'custom', [route]: { ...workflows[route], model } })
+  }
+
+  return (
+    <div className="settings-overlay" role="presentation" onMouseDown={onClose}>
+      <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="pursuit-settings-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <div><p className="eyebrow">Decision engine</p><h2 id="pursuit-settings-title">Company fit & AI routing</h2></div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Close settings"><X size={19} /></button>
+        </header>
+        <div className="settings-grid">
+          <div className="settings-section">
+            <h3>Your delivery envelope</h3>
+            <p>These values directly influence Pursue / Review / Skip.</p>
+            <div className="settings-fields three">
+              <label>Minimum viable €<input type="number" value={profile.minimum_viable_budget} onChange={(e) => onProfile({ ...profile, minimum_viable_budget: Number(e.target.value) })} /></label>
+              <label>Quick win max €<input type="number" value={profile.quick_win_budget_max} onChange={(e) => onProfile({ ...profile, quick_win_budget_max: Number(e.target.value) })} /></label>
+              <label>Core max €<input type="number" value={profile.core_budget_max} onChange={(e) => onProfile({ ...profile, core_budget_max: Number(e.target.value) })} /></label>
+            </div>
+            <div className="settings-fields two">
+              <label>Team size<input type="number" min="1" value={profile.team_size} onChange={(e) => onProfile({ ...profile, team_size: Number(e.target.value) })} /></label>
+              <label>Delivery mode<select value={profile.delivery_mode} onChange={(e) => onProfile({ ...profile, delivery_mode: e.target.value as CompanyProfile['delivery_mode'] })}><option value="solo_first">Solo first</option><option value="small_team">Small team</option><option value="partner_network">Partner network</option></select></label>
+            </div>
+            <label className="settings-check"><input type="checkbox" checked={profile.partners_available} onChange={(e) => onProfile({ ...profile, partners_available: e.target.checked })} /> Partners available for stretch opportunities</label>
+            <label className="settings-textarea">Core capabilities<textarea value={profile.core_capabilities.join('\n')} onChange={(e) => onProfile({ ...profile, core_capabilities: e.target.value.split('\n').map((v) => v.trim()).filter(Boolean) })} /></label>
+          </div>
+          <div className="settings-section">
+            <h3>AI quality / cost</h3>
+            <p>Cheap scan first; deeper models only for dossiers and questions.</p>
+            <div className="preset-row">
+              {(['economy', 'balanced', 'best'] as const).map((preset) => <button type="button" className={workflows.preset === preset ? 'active' : ''} key={preset} onClick={() => applyPreset(preset)}>{preset}</button>)}
+            </div>
+            {(['scan', 'dossier', 'chat'] as const).map((route) => (
+              <label className="model-route" key={route}><span>{route}</span><select value={workflows[route].model} onChange={(e) => setRoute(route, e.target.value)}>{aiModels.map((model) => <option key={model.id} value={model.id}>{model.label} · {model.quality}</option>)}</select></label>
+            ))}
+            <label className="model-route"><span>Auto deep top</span><input type="number" min="0" max="10" value={workflows.auto_deep_limit} onChange={(e) => onWorkflows({ ...workflows, auto_deep_limit: Number(e.target.value) })} /></label>
+            <button className="match-lab-link" type="button" onClick={onOpenMatchLab}><Sparkles size={16} /> Open full Software Match lab</button>
+          </div>
+        </div>
+        <footer><button className="secondary-action" type="button" onClick={onClose}>Cancel</button><button className="primary-action" type="button" disabled={saving} onClick={onSave}>{saving ? <Loader2 className="spin" size={16} /> : <Save size={16} />} Save & rerank</button></footer>
+      </section>
     </div>
   )
 }
@@ -3027,16 +3333,27 @@ function OpportunityRow({
   opportunity,
   guidance,
   pinned,
+  pursuit,
   onTogglePin,
+  onSavePursuit,
+  onUpdateStatus,
+  onFitFeedback,
   onOpenDetails,
 }: {
   opportunity: Opportunity
   guidance?: OpportunityGuidance
   pinned: boolean
+  pursuit?: PursuitRecord
   onTogglePin: () => void
+  onSavePursuit: () => void
+  onUpdateStatus: (status: PursuitStatus) => void
+  onFitFeedback: (fit: boolean) => void
   onOpenDetails: () => void
 }) {
-  const bandClass = bandToClass(opportunity.fit_score)
+  const assessment = opportunity.pursuit_assessment
+  const priority = assessment?.priority_score ?? opportunity.fit_score
+  const verdict = assessment?.verdict ?? 'review'
+  const bandClass = verdict === 'pursue' ? 'green' : verdict === 'review' ? 'blue' : 'red'
   const daysLeft = opportunity.deadline ? daysUntil(opportunity.deadline) : null
   const window = actionWindow(opportunity)
   const stage = rowLifecycleStage(opportunity, guidance)
@@ -3045,11 +3362,12 @@ function OpportunityRow({
   return (
     <article className={`opportunity-row ${bandClass}`}>
       <div className="score-cell">
-        <div className="score-ring" style={{ '--score': `${opportunity.fit_score * 3.6}deg` } as CSSProperties}>
-          <strong>{opportunity.fit_score}</strong>
-          <span>fit</span>
+        <div className="score-ring" style={{ '--score': `${priority * 3.6}deg` } as CSSProperties}>
+          <strong>{priority}</strong>
+          <span>priority</span>
         </div>
-        <span className={`band ${bandClass}`}>{opportunity.fit_band}</span>
+        <span className={`band ${bandClass}`}>{verdict === 'pursue' ? 'Pursue' : verdict === 'review' ? 'Review' : 'Skip'}</span>
+        {assessment ? <small className="confidence-label">{assessment.confidence} confidence</small> : null}
       </div>
 
       <div className="opportunity-main">
@@ -3073,13 +3391,14 @@ function OpportunityRow({
                 </span>
               ) : null}
               <span className={`stage-chip ${stage.tone}`}>{stage.label}</span>
+              {assessment ? <span className="route-chip">{solutionRouteLabel(assessment.solution_route)}</span> : null}
               <span className={`action-window ${window.tone}`}>{window.label}</span>
             </div>
             <h4>{opportunity.title}</h4>
           </div>
           <div className="row-actions">
             <button className="details-action" type="button" onClick={onOpenDetails}>
-              Details
+              Dossier
               <PanelRightOpen size={15} aria-hidden="true" />
             </button>
             {opportunity.url ? (
@@ -3088,13 +3407,38 @@ function OpportunityRow({
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
             ) : null}
-            <button className="icon-action" type="button" onClick={onTogglePin} aria-label={pinned ? 'Remove from shortlist' : 'Add to shortlist'}>
+            <button className="icon-action legacy-pin" type="button" onClick={onTogglePin} aria-label={pinned ? 'Remove bookmark' : 'Bookmark'} title="Bookmark">
               <PinIcon size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
 
         <p className="summary">{opportunity.summary}</p>
+
+        {assessment ? (
+          <div className="pursuit-decision">
+            <div className="factor-grid">
+              {assessment.factors.map((factor) => (
+                <div className="factor-score" key={factor.key} title={factor.reasons.join(' ')}>
+                  <span>{factor.label}</span><strong>{factor.score}</strong>
+                  <i><b style={{ width: `${factor.score}%` }} /></i>
+                </div>
+              ))}
+            </div>
+            <div className="decision-evidence">
+              <div>
+                <strong>Why</strong>
+                {assessment.top_reasons.length ? assessment.top_reasons.map((reason) => <span key={reason}>✓ {reason}</span>) : <span>Needs more evidence.</span>}
+              </div>
+              <div className={assessment.hard_gates.length ? 'hard-gates' : ''}>
+                <strong>{assessment.hard_gates.length ? 'Hard gate' : 'Risk / unknown'}</strong>
+                {(assessment.hard_gates.length ? assessment.hard_gates : assessment.risks).slice(0, 2).map((risk) => <span key={risk}>! {risk}</span>)}
+                {!assessment.hard_gates.length && !assessment.risks.length ? <span>No critical risk detected yet.</span> : null}
+              </div>
+            </div>
+            <div className="next-action-line"><ArrowUpRight size={16} aria-hidden="true" /><span><strong>Next:</strong> {assessment.next_action}</span></div>
+          </div>
+        ) : null}
 
         <div className="meta-grid">
           <Meta icon={Building2} label="Buyer" value={opportunity.buyer} />
@@ -3110,6 +3454,15 @@ function OpportunityRow({
             {opportunity.matched_keywords.slice(0, 5).map((keyword) => (
               <span key={keyword}>{keyword}</span>
             ))}
+          </div>
+          <div className="pursuit-actions">
+            {pursuit ? (
+              <label className="pipeline-status"><Handshake size={15} aria-hidden="true" /><select value={pursuit.status} onChange={(event) => onUpdateStatus(event.target.value as PursuitStatus)} aria-label="Pipeline status"><option value="review">Review</option><option value="pursue">Pursue</option><option value="waiting">Waiting</option><option value="won">Won</option><option value="lost">Lost</option></select></label>
+            ) : (
+              <button className="pipeline-button" type="button" onClick={onSavePursuit}><Handshake size={15} aria-hidden="true" /> Add to pipeline</button>
+            )}
+            <button className={pursuit?.feedback?.fit === true ? 'feedback-button active' : 'feedback-button'} type="button" onClick={() => onFitFeedback(true)}>Fit</button>
+            <button className={pursuit?.feedback?.fit === false ? 'feedback-button active negative' : 'feedback-button'} type="button" onClick={() => onFitFeedback(false)}>Not fit</button>
           </div>
         </div>
       </div>
@@ -5357,13 +5710,6 @@ function isSameCalendarDay(left: Date, right: Date) {
   return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate()
 }
 
-function bandToClass(score: number) {
-  if (score >= 80) return 'green'
-  if (score >= 60) return 'blue'
-  if (score >= 40) return 'amber'
-  return 'red'
-}
-
 function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
@@ -5390,6 +5736,18 @@ function packageLabel(name: string) {
     .replace('Cultural / Multimedia Digital Experience', 'Culture media')
     .replace('Dashboard & Data Intelligence', 'Dashboards')
     .replace('Document & Case Management', 'Documents')
+}
+
+function solutionRouteLabel(route: SolutionRoute) {
+  return ({
+    oss_configuration: 'Configure OSS',
+    oss_extension: 'Extend OSS',
+    custom_dashboard: 'Custom dashboard',
+    custom_web_app: 'Custom web app',
+    integration_data: 'Integration / data',
+    license_hardware: 'Licenses / hardware',
+    unknown: 'Route unknown',
+  })[route]
 }
 
 function cpvDescription(code: string) {
