@@ -19,6 +19,7 @@ Turn Opportunity Finder into a decision-first Action Feed that helps a solo-firs
 - Every assessed card exposes the four factors, reasons, risks/hard gates, solution route, confidence, and next action.
 - Existing bookmarks and Market Radar APIs remain; bookmarks migrate idempotently into the pursuit pipeline.
 - Private signals require official recent evidence, explicit software need, and high need/confidence scores.
+- Native operating-system certificate roots keep ΚΗΜΔΗΣ/TED/OpenAI HTTPS verification secure on managed Windows/Linux hosts.
 - Backend tests, catalog validation, frontend lint/tests/build, and desktop/mobile visual checks pass.
 
 ## Validation

@@ -34,6 +34,7 @@ The current implementation of Opportunity Finder. Replacing this stack must not 
 - Runtime software matching reads generated JSON; the workbook is the editable source of truth.
 - New API fields are backward-compatible unless a migration plan says otherwise.
 - Secrets stay in ignored env files/VPS configuration and never in Git.
+- Outbound HTTPS uses the native operating-system trust store via `truststore`; certificate verification stays enabled.
 - Tests must avoid live paid AI calls; use fakes/fixtures and explicit integration smoke tests.
 - CI runs catalog validation, backend tests, frontend lint, tests, typecheck, and build.
 

@@ -173,7 +173,13 @@ class OpportunityService:
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             return (
-                SourceRun(source=source, status="error", items=0, elapsed_ms=elapsed_ms, error=str(exc)[:240]),
+                SourceRun(
+                    source=source,
+                    status="error",
+                    items=0,
+                    elapsed_ms=elapsed_ms,
+                    error=(str(exc) or exc.__class__.__name__)[:240],
+                ),
                 [],
             )
 
@@ -196,7 +202,14 @@ class OpportunityService:
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             return (
-                SourceRun(source=source, status="error", items=0, shown=0, elapsed_ms=elapsed_ms, error=str(exc)[:240]),
+                SourceRun(
+                    source=source,
+                    status="error",
+                    items=0,
+                    shown=0,
+                    elapsed_ms=elapsed_ms,
+                    error=(str(exc) or exc.__class__.__name__)[:240],
+                ),
                 [],
             )
 
