@@ -28,6 +28,8 @@ The interface is a decision workspace, not a generic analytics dashboard. The fi
 - Scores support explanations; they are never the sole call to action.
 - Unknown data is shown explicitly and routes to a concrete verification action.
 - AI states always show pending/cached/error status and never block deterministic results.
+- Pipeline entry is always an explicit manual action. Fit feedback is available only after an opportunity is tracked and never creates or advances a pursuit implicitly.
+- Keep source links and documents inside the opportunity information view; avoid duplicate source actions on feed cards.
 
 ## UX principles
 

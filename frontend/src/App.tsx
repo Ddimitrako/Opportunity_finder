@@ -1816,8 +1816,11 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
   }
 
   const saveFitFeedback = async (opportunity: Opportunity, fit: boolean) => {
-    const saved = pursuitById.get(opportunity.id) ?? await savePursuit(opportunity)
-    if (!saved) return
+    const saved = pursuitById.get(opportunity.id)
+    if (!saved) {
+      setPursuitError('Add the opportunity to the pipeline before recording fit feedback.')
+      return
+    }
     try {
       const res = await fetch(`${API_BASE}/api/pursuits/${encodeURIComponent(opportunity.id)}/feedback`, {
         method: 'POST',
@@ -3397,16 +3400,10 @@ function OpportunityRow({
             <h4>{opportunity.title}</h4>
           </div>
           <div className="row-actions">
-            <button className="details-action" type="button" onClick={onOpenDetails}>
-              Dossier
-              <PanelRightOpen size={15} aria-hidden="true" />
+            <button className="details-action info-action" type="button" onClick={onOpenDetails} title="Open opportunity information and documents">
+              <Info size={15} aria-hidden="true" />
+              Info
             </button>
-            {opportunity.url ? (
-              <a className="platform-link" href={opportunity.url} target="_blank" rel="noreferrer">
-                Open source
-                <ExternalLink size={15} aria-hidden="true" />
-              </a>
-            ) : null}
             <button className="icon-action legacy-pin" type="button" onClick={onTogglePin} aria-label={pinned ? 'Remove bookmark' : 'Bookmark'} title="Bookmark">
               <PinIcon size={18} aria-hidden="true" />
             </button>
@@ -3457,12 +3454,20 @@ function OpportunityRow({
           </div>
           <div className="pursuit-actions">
             {pursuit ? (
-              <label className="pipeline-status"><Handshake size={15} aria-hidden="true" /><select value={pursuit.status} onChange={(event) => onUpdateStatus(event.target.value as PursuitStatus)} aria-label="Pipeline status"><option value="review">Review</option><option value="pursue">Pursue</option><option value="waiting">Waiting</option><option value="won">Won</option><option value="lost">Lost</option></select></label>
+              <>
+                <label className="pipeline-status"><Handshake size={15} aria-hidden="true" /><span>Pipeline</span><select value={pursuit.status} onChange={(event) => onUpdateStatus(event.target.value as PursuitStatus)} aria-label="Pipeline status"><option value="review">Review</option><option value="pursue">Pursue</option><option value="waiting">Waiting</option><option value="won">Won</option><option value="lost">Lost</option></select></label>
+                <div className="feedback-group" aria-label="Match feedback">
+                  <span>Match feedback</span>
+                  <button className={pursuit.feedback?.fit === true ? 'feedback-button active' : 'feedback-button'} type="button" onClick={() => onFitFeedback(true)}>Fit</button>
+                  <button className={pursuit.feedback?.fit === false ? 'feedback-button active negative' : 'feedback-button'} type="button" onClick={() => onFitFeedback(false)}>Not fit</button>
+                </div>
+              </>
             ) : (
-              <button className="pipeline-button" type="button" onClick={onSavePursuit}><Handshake size={15} aria-hidden="true" /> Add to pipeline</button>
+              <div className="pipeline-entry">
+                <button className="pipeline-button" type="button" onClick={onSavePursuit} title="Save this opportunity for manual pursuit tracking"><Handshake size={15} aria-hidden="true" /> Track in pipeline</button>
+                <small>Manual tracking · no automation</small>
+              </div>
             )}
-            <button className={pursuit?.feedback?.fit === true ? 'feedback-button active' : 'feedback-button'} type="button" onClick={() => onFitFeedback(true)}>Fit</button>
-            <button className={pursuit?.feedback?.fit === false ? 'feedback-button active negative' : 'feedback-button'} type="button" onClick={() => onFitFeedback(false)}>Not fit</button>
           </div>
         </div>
       </div>
@@ -3472,72 +3477,78 @@ function OpportunityRow({
 
 function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
   return (
-    <section className="drawer-section guidance-section">
-      <div className="guidance-header">
+    <details className="drawer-section guidance-section" open>
+      <summary className="guidance-summary">
         <div>
           <h4>Lifecycle guidance</h4>
           <p>{guidance.is_actionable ? 'This looks actionable now.' : 'This is not clearly actionable yet.'}</p>
         </div>
-        <span className={`actionable-pill ${guidance.is_actionable ? 'yes' : 'no'}`}>
-          {guidance.is_actionable ? 'Actionable' : 'Watch'}
-        </span>
-      </div>
+        <div className="guidance-summary-actions">
+          <span className={`actionable-pill ${guidance.is_actionable ? 'yes' : 'no'}`}>
+            {guidance.is_actionable ? 'Actionable' : 'Watch'}
+          </span>
+          <ChevronDown size={17} aria-hidden="true" />
+        </div>
+      </summary>
 
-      <div className="lifecycle-tracker" aria-label="Lifecycle tracker">
-        {guidance.stage_steps.map((step, index) => (
-          <div className={`lifecycle-node ${step.status}`} key={step.id}>
-            <div className="lifecycle-number" aria-label={`${index + 1}. ${step.label}`}>
-              {index + 1}
+      <div className="guidance-content">
+        <div className="lifecycle-tracker" aria-label="Lifecycle tracker">
+          {guidance.stage_steps.map((step, index) => (
+            <div className={`lifecycle-node ${step.status}`} key={step.id}>
+              <div className="lifecycle-number" aria-label={`${index + 1}. ${step.label}`}>
+                {index + 1}
+              </div>
+              <div className="lifecycle-node-copy">
+                <strong>{step.label}</strong>
+                <small>{step.references.length ? step.references.join(', ') : lifecycleStatusLabel(step.status)}</small>
+              </div>
             </div>
-            <div className="lifecycle-node-copy">
-              <strong>{step.label}</strong>
-              <small>{step.references.length ? step.references.join(', ') : lifecycleStatusLabel(step.status)}</small>
-            </div>
+          ))}
+        </div>
+
+        <div className="guidance-cards">
+          <GuidanceCard title="Where we are now" value={guidance.current_stage_label} />
+          <GuidanceCard title="Can I act now?" value={guidance.is_actionable ? 'Yes, review and prepare a bid.' : 'Not yet. Monitor the next official step.'} />
+          <GuidanceCard title="Next action" value={guidance.next_action} />
+        </div>
+
+        {guidance.primary_action_link ? (
+          <a className="drawer-primary-link" href={guidance.primary_action_link} target="_blank" rel="noreferrer">
+            Open recommended document
+            <ExternalLink size={15} aria-hidden="true" />
+          </a>
+        ) : null}
+
+        <CollapsiblePanel title="Checklist για αρχάριους" meta={`${guidance.checklist.length} βήματα`}>
+          <div className="checklist-list">
+            {guidance.checklist.map((item, index) => {
+              const translatedItem = translateChecklistItem(item)
+              return (
+              <div className={`checklist-item ${item.status}`} key={`${item.label}-${item.status}`}>
+                <span className="checklist-index">{index + 1}</span>
+                <span>
+                  <strong>{translatedItem.label}</strong>
+                  <small>{translatedItem.detail}</small>
+                </span>
+              </div>
+              )
+            })}
           </div>
-        ))}
-      </div>
+        </CollapsiblePanel>
 
-      <div className="guidance-cards">
-        <GuidanceCard title="Where we are now" value={guidance.current_stage_label} />
-        <GuidanceCard title="Can I act now?" value={guidance.is_actionable ? 'Yes, review and prepare a bid.' : 'Not yet. Monitor the next official step.'} />
-        <GuidanceCard title="Next action" value={guidance.next_action} />
-      </div>
-
-      {guidance.primary_action_link ? (
-        <a className="drawer-primary-link" href={guidance.primary_action_link} target="_blank" rel="noreferrer">
-          Open recommended document
-          <ExternalLink size={15} aria-hidden="true" />
-        </a>
-      ) : null}
-
-      <CollapsiblePanel title="Checklist για αρχάριους" meta={`${guidance.checklist.length} βήματα`}>
-        <div className="checklist-list">
-          {guidance.checklist.map((item, index) => {
-            const translatedItem = translateChecklistItem(item)
-            return (
-            <div className={`checklist-item ${item.status}`} key={`${item.label}-${item.status}`}>
-              <span className="checklist-index">{index + 1}</span>
-              <span>
-                <strong>{translatedItem.label}</strong>
-                <small>{translatedItem.detail}</small>
-              </span>
+        {guidance.watch_items.length ? (
+          <CollapsiblePanel title="What to watch next" meta={`${guidance.watch_items.length} items`}>
+            <div className="watch-block">
+              <ul>
+                {guidance.watch_items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
-            )
-          })}
-        </div>
-      </CollapsiblePanel>
-
-      {guidance.watch_items.length ? (
-        <div className="watch-block">
-          <h5>What to watch next</h5>
-          <ul>
-            {guidance.watch_items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </section>
+          </CollapsiblePanel>
+        ) : null}
+      </div>
+    </details>
   )
 }
 
@@ -3753,7 +3764,7 @@ function translateChecklistItem(item: GuidanceChecklistItem) {
   }
 }
 
-export function SoftwareMatchesPanel({
+function SoftwareMatchmakingContent({
   opportunity,
   aiEnabled,
   selectedAiModel,
@@ -3792,7 +3803,7 @@ export function SoftwareMatchesPanel({
   }
 
   return (
-    <section className="drawer-section software-matches-section">
+    <>
       <div className="software-matches-header">
         <div>
           <p className="eyebrow">Product matchmaking</p>
@@ -3873,6 +3884,18 @@ export function SoftwareMatchesPanel({
           ))}
         </div>
       )}
+    </>
+  )
+}
+
+export function SoftwareMatchesPanel(props: {
+  opportunity: Opportunity
+  aiEnabled: boolean
+  selectedAiModel: string
+}) {
+  return (
+    <section className="drawer-section software-matches-section">
+      <SoftwareMatchmakingContent {...props} />
     </section>
   )
 }
@@ -3978,14 +4001,11 @@ function DetailsDrawer({
               <h4>Available information</h4>
               <div className="details-overview-grid">
                 <div className="details-grid">
-                  <DetailItem label="Reference" value={details?.reference ?? opportunity.source_reference ?? 'N/A'} />
                   <DetailItem label="Source" value={opportunity.source_label} />
                   <DetailItem label="Buyer" value={formatSourceValue(metadata.buyer ?? metadata.organization ?? opportunity.buyer ?? 'N/A')} />
                   <DetailItem label="Published" value={String(metadata.publicationDate ?? metadata.submissionDate ?? opportunity.published_at ?? 'N/A')} />
                   <DetailItem label="Deadline" value={String(metadata.deadline ?? metadata.procurementDeliveryDate ?? opportunity.deadline ?? 'N/A')} />
-                  <DetailItem label="Type" value={String(metadata.noticeType ?? metadata.procedureType ?? opportunity.procedure_type ?? 'N/A')} />
                   <DetailItem label="Budget" value={formatCurrency(opportunity.budget)} />
-                  <CollapsibleCpvList label="CPV" value={opportunity.cpv_codes} />
                   <DocumentsDetailItem documents={documents} />
                 </div>
                 <div className="details-summary-panel">
@@ -4000,13 +4020,6 @@ function DetailsDrawer({
                 </div>
               </div>
             </section>
-
-            <SoftwareMatchesPanel
-              key={`software:${opportunity.id}`}
-              opportunity={opportunity}
-              aiEnabled={softwareMatchAiEnabled}
-              selectedAiModel={selectedAiModel}
-            />
 
             {details?.guidance ? (
               <GuidancePanel guidance={details.guidance} />
@@ -4030,6 +4043,8 @@ function DetailsDrawer({
                 onSelectAiModel={onSelectAiModel}
                 canGenerate={Boolean(opportunity.source_reference)}
                 onGenerate={onGenerateBrief}
+                opportunity={opportunity}
+                softwareMatchAiEnabled={softwareMatchAiEnabled}
               />
             </div>
 
@@ -4616,6 +4631,8 @@ export function DocumentBriefPanel({
   onSelectAiModel,
   canGenerate,
   onGenerate,
+  opportunity,
+  softwareMatchAiEnabled = false,
 }: {
   source: SourceName
   reference: string
@@ -4630,9 +4647,11 @@ export function DocumentBriefPanel({
   onSelectAiModel: (model: string) => void
   canGenerate: boolean
   onGenerate: () => void
+  opportunity?: Opportunity
+  softwareMatchAiEnabled?: boolean
 }) {
   const ActionIcon = generating ? Loader2 : Sparkles
-  const [activeTab, setActiveTab] = useState<'brief' | 'chat'>('brief')
+  const [activeTab, setActiveTab] = useState<'brief' | 'chat' | 'match'>('brief')
   const [preview, setPreview] = useState<PdfPreview | null>(null)
   const selectedModelInfo = aiModels.find((model) => model.id === selectedAiModel)
   const evidenceMap = new Map((brief?.evidence ?? []).map((item) => [item.id, item]))
@@ -4656,8 +4675,8 @@ export function DocumentBriefPanel({
         </div>
         <div className="ai-model-controls">
           <label>
-            <span>Model · Brief & Chat</span>
-            <select value={selectedAiModel} onChange={(event) => onSelectAiModel(event.target.value)} disabled={generating} aria-label="AI model for Decision Brief and Ask AI">
+            <span>Model · Brief, Ask AI & matching</span>
+            <select value={selectedAiModel} onChange={(event) => onSelectAiModel(event.target.value)} disabled={generating} aria-label="AI model for Decision Brief, Ask AI and product matching">
               {aiModels.map((model) => <option value={model.id} key={model.id}>{model.label}{model.recommended ? ' · Recommended' : ''}</option>)}
             </select>
             {selectedModelInfo ? <small>{selectedModelInfo.quality} · {selectedModelInfo.description}</small> : null}
@@ -4678,7 +4697,22 @@ export function DocumentBriefPanel({
         <button type="button" role="tab" aria-selected={activeTab === 'chat'} className={activeTab === 'chat' ? 'active' : undefined} onClick={() => setActiveTab('chat')}>
           <MessageSquare size={15} aria-hidden="true" /> Ask AI
         </button>
+        {opportunity ? (
+          <button type="button" role="tab" aria-selected={activeTab === 'match'} className={activeTab === 'match' ? 'active' : undefined} onClick={() => setActiveTab('match')}>
+            <Layers3 size={15} aria-hidden="true" /> Product match
+          </button>
+        ) : null}
       </div>
+
+      {activeTab === 'match' && opportunity ? (
+        <div className="ai-match-tab">
+          <SoftwareMatchmakingContent
+            opportunity={opportunity}
+            aiEnabled={softwareMatchAiEnabled}
+            selectedAiModel={selectedAiModel}
+          />
+        </div>
+      ) : null}
 
       {activeTab === 'brief' && loading ? (
         <div className="ai-brief-state">

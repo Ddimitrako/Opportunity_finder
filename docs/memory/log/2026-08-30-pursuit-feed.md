@@ -15,3 +15,5 @@ tags: [log, product, architecture, scoring]
 - Run deterministic/low-cost screening first and deep AI only for the strongest candidates, with caching and bounded cost.
 - Admit private-company signals only when they are recent, high-confidence, backed by an official URL, and describe a specific software need; broad corporate news stays in Market Radar.
 - Keep Market Radar and legacy bookmarks compatible, but make the Action Feed, pursuit status, and explicit Fit/Not fit feedback the primary workflow.
+- Pipeline entry is explicitly manual: tracking creates the pursuit, while Fit/Not fit only records feedback on an existing pursuit and never starts or advances a pipeline automatically.
+- Keep opportunity documents and source access in the information drawer instead of duplicating an external source action on each feed card.
