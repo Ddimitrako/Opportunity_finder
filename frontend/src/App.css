@@ -3533,6 +3533,43 @@ h5 {
   border: 1px solid #efc2b7;
 }
 
+.drawer-source-warning {
+  color: #6a4a10;
+  background: #fff9eb;
+  border-color: #efd9a7;
+}
+
+.drawer-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.drawer-retry:hover {
+  background: rgba(255, 255, 255, 0.52);
+}
+
+@media (max-width: 700px) {
+  .drawer-error {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .drawer-retry {
+    margin-left: 27px;
+  }
+}
+
 .source-visualization {
   display: grid;
   gap: 14px;

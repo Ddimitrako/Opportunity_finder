@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import date
 from typing import Any
 
@@ -33,6 +34,9 @@ TED_DETAIL_FIELDS = [
     "organisation-country-buyer",
 ]
 
+DETAIL_RETRY_DELAYS_SECONDS = (0.35,)
+logger = logging.getLogger(__name__)
+
 
 class OpportunityDetailsService:
     def __init__(self, settings: Settings):
@@ -54,15 +58,19 @@ class OpportunityDetailsService:
     async def _khmdhs_details(self, reference: str) -> OpportunityDetails:
         base = str(self.settings.khmdhs_base_url).rstrip("/")
         async with httpx.AsyncClient(
-            timeout=self.settings.khmdhs_timeout_seconds,
+            # Detail enrichment must not keep an already-selected opportunity blank
+            # behind the slower source-search timeout.
+            timeout=min(self.settings.khmdhs_timeout_seconds, 8.0),
             verify=self.settings.khmdhs_verify_ssl,
             headers={"Accept": "application/json"},
         ) as client:
-            metadata, metadata_error = await self._khmdhs_metadata(client, reference)
-            chain, chain_error = await _khmdhs_json(
-                client,
-                "GET",
-                f"{base}/khmdhs-opendata/adamChain/{reference}",
+            (metadata, metadata_error), (chain, chain_error) = await asyncio.gather(
+                self._khmdhs_metadata(client, reference),
+                _khmdhs_json(
+                    client,
+                    "GET",
+                    f"{base}/khmdhs-opendata/adamChain/{reference}",
+                ),
             )
             chain = chain or {}
             upstream_errors = [error for error in (metadata_error, chain_error) if error]
@@ -182,17 +190,33 @@ async def _khmdhs_json(
     params: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    for attempt in range(3):
-        response = await client.request(method, url, params=params, json=json)
+    attempts = len(DETAIL_RETRY_DELAYS_SECONDS) + 1
+    for attempt in range(attempts):
+        try:
+            response = await client.request(method, url, params=params, json=json)
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            if attempt < attempts - 1:
+                logger.warning("KIMDIS details request failed; retrying", extra={"attempt": attempt + 1, "error": str(exc)})
+                await asyncio.sleep(DETAIL_RETRY_DELAYS_SECONDS[attempt])
+                continue
+            return None, "KIMDIS did not respond while loading live details."
+
         if response.status_code == 404:
             return None, None
-        if response.status_code == 429:
-            if attempt < 2:
-                await asyncio.sleep(1.2 * (attempt + 1))
+        if response.status_code == 429 or response.status_code >= 500:
+            if attempt < attempts - 1:
+                logger.warning("KIMDIS details returned a transient status; retrying", extra={"attempt": attempt + 1, "status_code": response.status_code})
+                await asyncio.sleep(DETAIL_RETRY_DELAYS_SECONDS[attempt])
                 continue
-            return None, "KIMDIS rate limit reached while loading details. Try again in a little while."
-        response.raise_for_status()
-        return response.json(), None
+            if response.status_code == 429:
+                return None, "KIMDIS rate limit reached while loading live details."
+            return None, "KIMDIS is temporarily unavailable while loading live details."
+        if response.is_error:
+            return None, f"KIMDIS returned HTTP {response.status_code} while loading live details."
+        try:
+            return response.json(), None
+        except ValueError:
+            return None, "KIMDIS returned an invalid response while loading live details."
     return None, "KIMDIS details request did not complete."
 
 

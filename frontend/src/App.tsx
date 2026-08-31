@@ -1693,13 +1693,15 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
 
     if (!opportunity.source_reference) {
       setDetailsOpportunity(opportunity)
-      setDetails(null)
+      setDetails(detailsFallbackFromOpportunity(opportunity))
       setDetailsError('Δεν υπάρχει reference από την πηγή για live details.')
       return
     }
 
     setDetailsOpportunity(opportunity)
-    setDetails(null)
+    // Keep the result we already have visible while the live source is being
+    // enriched. A slow source must never turn an opportunity into an empty drawer.
+    setDetails(detailsFallbackFromOpportunity(opportunity))
     setDetailsError(null)
     setDetailsLoading(true)
     try {
@@ -1721,8 +1723,8 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
       const intelligenceOpportunity = enrichOpportunityFromDetails(opportunity, nextDetails)
       void loadCachedBrief(opportunity)
       void loadBuyerIntelligence(intelligenceOpportunity, response?.opportunities ?? [])
-    } catch (exc) {
-      setDetailsError(exc instanceof Error ? exc.message : 'Details fetch failed')
+    } catch {
+      setDetailsError('Live details are temporarily unavailable. Showing the information already loaded for this opportunity.')
     } finally {
       setDetailsLoading(false)
     }
@@ -2407,6 +2409,7 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
         softwareMatchAiEnabled={config?.software_match_ai_enabled ?? false}
         onSelectAiModel={selectAiModel}
         onGenerateBrief={() => detailsOpportunity ? void generateDocumentBrief(detailsOpportunity) : undefined}
+        onRetry={() => detailsOpportunity ? void openDetails(detailsOpportunity) : undefined}
         onClose={closeDetails}
       />
       {settingsOpen && companyProfile && aiWorkflows ? (
@@ -3918,6 +3921,7 @@ function DetailsDrawer({
   softwareMatchAiEnabled,
   onSelectAiModel,
   onGenerateBrief,
+  onRetry,
   onClose,
 }: {
   opportunity: Opportunity | null
@@ -3937,6 +3941,7 @@ function DetailsDrawer({
   softwareMatchAiEnabled: boolean
   onSelectAiModel: (model: string) => void
   onGenerateBrief: () => void
+  onRetry: () => void
   onClose: () => void
 }) {
   useEffect(() => {
@@ -3967,6 +3972,8 @@ function DetailsDrawer({
   const metadata = details?.metadata ?? {}
   const documents = details?.documents ?? []
   const primaryLinkLabel = details?.source === 'khmdhs' ? 'Άνοιγμα βασικού εγγράφου ΚΗΜΔΗΣ' : 'Άνοιγμα record'
+  const upstreamErrors = Array.isArray(details?.raw.upstream_errors) ? details.raw.upstream_errors.filter((item): item is string => typeof item === 'string') : []
+  const detailsUnavailable = Boolean(error || upstreamErrors.length)
 
   return (
     <div className="drawer-backdrop" role="presentation" onClick={onClose}>
@@ -3992,10 +3999,19 @@ function DetailsDrawer({
           <div className="drawer-error">
             <AlertTriangle size={17} aria-hidden="true" />
             <span>{error}</span>
+            <button className="drawer-retry" type="button" onClick={onRetry}><RefreshCw size={15} aria-hidden="true" /> Retry live details</button>
           </div>
         ) : null}
 
-        {!loading && !error ? (
+        {upstreamErrors.length && !error ? (
+          <div className="drawer-error drawer-source-warning">
+            <AlertTriangle size={17} aria-hidden="true" />
+            <span>Some live KIMDIS details could not be refreshed. The information below is still available from the opportunity record.</span>
+            <button className="drawer-retry" type="button" onClick={onRetry}><RefreshCw size={15} aria-hidden="true" /> Retry live details</button>
+          </div>
+        ) : null}
+
+        {details ? (
           <div className="drawer-content">
             <section className="drawer-section details-overview-section">
               <h4>Available information</h4>
@@ -4048,22 +4064,52 @@ function DetailsDrawer({
               />
             </div>
 
-            <section className="drawer-section source-data-section">
-              <h4>Visualized source data</h4>
-              <SourceDataVisualization details={details} />
-            </section>
+            {!detailsUnavailable ? (
+              <section className="drawer-section source-data-section">
+                <h4>Visualized source data</h4>
+                <SourceDataVisualization details={details} />
+              </section>
+            ) : null}
 
-            <section className="drawer-section compact-section">
-              <details className="raw-details">
-                <summary>Raw JSON</summary>
-                <pre>{JSON.stringify(details?.raw ?? {}, null, 2)}</pre>
-              </details>
-            </section>
+            {!detailsUnavailable ? (
+              <section className="drawer-section compact-section">
+                <details className="raw-details">
+                  <summary>Raw JSON</summary>
+                  <pre>{JSON.stringify(details.raw, null, 2)}</pre>
+                </details>
+              </section>
+            ) : null}
           </div>
         ) : null}
       </aside>
     </div>
   )
+}
+
+function detailsFallbackFromOpportunity(opportunity: Opportunity): OpportunityDetails {
+  const metadata: Record<string, unknown> = {
+    buyer: opportunity.buyer,
+    publicationDate: opportunity.published_at,
+    deadline: opportunity.deadline,
+  }
+  const documents = opportunity.url ? [{
+    label: `${opportunity.source_label} source record`,
+    url: opportunity.url,
+    document_type: 'source',
+    reference: opportunity.source_reference,
+  }] : []
+
+  return {
+    source: opportunity.source,
+    reference: opportunity.source_reference ?? opportunity.id,
+    title: opportunity.title,
+    platform_url: opportunity.url,
+    summary: opportunity.summary,
+    metadata,
+    documents,
+    related_references: {},
+    raw: {},
+  }
 }
 
 function BuyerIntelligencePanel({
