@@ -2248,10 +2248,10 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
         ) : null}
 
         <section className="metric-strip">
-          <Metric icon={Target} label="Pursue" value={loading ? '...' : String(verdictCounts.pursue)} tone="green" />
-          <Metric icon={Gauge} label="Review" value={String(verdictCounts.review)} tone="blue" />
-          <Metric icon={AlertTriangle} label="Skip" value={String(verdictCounts.skip)} tone="amber" />
-          <Metric icon={Handshake} label="Pipeline" value={String(pursuits.length)} tone="blue" />
+          <Metric icon={Target} label="Διεκδίκηση" hint="Ευκαιρίες με αρκετά θετικά στοιχεία ώστε να αξίζει άμεσο επόμενο βήμα. Δεν αποτελεί εγγύηση ανάθεσης." value={loading ? '...' : String(verdictCounts.pursue)} tone="green" />
+          <Metric icon={Gauge} label="Αξιολόγηση" hint="Ευκαιρίες που χρειάζονται έλεγχο στοιχείων, πρόσβασης ή τεχνικών απαιτήσεων πριν αποφασίσεις αν θα κινηθείς." value={String(verdictCounts.review)} tone="blue" />
+          <Metric icon={AlertTriangle} label="Παράλειψη" hint="Ευκαιρίες που δεν αξίζει να προτεραιοποιηθούν τώρα, συνήθως λόγω σταδίου, περιορισμών ή απαιτούμενης προσπάθειας." value={String(verdictCounts.skip)} tone="amber" />
+          <Metric icon={Handshake} label="Pipeline" hint="Ευκαιρίες που έχεις προσθέσει χειροκίνητα για παρακολούθηση. Η προσθήκη δεν εκτελεί αυτόματες ενέργειες." value={String(pursuits.length)} tone="blue" />
         </section>
 
         <details className="secondary-insights">
@@ -2340,22 +2340,22 @@ function OpportunityFinderApp({ username, onLogout }: { username: string; onLogo
 
         <section className="results-header">
           <div>
-            <p className="eyebrow">Decision queue</p>
-            <h3>{loading ? 'Loading opportunities' : `${filteredOpportunities.length} actionable records`}</h3>
+            <p className="eyebrow">Ουρά αποφάσεων</p>
+            <h3>{loading ? 'Φόρτωση ευκαιριών' : `${filteredOpportunities.length} αξιοποιήσιμες εγγραφές`}</h3>
           </div>
           <div className="decision-filters" aria-label="Action feed filters">
             {(['all', 'pursue', 'review', 'skip'] as const).map((value) => (
               <button className={verdictFilter === value ? 'active' : ''} type="button" key={value} onClick={() => setVerdictFilter(value)}>
-                {value === 'all' ? 'All' : value === 'pursue' ? 'Pursue' : value === 'review' ? 'Review' : 'Skip'}
+                {value === 'all' ? 'Όλες' : pursuitVerdictLabel(value)}
               </button>
             ))}
-            <select value={candidateFilter} onChange={(event) => setCandidateFilter(event.target.value as typeof candidateFilter)} aria-label="Candidate type">
-              <option value="all">All stages</option>
-              <option value="bid_now">Bid now</option>
-              <option value="position_early">Position early</option>
-              <option value="outbound">Outbound</option>
-              <option value="historical">Historical</option>
-              <option value="review">Unknown stage</option>
+            <select value={candidateFilter} onChange={(event) => setCandidateFilter(event.target.value as typeof candidateFilter)} aria-label="Τύπος ευκαιρίας">
+              <option value="all">Όλα τα στάδια</option>
+              <option value="bid_now">Υποβολή τώρα</option>
+              <option value="position_early">Πρώιμη τοποθέτηση</option>
+              <option value="outbound">Εξερχόμενη προσέγγιση</option>
+              <option value="historical">Ιστορικό</option>
+              <option value="review">Άγνωστο στάδιο</option>
             </select>
           </div>
         </section>
@@ -3368,37 +3368,37 @@ function OpportunityRow({
   return (
     <article className={`opportunity-row ${bandClass}`}>
       <div className="score-cell">
-        <div className="score-ring" style={{ '--score': `${priority * 3.6}deg` } as CSSProperties}>
+        <Explainable className="score-ring" hint="Προτεραιότητα 0–100: συνδυάζει πρόσβαση, πιθανότητα νίκης, δυνατότητα παράδοσης και αξία σε σχέση με την προσπάθεια. Δεν είναι πιθανότητα επιτυχίας." style={{ '--score': `${priority * 3.6}deg` } as CSSProperties}>
           <strong>{priority}</strong>
-          <span>priority</span>
-        </div>
-        <span className={`band ${bandClass}`}>{verdict === 'pursue' ? 'Pursue' : verdict === 'review' ? 'Review' : 'Skip'}</span>
-        {assessment ? <small className="confidence-label">{assessment.confidence} confidence</small> : null}
+          <span>προτεραιότητα</span>
+        </Explainable>
+        <Explainable className={`band ${bandClass}`} hint={pursuitVerdictExplanation(verdict)}>{pursuitVerdictLabel(verdict)}</Explainable>
+        {assessment ? <Explainable className="confidence-label" hint="Η βεβαιότητα δείχνει πόσο επαρκή και συνεπή είναι τα διαθέσιμα στοιχεία για την αξιολόγηση. Δεν προβλέπει το αποτέλεσμα του διαγωνισμού.">{confidenceLabel(assessment.confidence)}</Explainable> : null}
       </div>
 
       <div className="opportunity-main">
         <div className="title-line">
           <div>
             <div className="source-line">
-              <span>{opportunity.source_label}</span>
-              {opportunity.procedure_type ? <span>{opportunity.procedure_type}</span> : null}
-              {opportunity.package_match ? <span>{packageLabel(opportunity.package_match)}</span> : null}
+              <Explainable hint={sourceExplanation(opportunity.source)}>{sourceLabel(opportunity.source, opportunity.source_label)}</Explainable>
+              {opportunity.procedure_type ? <Explainable hint="Είδος ανάγκης όπως προκύπτει από την πηγή. Χρησιμοποιείται ως ένδειξη και χρειάζεται επιβεβαίωση στα επίσημα έγγραφα.">{packageLabel(opportunity.procedure_type)}</Explainable> : null}
+              {opportunity.package_match ? <Explainable hint="Θεματική κατηγορία που ταιριάζει με το αντικείμενο της ευκαιρίας. Βοηθά στην ομαδοποίηση, δεν αποτελεί τεχνική προδιαγραφή.">{packageLabel(opportunity.package_match)}</Explainable> : null}
               {opportunity.software_matches?.[0] ? (
-                <span className={`software-match-chip ${opportunity.software_matches[0].confidence}`}>
+                <Explainable className={`software-match-chip ${opportunity.software_matches[0].confidence}`} hint={softwareMatchExplanation(opportunity.software_matches)}>
                   <Sparkles size={12} aria-hidden="true" />
-                  Catalog match · {opportunity.software_matches[0].product.name} · {opportunity.software_matches[0].score}
+                  Ταίριασμα καταλόγου · {opportunity.software_matches[0].product.name} · {opportunity.software_matches[0].score}
                   {opportunity.software_matches.length > 1 ? ` · +${opportunity.software_matches.length - 1}` : ''}
-                </span>
+                </Explainable>
               ) : null}
               {opportunity.software_screening?.status === 'needs_review' ? (
-                <span className="software-review-chip">
+                <Explainable className="software-review-chip" hint="Τα διαθέσιμα στοιχεία δεν αρκούν για ασφαλές ταίριασμα με έτοιμη λύση. Δες τα έγγραφα ή ζήτησε AI ανάλυση.">
                   <Info size={12} aria-hidden="true" />
-                  Software fit needs review
-                </span>
+                  Απαιτείται έλεγχος λογισμικού
+                </Explainable>
               ) : null}
-              <span className={`stage-chip ${stage.tone}`}>{stage.label}</span>
-              {assessment ? <span className="route-chip">{solutionRouteLabel(assessment.solution_route)}</span> : null}
-              <span className={`action-window ${window.tone}`}>{window.label}</span>
+              <Explainable className={`stage-chip ${stage.tone}`} hint={lifecycleStageExplanation(stage.tone)}>{stage.label}</Explainable>
+              {assessment ? <Explainable className="route-chip" hint={solutionRouteExplanation(assessment.solution_route)}>{solutionRouteLabel(assessment.solution_route)}</Explainable> : null}
+              <Explainable className={`action-window ${window.tone}`} hint={actionWindowExplanation(window)}>{window.label}</Explainable>
             </div>
             <h4>{opportunity.title}</h4>
           </div>
@@ -3419,33 +3419,33 @@ function OpportunityRow({
           <div className="pursuit-decision">
             <div className="factor-grid">
               {assessment.factors.map((factor) => (
-                <div className="factor-score" key={factor.key} title={factor.reasons.join(' ')}>
-                  <span>{factor.label}</span><strong>{factor.score}</strong>
+                <div className="factor-score explainable" key={factor.key} data-tooltip={factorExplanation(factor)} title={factorExplanation(factor)} tabIndex={0}>
+                  <span>{pursuitFactorLabel(factor.key)}</span><strong>{factor.score}</strong>
                   <i><b style={{ width: `${factor.score}%` }} /></i>
                 </div>
               ))}
             </div>
             <div className="decision-evidence">
               <div>
-                <strong>Why</strong>
-                {assessment.top_reasons.length ? assessment.top_reasons.map((reason) => <span key={reason}>✓ {reason}</span>) : <span>Needs more evidence.</span>}
+                <strong>Γιατί</strong>
+                {assessment.top_reasons.length ? assessment.top_reasons.map((reason) => <span key={reason}>✓ {reason}</span>) : <span>Χρειάζονται περισσότερα στοιχεία.</span>}
               </div>
               <div className={assessment.hard_gates.length ? 'hard-gates' : ''}>
-                <strong>{assessment.hard_gates.length ? 'Hard gate' : 'Risk / unknown'}</strong>
+                <strong>{assessment.hard_gates.length ? 'Κρίσιμο εμπόδιο' : 'Ρίσκο / άγνωστο'}</strong>
                 {(assessment.hard_gates.length ? assessment.hard_gates : assessment.risks).slice(0, 2).map((risk) => <span key={risk}>! {risk}</span>)}
-                {!assessment.hard_gates.length && !assessment.risks.length ? <span>No critical risk detected yet.</span> : null}
+                {!assessment.hard_gates.length && !assessment.risks.length ? <span>Δεν εντοπίστηκε ακόμη κρίσιμο ρίσκο.</span> : null}
               </div>
             </div>
-            <div className="next-action-line"><ArrowUpRight size={16} aria-hidden="true" /><span><strong>Next:</strong> {assessment.next_action}</span></div>
+            <div className="next-action-line"><ArrowUpRight size={16} aria-hidden="true" /><span><strong>Επόμενο:</strong> {assessment.next_action}</span></div>
           </div>
         ) : null}
 
         <div className="meta-grid">
-          <Meta icon={Building2} label="Buyer" value={opportunity.buyer} />
-          <Meta icon={CircleDollarSign} label="Budget" value={formatCurrency(opportunity.budget)} />
-          <Meta icon={CalendarClock} label="Published" value={formatPublishedDate(opportunity.published_at)} />
-          <Meta icon={CalendarClock} label="Deadline" value={daysLeft === null ? 'Unknown' : `${formatDate(opportunity.deadline)} - ${daysLeft}d`} />
-          <Meta icon={Gauge} label="Action window" value={window.detail} />
+          <Meta icon={Building2} label="Αναθέτουσα αρχή" value={opportunity.buyer} />
+          <Meta icon={CircleDollarSign} label="Προϋπολογισμός" value={formatCurrency(opportunity.budget)} />
+          <Meta icon={CalendarClock} label="Δημοσίευση" value={formatPublishedDate(opportunity.published_at)} />
+          <Meta icon={CalendarClock} label="Προθεσμία" value={daysLeft === null ? 'Άγνωστη' : `${formatDate(opportunity.deadline)} · ${daysLeft} ημ.`} />
+          <Meta icon={Gauge} label="Χρονικό περιθώριο" value={window.detail} />
           <Meta icon={FileText} label="CPV" value={opportunity.cpv_codes.slice(0, 3).join(', ') || 'N/A'} />
         </div>
 
@@ -5518,9 +5518,17 @@ function formatCpvEntry(entry: CpvEntry) {
   return [entry.code, entry.description].filter(Boolean).join(' - ')
 }
 
-function Metric({ icon: Icon, label, value, tone = 'neutral' }: { icon: LucideIcon; label: string; value: string; tone?: string }) {
+function Explainable({ children, className = '', hint, style }: { children: ReactNode; className?: string; hint: string; style?: CSSProperties }) {
   return (
-    <div className={`metric ${tone}`}>
+    <span className={`explainable ${className}`.trim()} data-tooltip={hint} title={hint} tabIndex={0} style={style}>
+      {children}
+    </span>
+  )
+}
+
+function Metric({ icon: Icon, label, hint, value, tone = 'neutral' }: { icon: LucideIcon; label: string; hint: string; value: string; tone?: string }) {
+  return (
+    <div className={`metric ${tone} explainable`} data-tooltip={hint} title={hint} tabIndex={0}>
       <Icon size={19} aria-hidden="true" />
       <span>{label}</span>
       <strong>{value}</strong>
@@ -5707,15 +5715,15 @@ function actionWindow(opportunity: Opportunity) {
   const age = daysSince(opportunity.published_at)
 
   if (daysLeft !== null && daysLeft <= 5) {
-    return { label: 'Urgent', detail: daysLeft < 0 ? 'Deadline passed' : `${daysLeft}d left`, tone: 'urgent' }
+    return { label: 'Επείγον', detail: daysLeft < 0 ? 'Η προθεσμία έληξε' : `${daysLeft} ημέρες απομένουν`, tone: 'urgent' }
   }
   if (age === null) {
-    return { label: 'Unknown', detail: 'Missing publish date', tone: 'unknown' }
+    return { label: 'Άγνωστο', detail: 'Δεν υπάρχει ημερομηνία δημοσίευσης', tone: 'unknown' }
   }
   if (age <= 14 && (daysLeft === null || daysLeft >= 10)) {
-    return { label: 'Fresh', detail: `${age}d old`, tone: 'fresh' }
+    return { label: 'Πρόσφατο', detail: `${age} ημέρες από τη δημοσίευση`, tone: 'fresh' }
   }
-  return { label: 'Stale', detail: `${age}d old`, tone: 'stale' }
+  return { label: 'Παλαιότερο', detail: `${age} ημέρες από τη δημοσίευση`, tone: 'stale' }
 }
 
 function rowLifecycleStage(opportunity: Opportunity, guidance?: OpportunityGuidance) {
@@ -5737,19 +5745,19 @@ function rowLifecycleStage(opportunity: Opportunity, guidance?: OpportunityGuida
     if (reference.includes('PROC')) return { label: 'Διακήρυξη', tone: 'action' }
     if (reference.includes('AWRD')) return { label: 'Ανάθεση', tone: 'closed' }
     if (reference.includes('SYMV')) return { label: 'Σύμβαση', tone: 'closed' }
-    return { label: 'KIMDIS', tone: 'unknown' }
+    return { label: 'ΚΗΜΔΗΣ', tone: 'unknown' }
   }
 
   if (opportunity.source === 'ted') {
-    if (text.includes('award') || text.includes('result')) return { label: 'Result', tone: 'closed' }
+    if (text.includes('award') || text.includes('result')) return { label: 'Αποτέλεσμα', tone: 'closed' }
     if (text.includes('prior') || text.includes('planning') || text.includes('consultation')) {
-      return { label: 'Planning', tone: 'watch' }
+      return { label: 'Σχεδιασμός', tone: 'watch' }
     }
-    if (opportunity.deadline && daysUntil(opportunity.deadline) >= 0) return { label: 'Competition', tone: 'action' }
+    if (opportunity.deadline && daysUntil(opportunity.deadline) >= 0) return { label: 'Ανοιχτός διαγωνισμός', tone: 'action' }
     return { label: 'TED', tone: 'unknown' }
   }
 
-  return { label: 'Example', tone: 'unknown' }
+  return { label: 'Παράδειγμα', tone: 'unknown' }
 }
 
 function guidanceLifecycleStage(guidance: OpportunityGuidance) {
@@ -5817,25 +5825,101 @@ function toDateInput(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+function sourceLabel(source: SourceName, fallback: string) {
+  return ({ khmdhs: 'ΚΗΜΔΗΣ', ted: 'TED', demo: 'Παράδειγμα', market: 'Ιδιωτικό σήμα' })[source] ?? fallback
+}
+
+function sourceExplanation(source: SourceName) {
+  return ({
+    khmdhs: 'ΚΗΜΔΗΣ: το επίσημο ελληνικό μητρώο δημοσίων συμβάσεων. Τα στοιχεία προέρχονται από την αντίστοιχη δημόσια εγγραφή.',
+    ted: 'TED: η επίσημη ευρωπαϊκή πλατφόρμα δημοσίων διαγωνισμών. Επιβεβαίωσε πάντα τις προθεσμίες στο πρωτογενές έγγραφο.',
+    demo: 'Παράδειγμα δεδομένων για δοκιμή της ροής. Δεν αποτελεί ζωντανή ευκαιρία.',
+    market: 'Ιδιωτικό σήμα αγοράς. Χρειάζεται ανεξάρτητη επιβεβαίωση της ανάγκης και του υπεύθυνου επικοινωνίας.',
+  })[source]
+}
+
 function packageLabel(name: string) {
-  return name
-    .replace('Public Applications Platform', 'Applications')
-    .replace('Field Monitoring & Reporting App', 'Field reporting')
-    .replace('Cultural / Multimedia Digital Experience', 'Culture media')
-    .replace('Dashboard & Data Intelligence', 'Dashboards')
-    .replace('Document & Case Management', 'Documents')
+  const labels: Record<string, string> = {
+    'Public Applications Platform': 'Πλατφόρμα δημοσίων εφαρμογών',
+    'Field Monitoring & Reporting App': 'Παρακολούθηση πεδίου & αναφορές',
+    'Cultural / Multimedia Digital Experience': 'Πολιτισμός / πολυμέσα',
+    'Dashboard & Data Intelligence': 'Dashboards & δεδομένα',
+    'Document & Case Management': 'Διαχείριση εγγράφων & υποθέσεων',
+    'Custom software': 'Προσαρμοσμένο λογισμικό',
+  }
+  return labels[name] ?? name
 }
 
 function solutionRouteLabel(route: SolutionRoute) {
   return ({
-    oss_configuration: 'Configure OSS',
-    oss_extension: 'Extend OSS',
-    custom_dashboard: 'Custom dashboard',
-    custom_web_app: 'Custom web app',
-    integration_data: 'Integration / data',
-    license_hardware: 'Licenses / hardware',
-    unknown: 'Route unknown',
+    oss_configuration: 'Ρύθμιση open source',
+    oss_extension: 'Επέκταση open source',
+    custom_dashboard: 'Εξατομικευμένο dashboard',
+    custom_web_app: 'Εξατομικευμένη web εφαρμογή',
+    integration_data: 'Διασύνδεση / δεδομένα',
+    license_hardware: 'Άδειες / εξοπλισμός',
+    unknown: 'Ασαφής προσέγγιση',
   })[route]
+}
+
+function solutionRouteExplanation(route: SolutionRoute) {
+  return ({
+    oss_configuration: 'Υπάρχει ώριμη ανοιχτού κώδικα λύση που πιθανότατα καλύπτει τον πυρήνα. Η εργασία αφορά κυρίως εγκατάσταση, ρυθμίσεις και εκπαίδευση.',
+    oss_extension: 'Υπάρχει ώριμη ανοιχτού κώδικα βάση, αλλά απαιτούνται προσαρμογές ή νέα λειτουργικότητα πάνω της. Συνήθως είναι ταχύτερο από ανάπτυξη από το μηδέν.',
+    custom_dashboard: 'Το αντικείμενο ταιριάζει κυρίως σε στοχευμένο dashboard, αναφορές ή επιχειρησιακή εικόνα πάνω σε υπάρχοντα δεδομένα.',
+    custom_web_app: 'Το αντικείμενο φαίνεται να απαιτεί νέα, ειδικά σχεδιασμένη web εφαρμογή ή ουσιαστικό custom κομμάτι.',
+    integration_data: 'Η βασική αξία είναι διασυνδέσεις συστημάτων, ροές δεδομένων, APIs ή αυτοματοποίηση και όχι ένα εντελώς νέο προϊόν.',
+    license_hardware: 'Το αντικείμενο κυριαρχείται από άδειες ή εξοπλισμό και συνήθως δεν είναι η καλύτερη solo-first ευκαιρία χωρίς συνεργάτη.',
+    unknown: 'Τα διαθέσιμα στοιχεία δεν αρκούν ακόμη για ασφαλή επιλογή προσέγγισης. Δες το βασικό έγγραφο πριν επενδύσεις χρόνο.',
+  })[route]
+}
+
+function pursuitVerdictLabel(verdict: PursuitVerdict | 'all') {
+  return ({ pursue: 'Διεκδίκηση', review: 'Αξιολόγηση', skip: 'Παράλειψη', all: 'Όλες' })[verdict]
+}
+
+function pursuitVerdictExplanation(verdict: PursuitVerdict) {
+  return ({
+    pursue: 'Προτείνεται να κινηθείς: υπάρχουν αρκετά θετικά στοιχεία για ένα συγκεκριμένο επόμενο βήμα. Επιβεβαίωσε τα επίσημα έγγραφα πριν από δέσμευση.',
+    review: 'Χρειάζεται ακόμη έλεγχος: μπορεί να ταιριάζει, αλλά λείπει κρίσιμη πληροφορία για πρόσβαση, απαιτήσεις ή χρονικό πλαίσιο.',
+    skip: 'Δεν προτεραιοποιείται τώρα: τα διαθέσιμα στοιχεία δείχνουν χαμηλή αξία, δύσκολη πρόσβαση ή δυσανάλογη προσπάθεια για την εταιρεία.',
+  })[verdict]
+}
+
+function confidenceLabel(confidence: PursuitAssessment['confidence']) {
+  return ({ high: 'Υψηλή βεβαιότητα', medium: 'Μέτρια βεβαιότητα', low: 'Χαμηλή βεβαιότητα' })[confidence]
+}
+
+function softwareMatchExplanation(matches: SoftwareMatch[]) {
+  const [primary] = matches
+  const additional = matches.length > 1 ? ` Υπάρχουν ακόμη ${matches.length - 1} σχετικές λύσεις.` : ''
+  return `${primary.product.name} έχει ταίριασμα ${primary.score}/100 με τα διαθέσιμα σήματα. Πρόκειται για πρόταση διερεύνησης από τον κατάλογο, όχι για επιβεβαίωση τεχνικής προδιαγραφής.${additional}`
+}
+
+function lifecycleStageExplanation(tone: string) {
+  return ({
+    action: 'Στάδιο στο οποίο μπορεί να υπάρχει ενεργή δυνατότητα συμμετοχής. Έλεγξε επίσημη πρόσκληση, προθεσμία και τρόπο υποβολής.',
+    watch: 'Πρώιμο ή εγκριτικό στάδιο. Αξίζει παρακολούθηση και προετοιμασία, αλλά όχι ακόμη πλήρης προσφορά.',
+    closed: 'Μεταγενέστερο στάδιο, όπως ανάθεση ή σύμβαση. Χρήσιμο για γνώση αγοράς, όχι συνήθως για νέα συμμετοχή.',
+    unknown: 'Το στάδιο δεν επιβεβαιώνεται από τα διαθέσιμα στοιχεία. Άνοιξε το βασικό έγγραφο για επαλήθευση.',
+  } as Record<string, string>)[tone] ?? 'Το στάδιο δεν επιβεβαιώνεται από τα διαθέσιμα στοιχεία. Άνοιξε το βασικό έγγραφο για επαλήθευση.'
+}
+
+function actionWindowExplanation(window: ReturnType<typeof actionWindow>) {
+  if (window.tone === 'fresh') return `Δημοσιεύθηκε πρόσφατα: ${window.detail}. Δώσε προτεραιότητα σε έγκαιρο έλεγχο, χωρίς να θεωρείς δεδομένο ότι είναι ανοιχτό για προσφορά.`
+  if (window.tone === 'urgent') return `${window.detail}. Έλεγξε άμεσα το επίσημο έγγραφο πριν επενδύσεις χρόνο.`
+  if (window.tone === 'stale') return `${window.detail}. Μπορεί να είναι ακόμη χρήσιμο, αλλά επιβεβαίωσε το τρέχον στάδιο.`
+  return 'Δεν υπάρχει αρκετή χρονική πληροφορία για να εκτιμηθεί η αμεσότητα.'
+}
+
+function pursuitFactorLabel(key: PursuitFactor['key']) {
+  return ({ access: 'Πρόσβαση', win_chance: 'Πιθανότητα νίκης', delivery_fit: 'Δυνατότητα παράδοσης', value_effort: 'Αξία / προσπάθεια' })[key]
+}
+
+function factorExplanation(factor: PursuitFactor) {
+  const criterion = pursuitFactorLabel(factor.key)
+  const reasons = factor.reasons.length ? ` Στοιχεία: ${factor.reasons.join(' ')}` : ''
+  return `${criterion}: ${factor.score}/100.${reasons}`
 }
 
 function cpvDescription(code: string) {

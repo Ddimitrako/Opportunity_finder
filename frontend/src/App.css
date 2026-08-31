@@ -885,6 +885,47 @@ h5 {
   margin-bottom: 16px;
 }
 
+.explainable {
+  position: relative;
+  cursor: help;
+}
+
+.explainable::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  width: min(330px, calc(100vw - 40px));
+  padding: 9px 11px;
+  border: 1px solid #c8d8df;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #17232a;
+  box-shadow: 0 14px 30px rgba(26, 40, 48, 0.18);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.explainable:hover::after,
+.explainable:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.explainable:focus-visible {
+  outline: 2px solid #2f7f9f;
+  outline-offset: 3px;
+}
+
 .metric {
   display: grid;
   grid-template-columns: 22px 1fr;
