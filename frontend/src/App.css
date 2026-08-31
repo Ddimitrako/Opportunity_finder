@@ -2488,6 +2488,10 @@ h5 {
   background: #216a55;
 }
 
+.source-status-pill.partial {
+  background: #a86d16;
+}
+
 .source-status-pill.error {
   background: #c94c34;
 }

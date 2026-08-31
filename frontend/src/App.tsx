@@ -496,7 +496,7 @@ type BuyerIntelligenceResponse = {
   similar_opportunities: BuyerOpportunitySample[]
   recent_opportunities: BuyerOpportunitySample[]
   has_similar_procurement: boolean
-  khmdhs_history_status: 'ok' | 'error' | 'skipped'
+  khmdhs_history_status: 'ok' | 'partial' | 'error' | 'skipped'
   khmdhs_history_message?: string | null
   diavgeia_status: 'ok' | 'error' | 'skipped'
   diavgeia_message?: string | null

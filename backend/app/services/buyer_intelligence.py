@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import statistics
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -60,6 +62,13 @@ SOFTWARE_TERMS = (
     "dashboard",
     "ψηφιακ",
 )
+KHMDHS_HISTORY_RETRY_DELAYS_SECONDS = (0.65,)
+KHMDHS_HISTORY_TIMEOUT_SECONDS = 25.0
+logger = logging.getLogger(__name__)
+
+
+class KhmdhsHistoryLookupError(RuntimeError):
+    """A KIMDIS history request failed after its bounded retry budget."""
 
 
 class BuyerIntelligenceService:
@@ -81,14 +90,25 @@ class BuyerIntelligenceService:
             khmdhs_history_date_to = date.today()
             khmdhs_history_date_from = khmdhs_history_date_to - timedelta(days=request.history_days)
             try:
-                khmdhs_history = await self._khmdhs_history(khmdhs_org_key, request.history_days, request.history_limit)
-                khmdhs_history_status = "ok"
-                if not khmdhs_history:
+                khmdhs_history, history_errors = await self._khmdhs_history_with_diagnostics(
+                    khmdhs_org_key,
+                    request.history_days,
+                    request.history_limit,
+                )
+                if history_errors:
+                    khmdhs_history_status = "partial" if khmdhs_history else "error"
+                    khmdhs_history_message = (
+                        f"KIMDIS history loaded with {len(history_errors)} unavailable source request"
+                        f"{'s' if len(history_errors) != 1 else ''}."
+                    )
+                else:
+                    khmdhs_history_status = "ok"
+                if not khmdhs_history and not khmdhs_history_message:
                     khmdhs_history_message = "No KIMDIS historical records returned for this organization key."
             except Exception as exc:
                 khmdhs_history_status = "error"
                 khmdhs_history_message = f"KIMDIS history lookup failed: {exc.__class__.__name__}"
-            if khmdhs_history_status == "ok":
+            if khmdhs_history_status in {"ok", "partial"}:
                 try:
                     khmdhs_awards = await self._khmdhs_awards(khmdhs_org_key, request.history_days, min(10, request.history_limit))
                 except Exception as exc:
@@ -163,15 +183,30 @@ class BuyerIntelligenceService:
         return [_decision_signal(record) for record in extract_records(payload)]
 
     async def _khmdhs_history(self, organization_key: str, days: int, limit: int) -> list[Opportunity]:
+        records, _ = await self._khmdhs_history_with_diagnostics(organization_key, days, limit)
+        return records
+
+    async def _khmdhs_history_with_diagnostics(
+        self,
+        organization_key: str,
+        days: int,
+        limit: int,
+    ) -> tuple[list[Opportunity], list[str]]:
         client = KhmdhsClient(self.settings)
         records: list[Opportunity] = []
+        errors: list[str] = []
         for endpoint in ("request", "notice"):
             for body in _khmdhs_history_bodies(organization_key, days, endpoint):
                 if len(records) >= limit:
-                    return _dedupe_by_id(records)
-                fetched = await self._khmdhs_records(endpoint, body, page=0)
+                    return _dedupe_by_id(records), errors
+                try:
+                    fetched = await self._khmdhs_records(endpoint, body, page=0)
+                except KhmdhsHistoryLookupError as exc:
+                    errors.append(str(exc))
+                    logger.warning("KIMDIS history window unavailable; continuing with remaining windows", extra={"endpoint": endpoint})
+                    continue
                 records.extend(client._to_opportunity(record) for record in fetched[: max(0, limit - len(records))])
-        return _dedupe_by_id(records)[:limit]
+        return _dedupe_by_id(records)[:limit], errors
 
     async def _khmdhs_awards(self, organization_key: str, days: int, limit: int) -> list[DiavgeiaDecisionSignal]:
         signals: list[DiavgeiaDecisionSignal] = []
@@ -186,15 +221,36 @@ class BuyerIntelligenceService:
     async def _khmdhs_records(self, endpoint: str, body: dict[str, Any], page: int) -> list[dict[str, Any]]:
         url = f"{str(self.settings.khmdhs_base_url).rstrip('/')}/khmdhs-opendata/{endpoint}"
         async with httpx.AsyncClient(
-            timeout=self.settings.khmdhs_timeout_seconds,
+            timeout=max(float(self.settings.khmdhs_timeout_seconds), KHMDHS_HISTORY_TIMEOUT_SECONDS),
             verify=self.settings.khmdhs_verify_ssl,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         ) as client:
-            response = await client.post(url, params={"page": page}, json=body)
-            if response.status_code == 404:
-                return []
-            response.raise_for_status()
-            return extract_records(response.json())
+            attempts = len(KHMDHS_HISTORY_RETRY_DELAYS_SECONDS) + 1
+            for attempt in range(attempts):
+                try:
+                    response = await client.post(url, params={"page": page}, json=body)
+                except (httpx.TimeoutException, httpx.TransportError) as exc:
+                    if attempt < attempts - 1:
+                        logger.warning("KIMDIS history request failed; retrying", extra={"attempt": attempt + 1, "error": str(exc)})
+                        await asyncio.sleep(KHMDHS_HISTORY_RETRY_DELAYS_SECONDS[attempt])
+                        continue
+                    raise KhmdhsHistoryLookupError("KIMDIS did not respond") from exc
+
+                if response.status_code == 404:
+                    return []
+                if response.status_code == 429 or response.status_code >= 500:
+                    if attempt < attempts - 1:
+                        logger.warning("KIMDIS history returned a transient status; retrying", extra={"attempt": attempt + 1, "status_code": response.status_code})
+                        await asyncio.sleep(KHMDHS_HISTORY_RETRY_DELAYS_SECONDS[attempt])
+                        continue
+                    raise KhmdhsHistoryLookupError(f"KIMDIS returned HTTP {response.status_code}")
+                if response.is_error:
+                    raise KhmdhsHistoryLookupError(f"KIMDIS returned HTTP {response.status_code}")
+                try:
+                    return extract_records(response.json())
+                except ValueError as exc:
+                    raise KhmdhsHistoryLookupError("KIMDIS returned invalid JSON") from exc
+        raise KhmdhsHistoryLookupError("KIMDIS request did not complete")
 
 
 def _dedupe_by_id(items: list[Opportunity | None]) -> list[Opportunity]:

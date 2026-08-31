@@ -788,7 +788,7 @@ class BuyerIntelligenceResponse(BaseModel):
     similar_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
     recent_opportunities: list[BuyerOpportunitySample] = Field(default_factory=list)
     has_similar_procurement: bool = False
-    khmdhs_history_status: Literal["ok", "error", "skipped"] = "skipped"
+    khmdhs_history_status: Literal["ok", "partial", "error", "skipped"] = "skipped"
     khmdhs_history_message: str | None = None
     diavgeia_status: Literal["ok", "error", "skipped"] = "skipped"
     diavgeia_message: str | None = None
