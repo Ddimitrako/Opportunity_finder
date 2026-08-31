@@ -3997,7 +3997,6 @@ function DetailsDrawer({
 
   const metadata = details?.metadata ?? {}
   const documents = details?.documents ?? []
-  const primaryLinkLabel = details?.source === 'khmdhs' ? 'Άνοιγμα βασικού εγγράφου ΚΗΜΔΗΣ' : 'Άνοιγμα record'
   const upstreamErrors = Array.isArray(details?.raw.upstream_errors) ? details.raw.upstream_errors.filter((item): item is string => typeof item === 'string') : []
   const detailsUnavailable = Boolean(error || upstreamErrors.length)
 
@@ -4053,12 +4052,6 @@ function DetailsDrawer({
                 <div className="details-summary-panel">
                   <h5>Summary</h5>
                   <p className="drawer-summary">{details?.summary || opportunity.summary}</p>
-                  {details?.platform_url ? (
-                    <a className="drawer-primary-link" href={details.platform_url} target="_blank" rel="noreferrer">
-                      {primaryLinkLabel}
-                      <ExternalLink size={15} aria-hidden="true" />
-                    </a>
-                  ) : null}
                 </div>
               </div>
             </section>

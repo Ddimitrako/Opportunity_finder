@@ -9,6 +9,7 @@ Durable product intent, current architecture, and concise dated decisions. Verif
 
 ## Log (newest first)
 
+- [2026-08-31 Summary document link](log/2026-08-31-summary-document-link.md) — the Summary no longer duplicates the primary document action
 - [2026-08-31 Lifecycle guidance visibility](log/2026-08-31-lifecycle-guidance-visibility.md) — details always expose a discoverable lifecycle panel with an unknown-stage fallback
 - [2026-08-31 Greek decision explanations](log/2026-08-31-greek-decision-explanations.md) — core feed cues are Greek-facing and explainable on hover/focus
 - [2026-08-31 PDF preview framing](log/2026-08-31-pdf-preview-framing.md) — same-origin document viewer no longer receives the global frame denial
