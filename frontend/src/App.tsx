@@ -3478,6 +3478,24 @@ function OpportunityRow({
   )
 }
 
+function fallbackGuidance(opportunity: Opportunity): OpportunityGuidance {
+  return {
+    current_stage: 'unknown',
+    current_stage_label: 'Άγνωστο στάδιο',
+    is_actionable: false,
+    next_action: `Δεν φορτώθηκε οδηγός σταδίου για την πηγή ${sourceLabel(opportunity.source, opportunity.source_label)}. Άνοιξε το βασικό έγγραφο και επιβεβαίωσε την τρέχουσα φάση πριν κινηθείς.`,
+    stage_steps: [{
+      id: 'unknown',
+      label: 'Δεν επιβεβαιώθηκε',
+      status: 'current',
+      description: 'Δεν υπάρχουν αρκετά δεδομένα για ασφαλή αναγνώριση του σταδίου.',
+      references: [],
+    }],
+    checklist: [],
+    watch_items: ['Το επόμενο επίσημο έγγραφο ή ανακοίνωση της πηγής.', 'Προθεσμία και τρόπος υποβολής, εφόσον ανοίξει διαγωνισμός.'],
+  }
+}
+
 function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
   const [isOpen, setIsOpen] = useState(true)
 
@@ -3491,19 +3509,19 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
         onClick={() => setIsOpen((current) => !current)}
       >
         <div>
-          <h4>Lifecycle guidance</h4>
-          <p>{guidance.is_actionable ? 'This looks actionable now.' : 'This is not clearly actionable yet.'}</p>
+          <h4>Οδηγός σταδίου</h4>
+          <p>{guidance.is_actionable ? 'Φαίνεται αξιοποιήσιμο τώρα.' : 'Δεν είναι ακόμη ξεκάθαρα αξιοποιήσιμο.'}</p>
         </div>
         <div className="guidance-summary-actions">
           <span className={`actionable-pill ${guidance.is_actionable ? 'yes' : 'no'}`}>
-            {guidance.is_actionable ? 'Actionable' : 'Watch'}
+            {guidance.is_actionable ? 'Αξιοποιήσιμο' : 'Παρακολούθηση'}
           </span>
           <ChevronDown size={17} aria-hidden="true" />
         </div>
       </button>
 
       {isOpen ? <div className="guidance-content" id="lifecycle-guidance-content">
-        <div className="lifecycle-tracker" aria-label="Lifecycle tracker">
+        <div className="lifecycle-tracker" aria-label="Παρακολούθηση σταδίου">
           {guidance.stage_steps.map((step, index) => (
             <div className={`lifecycle-node ${step.status}`} key={step.id}>
               <div className="lifecycle-number" aria-label={`${index + 1}. ${step.label}`}>
@@ -3518,14 +3536,14 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
         </div>
 
         <div className="guidance-cards">
-          <GuidanceCard title="Where we are now" value={guidance.current_stage_label} />
-          <GuidanceCard title="Can I act now?" value={guidance.is_actionable ? 'Yes, review and prepare a bid.' : 'Not yet. Monitor the next official step.'} />
-          <GuidanceCard title="Next action" value={guidance.next_action} />
+          <GuidanceCard title="Πού βρισκόμαστε" value={guidance.current_stage_label} />
+          <GuidanceCard title="Μπορώ να κινηθώ τώρα;" value={guidance.is_actionable ? 'Ναι, έλεγξε και ετοίμασε προσφορά.' : 'Όχι ακόμη. Παρακολούθησε το επόμενο επίσημο βήμα.'} />
+          <GuidanceCard title="Επόμενη ενέργεια" value={guidance.next_action} />
         </div>
 
         {guidance.primary_action_link ? (
           <a className="drawer-primary-link" href={guidance.primary_action_link} target="_blank" rel="noreferrer">
-            Open recommended document
+            Άνοιγμα προτεινόμενου εγγράφου
             <ExternalLink size={15} aria-hidden="true" />
           </a>
         ) : null}
@@ -3548,7 +3566,7 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
         </CollapsiblePanel>
 
         {guidance.watch_items.length ? (
-          <CollapsiblePanel title="What to watch next" meta={`${guidance.watch_items.length} items`}>
+          <CollapsiblePanel title="Τι να παρακολουθήσεις μετά" meta={`${guidance.watch_items.length} στοιχεία`}>
             <div className="watch-block">
               <ul>
                 {guidance.watch_items.map((item) => (
@@ -4045,9 +4063,7 @@ function DetailsDrawer({
               </div>
             </section>
 
-            {details?.guidance ? (
-              <GuidancePanel guidance={details.guidance} />
-            ) : null}
+            <GuidancePanel guidance={details?.guidance ?? fallbackGuidance(opportunity)} />
 
             <div className="details-insight-grid">
               <BuyerIntelligencePanel intelligence={buyerIntelligence} loading={buyerIntelligenceLoading} error={buyerIntelligenceError} />

@@ -2171,8 +2171,12 @@ h5 {
 
 .guidance-section {
   display: block;
-  overflow: hidden;
+  overflow: visible;
   padding: 0;
+}
+
+.guidance-section:not(.open) {
+  min-height: 68px;
 }
 
 .guidance-summary {
@@ -2188,6 +2192,7 @@ h5 {
   font: inherit;
   text-align: left;
   padding: 13px 16px;
+  min-height: 68px;
 }
 
 .guidance-section.open > .guidance-summary {
