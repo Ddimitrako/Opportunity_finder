@@ -3479,9 +3479,17 @@ function OpportunityRow({
 }
 
 function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
+  const [isOpen, setIsOpen] = useState(true)
+
   return (
-    <details className="drawer-section guidance-section" open>
-      <summary className="guidance-summary">
+    <section className={`drawer-section guidance-section${isOpen ? ' open' : ''}`}>
+      <button
+        className="guidance-summary"
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls="lifecycle-guidance-content"
+        onClick={() => setIsOpen((current) => !current)}
+      >
         <div>
           <h4>Lifecycle guidance</h4>
           <p>{guidance.is_actionable ? 'This looks actionable now.' : 'This is not clearly actionable yet.'}</p>
@@ -3492,9 +3500,9 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
           </span>
           <ChevronDown size={17} aria-hidden="true" />
         </div>
-      </summary>
+      </button>
 
-      <div className="guidance-content">
+      {isOpen ? <div className="guidance-content" id="lifecycle-guidance-content">
         <div className="lifecycle-tracker" aria-label="Lifecycle tracker">
           {guidance.stage_steps.map((step, index) => (
             <div className={`lifecycle-node ${step.status}`} key={step.id}>
@@ -3550,8 +3558,8 @@ function GuidancePanel({ guidance }: { guidance: OpportunityGuidance }) {
             </div>
           </CollapsiblePanel>
         ) : null}
-      </div>
-    </details>
+      </div> : null}
+    </section>
   )
 }
 

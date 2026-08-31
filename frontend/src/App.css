@@ -2139,16 +2139,17 @@ h5 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  list-style: none;
-  padding: 13px 16px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 13px 16px;
 }
 
-.guidance-summary::-webkit-details-marker {
-  display: none;
-}
-
-.guidance-section[open] > .guidance-summary {
+.guidance-section.open > .guidance-summary {
   border-bottom: 1px solid #e6ecef;
 }
 
@@ -2166,7 +2167,7 @@ h5 {
   color: #60707a;
 }
 
-.guidance-section[open] > .guidance-summary .guidance-summary-actions > svg {
+.guidance-section.open > .guidance-summary .guidance-summary-actions > svg {
   transform: rotate(180deg);
 }
 
