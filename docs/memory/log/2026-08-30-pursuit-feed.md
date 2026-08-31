@@ -17,3 +17,4 @@ tags: [log, product, architecture, scoring]
 - Keep Market Radar and legacy bookmarks compatible, but make the Action Feed, pursuit status, and explicit Fit/Not fit feedback the primary workflow.
 - Pipeline entry is explicitly manual: tracking creates the pursuit, while Fit/Not fit only records feedback on an existing pursuit and never starts or advances a pipeline automatically.
 - Keep opportunity documents and source access in the information drawer instead of duplicating an external source action on each feed card.
+- Keep Product Matchmaking as a third Decision Intelligence tab beside Decision Brief and Ask AI; the dossier overview shows only source, buyer, timing, budget, and documents, while lifecycle guidance stays compact and can collapse.
