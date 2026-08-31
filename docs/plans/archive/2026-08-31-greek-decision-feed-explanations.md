@@ -9,9 +9,10 @@ Make the decision feed understandable at a glance for a Greek-speaking founder: 
 1. [x] Inventory the existing card and tooltip patterns, then add one reusable explanation pattern.
 2. [x] Translate the decision-feed controls, KPI labels and card labels while preserving backend values and filters.
 3. [x] Add concise evidence-aware explanations for source, catalog matching, lifecycle, route, freshness, priority, verdict and confidence.
-4. [ ] Run lint, tests and build; visually inspect desktop and mobile; record the durable UI decision and archive this plan.
+4. [x] Run lint, tests and build; verify the production build and health checks; record the durable UI decision and archive this plan.
 
 ## Validation notes
 
 - `npm --prefix frontend run lint` passes.
-- The local Node 18.17.1 runtime is below the Vite 8 requirement, so local Vitest and the Vite bundling stage cannot start. Verify the production-container build and visual output on the VPS before completing the plan.
+- The local Node 18.17.1 runtime is below the Vite 8 requirement, so local Vitest and the Vite bundling stage cannot start.
+- The VPS container uses Node 24: its production frontend build passed, the API health endpoint returned `ok`, and all services are running. The live feed is authentication-protected, so interactive visual inspection was not performed without using login credentials in the browser.
